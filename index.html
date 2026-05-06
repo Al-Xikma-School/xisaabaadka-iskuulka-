@@ -2,42 +2,301 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>AL-XIKMA SYSTEM</title>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <style>
-    body { font-family: Arial; padding: 20px; }
-    button { margin: 5px; padding: 10px; cursor: pointer; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f0f1a;
+      color: #eee;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 16px;
+      padding: 36px 32px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 1.6rem;
+      color: #7eb8f7;
+      margin-bottom: 8px;
+      letter-spacing: 2px;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 0.85rem;
+      margin-bottom: 28px;
+    }
+
+    .tabs {
+      display: flex;
+      background: #111128;
+      border-radius: 10px;
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 10px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #888;
+      border: none;
+      background: none;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: #2a2a5a;
+      color: #7eb8f7;
+      font-weight: bold;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #aaa;
+      margin-bottom: 6px;
+    }
+
+    input {
+      width: 100%;
+      padding: 11px 14px;
+      background: #111128;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      color: #eee;
+      font-size: 0.95rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus { border-color: #7eb8f7; }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: bold;
+      margin-top: 6px;
+      transition: opacity 0.2s;
+    }
+
+    .btn:hover { opacity: 0.85; }
+
+    .btn-primary { background: #3a6fd8; color: white; }
+    .btn-google {
+      background: white;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .divider {
+      text-align: center;
+      color: #555;
+      font-size: 0.8rem;
+      margin: 14px 0;
+    }
+
+    .msg {
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-top: 14px;
+      display: none;
+    }
+
+    .msg.error { background: #3a1a1a; color: #f88; display: block; }
+    .msg.success { background: #1a3a1a; color: #8f8; display: block; }
+
+    /* ===== APP SECTION ===== */
+    #appSection { display: none; }
+
+    .welcome-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .welcome-header h2 {
+      font-size: 1.1rem;
+      color: #7eb8f7;
+    }
+
+    .role-badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+    }
+
+    .role-admin { background: #2a1a4a; color: #c8a0ff; }
+    .role-editor { background: #1a2a1a; color: #a0ffa0; }
+    .role-viewer { background: #1a2a3a; color: #a0c8ff; }
+
+    .feature-box {
+      background: #111128;
+      border: 1px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+
+    .admin-panel {
+      border: 1px solid #3a2a5a;
+      border-radius: 10px;
+      padding: 18px;
+      margin-bottom: 16px;
+      background: #1a1030;
+    }
+
+    .admin-panel h3 {
+      color: #c8a0ff;
+      font-size: 0.95rem;
+      margin-bottom: 14px;
+    }
+
+    .btn-danger { background: #8b1a1a; color: white; margin-top: 10px; }
+    .btn-purple { background: #4a1a8a; color: white; }
+    .btn-logout { background: #2a2a2a; color: #aaa; margin-top: 10px; }
+
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      background: #111128;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      color: #eee;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+      outline: none;
+    }
   </style>
 </head>
 <body>
 
-<h1>🔥 AL-XIKMA SYSTEM</h1>
+<!-- ===== AUTH CARD ===== -->
+<div class="card">
 
-<div id="authSection">
-  <button onclick="loginGoogle()">Login with Google</button>
-  <button onclick="loginEmail()">Login Email</button>
-  <button onclick="registerEmail()">Register</button>
-</div>
+  <div id="authSection">
+    <h1>⚡ AL-XIKMA</h1>
+    <p class="subtitle">SYSTEM LOGIN</p>
 
-<div id="appSection" style="display:none;">
-  <h2 id="userEmail"></h2>
-  <h3 id="userRole"></h3>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('login')">Login</button>
+      <button class="tab" onclick="switchTab('register')">Register</button>
+    </div>
 
-  <p id="features"></p>
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="loginEmail" placeholder="email@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" />
+      </div>
+      <button class="btn btn-primary" onclick="loginEmail()">🔐 Login</button>
 
-  <button onclick="logout()">Logout</button>
+      <div class="divider">— ama —</div>
 
-  <div id="adminPanel" style="display:none;">
-    <h3>⚙️ Admin Panel</h3>
-    <button onclick="changeRole()">Change User Role</button>
+      <button class="btn btn-google" onclick="loginGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20"/>
+        Continue with Google
+      </button>
+    </div>
+
+    <!-- Register Form -->
+    <div id="registerForm" style="display:none;">
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="regEmail" placeholder="email@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPassword" placeholder="Min 6 characters" />
+      </div>
+      <button class="btn btn-primary" onclick="registerEmail()">✅ Create Account</button>
+    </div>
+
+    <div id="authMsg" class="msg"></div>
   </div>
+
+  <!-- ===== APP SECTION ===== -->
+  <div id="appSection">
+    <h1>⚡ AL-XIKMA</h1>
+    <div class="welcome-header">
+      <h2 id="userEmail"></h2>
+      <span id="roleBadge" class="role-badge"></span>
+    </div>
+
+    <div class="feature-box" id="featureBox"></div>
+
+    <!-- Admin Panel -->
+    <div class="admin-panel" id="adminPanel" style="display:none;">
+      <h3>⚙️ Admin Panel — Change User Role</h3>
+      <div class="form-group">
+        <label>User UID</label>
+        <input type="text" id="adminUID" placeholder="Paste user UID here" />
+      </div>
+      <div class="form-group">
+        <label>New Role</label>
+        <select id="adminRole">
+          <option value="viewer">👁 Viewer</option>
+          <option value="editor">✏️ Editor</option>
+          <option value="admin">👑 Admin</option>
+        </select>
+      </div>
+      <button class="btn btn-purple" onclick="changeRole()">Update Role</button>
+      <div id="adminMsg" class="msg"></div>
+    </div>
+
+    <!-- My UID -->
+    <div class="feature-box" id="myUID" style="font-size:0.75rem; color:#666;"></div>
+
+    <button class="btn btn-logout" onclick="logout()">🚪 Logout</button>
+  </div>
+
 </div>
 
 <script>
-  // 🔥 FIREBASE CONFIG
   const firebaseConfig = {
     apiKey: "AIzaSyB_ZgWHivBz_Z-_KbNiGrtTGU3R1Dtq7gw",
     authDomain: "alxikma-xisaabaad.firebaseapp.com",
@@ -48,110 +307,139 @@
   };
 
   firebase.initializeApp(firebaseConfig);
-
   const auth = firebase.auth();
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
 
-  let currentUser = null;
   let currentRole = null;
 
-  // 🔄 AUTH STATE
+  // ===== TAB SWITCH =====
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+    document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+    clearMsg();
+  }
+
+  function showMsg(id, text, type) {
+    const el = document.getElementById(id);
+    el.className = 'msg ' + type;
+    el.innerText = text;
+  }
+
+  function clearMsg() {
+    const el = document.getElementById('authMsg');
+    el.className = 'msg';
+    el.innerText = '';
+  }
+
+  // ===== AUTH STATE =====
   auth.onAuthStateChanged(async (user) => {
     if (user) {
-      currentUser = user;
+      document.getElementById('authSection').style.display = 'none';
+      document.getElementById('appSection').style.display = 'block';
+      document.getElementById('userEmail').innerText = user.email;
 
-      document.getElementById("authSection").style.display = "none";
-      document.getElementById("appSection").style.display = "block";
-
-      document.getElementById("userEmail").innerText = "Welcome " + user.email;
-
-      const ref = db.collection("users").doc(user.uid);
+      const ref = db.collection('users').doc(user.uid);
       const snap = await ref.get();
 
       if (snap.exists) {
         currentRole = snap.data().role;
       } else {
-        await ref.set({
-          email: user.email,
-          role: "viewer",
-          createdAt: new Date()
-        });
-        currentRole = "viewer";
+        await ref.set({ email: user.email, role: 'viewer', createdAt: new Date() });
+        currentRole = 'viewer';
       }
 
-      document.getElementById("userRole").innerText = "Role: " + currentRole;
+      // Role badge
+      const badge = document.getElementById('roleBadge');
+      badge.innerText = currentRole.toUpperCase();
+      badge.className = 'role-badge role-' + currentRole;
 
-      showFeatures();
+      // Features
+      const features = {
+        admin: '👑 Admin — Full system control. Can manage all users and data.',
+        editor: '✏️ Editor — Can add and edit data.',
+        viewer: '👁 Viewer — Read-only access.'
+      };
+      document.getElementById('featureBox').innerText = features[currentRole] || '🔵 User';
+
+      // Admin panel
+      if (currentRole === 'admin') {
+        document.getElementById('adminPanel').style.display = 'block';
+      }
+
+      // Show UID (useful for admin)
+      document.getElementById('myUID').innerText = '🔑 Your UID: ' + user.uid;
+
     } else {
-      currentUser = null;
-      document.getElementById("authSection").style.display = "block";
-      document.getElementById("appSection").style.display = "none";
+      document.getElementById('authSection').style.display = 'block';
+      document.getElementById('appSection').style.display = 'none';
     }
   });
 
-  // 🔐 GOOGLE LOGIN
+  // ===== GOOGLE LOGIN =====
   function loginGoogle() {
-    auth.signInWithPopup(provider);
+    auth.signInWithPopup(provider).catch(err => {
+      showMsg('authMsg', '❌ ' + err.message, 'error');
+    });
   }
 
-  // 🔐 EMAIL LOGIN
+  // ===== EMAIL LOGIN =====
   function loginEmail() {
-    const email = prompt("Email");
-    const password = prompt("Password");
-    auth.signInWithEmailAndPassword(email, password);
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) return showMsg('authMsg', '⚠️ Email iyo password geli', 'error');
+
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(err => showMsg('authMsg', '❌ ' + friendlyError(err.code), 'error'));
   }
 
-  // 🔐 REGISTER
+  // ===== REGISTER =====
   function registerEmail() {
-    const email = prompt("Email");
-    const password = prompt("Password");
+    const email = document.getElementById('regEmail').value.trim();
+    const password = document.getElementById('regPassword').value;
+    if (!email || !password) return showMsg('authMsg', '⚠️ Email iyo password geli', 'error');
+    if (password.length < 6) return showMsg('authMsg', '⚠️ Password waa 6 xaraf ama ka badan', 'error');
 
     auth.createUserWithEmailAndPassword(email, password)
       .then(async (res) => {
-        await db.collection("users").doc(res.user.uid).set({
-          email,
-          role: "viewer",
-          createdAt: new Date()
+        await db.collection('users').doc(res.user.uid).set({
+          email, role: 'viewer', createdAt: new Date()
         });
-      });
+        showMsg('authMsg', '✅ Account la sameeyay!', 'success');
+      })
+      .catch(err => showMsg('authMsg', '❌ ' + friendlyError(err.code), 'error'));
   }
 
-  // 🚪 LOGOUT
-  function logout() {
-    auth.signOut();
-  }
+  // ===== LOGOUT =====
+  function logout() { auth.signOut(); }
 
-  // ⚙️ CHANGE ROLE (ADMIN ONLY)
+  // ===== CHANGE ROLE =====
   function changeRole() {
-    if (currentRole !== "admin") return alert("Only admin allowed");
+    if (currentRole !== 'admin') return;
+    const uid = document.getElementById('adminUID').value.trim();
+    const role = document.getElementById('adminRole').value;
+    if (!uid) return showMsg('adminMsg', '⚠️ UID geli', 'error');
 
-    const uid = prompt("User UID");
-    const role = prompt("Role (viewer/editor/admin)");
-
-    db.collection("users").doc(uid).update({
-      role: role
-    });
-
-    alert("Role updated");
+    db.collection('users').doc(uid).update({ role })
+      .then(() => showMsg('adminMsg', '✅ Role waa la beddelay: ' + role, 'success'))
+      .catch(() => showMsg('adminMsg', '❌ UID ma jiro ama khalad baa jira', 'error'));
   }
 
-  // 📊 FEATURES
-  function showFeatures() {
-    let text = "";
-
-    if (currentRole === "admin") {
-      text = "🟢 Full system control";
-      document.getElementById("adminPanel").style.display = "block";
-    } else if (currentRole === "editor") {
-      text = "🟡 Can edit data";
-    } else {
-      text = "🔵 View only";
-    }
-
-    document.getElementById("features").innerText = text;
+  // ===== FRIENDLY ERRORS =====
+  function friendlyError(code) {
+    const errors = {
+      'auth/user-not-found': 'User ma jiro',
+      'auth/wrong-password': 'Password khalad ah',
+      'auth/email-already-in-use': 'Email horay loo isticmaalay',
+      'auth/invalid-email': 'Email saxan ma aha',
+      'auth/weak-password': 'Password aad u gaaban',
+      'auth/popup-closed-by-user': 'Login la joojiyay',
+      'auth/network-request-failed': 'Internet dhibaato — isku day mar kale',
+    };
+    return errors[code] || 'Khalad baa jira, isku day mar kale';
   }
-
 </script>
 
 </body>
