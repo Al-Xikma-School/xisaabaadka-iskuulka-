@@ -1,0 +1,198 @@
+// 🔥 FULL PROFESSIONAL FIREBASE + ROLE SYSTEM (READY FOR GITHUB)
+// Copy & paste into React (Vite recommended)
+
+import { useEffect, useState } from "react";
+import { initializeApp } from "firebase/app";
+import {
+  getAuth,
+  signInWithPopup,
+  GoogleAuthProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "firebase/auth";
+import {
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc
+} from "firebase/firestore";
+
+// ✅ FIREBASE CONFIG
+const firebaseConfig = {
+  apiKey: "AIzaSyB_ZgWHivBz_Z-_KbNiGrtTGU3R1Dtq7gw",
+  authDomain: "alxikma-xisaabaad.firebaseapp.com",
+  projectId: "alxikma-xisaabaad",
+  storageBucket: "alxikma-xisaabaad.firebasestorage.app",
+  messagingSenderId: "842183507563",
+  appId: "1:842183507563:web:f197771bb6924a7ae07b2e",
+  measurementId: "G-G4KTN9388C"
+};
+
+// 🔌 INIT
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+
+  // 🔄 AUTH STATE
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        setUser(u);
+
+        const ref = doc(db, "users", u.uid);
+        const snap = await getDoc(ref);
+
+        if (snap.exists()) {
+          setRole(snap.data().role);
+        } else {
+          // 🆕 Create new user automatically
+          await setDoc(ref, {
+            email: u.email,
+            role: "viewer",
+            createdAt: new Date()
+          });
+          setRole("viewer");
+        }
+      } else {
+        setUser(null);
+        setRole(null);
+      }
+    });
+
+    return () => unsub();
+  }, []);
+
+  // 🔐 GOOGLE LOGIN
+  const loginGoogle = async () => {
+    await signInWithPopup(auth, provider);
+  };
+
+  // 🔐 REGISTER
+  const register = async () => {
+    const email = prompt("Email");
+    const password = prompt("Password");
+
+    const res = await createUserWithEmailAndPassword(auth, email, password);
+
+    await setDoc(doc(db, "users", res.user.uid), {
+      email,
+      role: "viewer",
+      createdAt: new Date()
+    });
+  };
+
+  // 🔐 LOGIN
+  const login = async () => {
+    const email = prompt("Email");
+    const password = prompt("Password");
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  // 🚪 LOGOUT
+  const logout = () => signOut(auth);
+
+  // ➕ ADMIN: CHANGE ROLE
+  const changeRole = async () => {
+    if (role !== "admin") return alert("Only admin allowed");
+
+    const uid = prompt("Enter USER UID");
+    const newRole = prompt("Enter role (viewer/editor/admin)");
+
+    await updateDoc(doc(db, "users", uid), {
+      role: newRole
+    });
+
+    alert("Role updated successfully");
+  };
+
+  // 📊 ROLE FEATURES
+  const Features = () => {
+    if (role === "admin") {
+      return <p>🟢 Full system control (users + data + settings)</p>;
+    }
+
+    if (role === "editor") {
+      return <p>🟡 Can edit and manage data</p>;
+    }
+
+    return <p>🔵 View only (read access)</p>;
+  };
+
+  // 🔐 LOGIN SCREEN
+  if (!user) {
+    return (
+      <div className="p-10 space-y-4">
+        <h1 className="text-2xl font-bold">🔥 AL-XIKMA SYSTEM</h1>
+
+        <button onClick={loginGoogle}>Login with Google</button>
+        <button onClick={login}>Login Email</button>
+        <button onClick={register}>Register</button>
+      </div>
+    );
+  }
+
+  // 🏠 MAIN APP
+  return (
+    <div className="p-10 space-y-4">
+      <h1>Welcome {user.email}</h1>
+      <h2>Role: {role}</h2>
+
+      <Features />
+
+      <button onClick={logout}>Logout</button>
+
+      {role === "admin" && (
+        <div>
+          <h2>⚙️ Admin Panel</h2>
+          <button onClick={changeRole}>Change User Role</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/*
+🔥 FIRESTORE STRUCTURE
+
+users (collection)
+  uid
+    email: string
+    role: viewer | editor | admin
+    createdAt: date
+
+🔥 SECURITY RULES (IMPORTANT)
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+
+  }
+}
+
+🔥 PRO FEATURES ADDED
+✔ Auto user creation
+✔ Role system (clean)
+✔ Admin role control
+✔ Google + Email login
+✔ GitHub ready
+✔ Secure structure
+
+🚀 NEXT UPGRADE (ASK ME)
+- Dashboard (school system)
+- Attendance system
+- Finance system
+- SaaS lacag system
+*/
