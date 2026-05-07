@@ -121,29 +121,30 @@
       const [settings,     setSettingsRaw] = useState(() => load("edu_settings",     { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }));
       const [fbLoaded,     setFbLoaded]    = useState(false);
 
-      // ── Load from Firebase on startup ──────────────────────
+      // ── Firebase real-time sync ────────────────────────────
       useEffect(() => {
-        const doLoad = async () => {
+        const setupListeners = () => {
           if (!window._fbDb) return;
-          try {
-            const [sc, us, tx, lm, st] = await Promise.all([
-              window._fbGet(window._fbRef(window._fbDb, "app/schools")),
-              window._fbGet(window._fbRef(window._fbDb, "app/users")),
-              window._fbGet(window._fbRef(window._fbDb, "app/transactions")),
-              window._fbGet(window._fbRef(window._fbDb, "app/limits")),
-              window._fbGet(window._fbRef(window._fbDb, "app/settings")),
-            ]);
-            if (sc.exists())  { const v = sc.val();  setSchoolsRaw(v);  localStorage.setItem("edu_schools",      JSON.stringify(v)); }
-            if (us.exists())  { const v = us.val();  setUsersRaw(v);    localStorage.setItem("edu_users",        JSON.stringify(v)); }
-            if (tx.exists())  { const v = tx.val();  setTxRaw(v);       localStorage.setItem("edu_transactions", JSON.stringify(v)); }
-            if (lm.exists())  { const v = lm.val();  setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }
-            if (st.exists())  { const v = st.val();  setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }
-            setFbLoaded(true);
-          } catch(e) { console.error("FB load:", e); setFbLoaded(true); }
+          const paths = [
+            ["app/schools",      v => { setSchoolsRaw(v);  localStorage.setItem("edu_schools",      JSON.stringify(v)); }, INITIAL_SCHOOLS],
+            ["app/users",        v => { setUsersRaw(v);    localStorage.setItem("edu_users",        JSON.stringify(v)); }, INITIAL_USERS],
+            ["app/transactions", v => { setTxRaw(v);       localStorage.setItem("edu_transactions", JSON.stringify(v)); }, []],
+            ["app/limits",       v => { setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }, {}],
+            ["app/settings",     v => { setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }, { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
+          ];
+          const unsubs = paths.map(([path, setter, def]) => {
+            const r = window._fbRef(window._fbDb, path);
+            return window._fbOnValue(r, snap => {
+              setter(snap.exists() ? snap.val() : def);
+              setFbLoaded(true);
+            }, () => setFbLoaded(true));
+          });
+          return () => unsubs.forEach(u => u());
         };
-        if (window._firebaseReady) { doLoad(); }
-        else { window.addEventListener("firebaseReady", doLoad, { once: true }); }
-        return () => window.removeEventListener("firebaseReady", doLoad);
+        if (window._firebaseReady) return setupListeners();
+        const handler = () => setupListeners();
+        window.addEventListener("firebaseReady", handler, { once: true });
+        return () => window.removeEventListener("firebaseReady", handler);
       }, []);
 
       const setSchools      = v => { setSchoolsRaw(v);  save("edu_schools",      v); };
@@ -159,6 +160,19 @@
       const [loginError,   setLoginError]   = useState("");
       const [sidebarOpen,  setSidebarOpen]  = useState(true);
       const [notif,        setNotif]        = useState(null);
+      const [isMobile,     setIsMobile]     = useState(() => window.innerWidth < 768);
+
+      // Track screen size
+      useEffect(() => {
+        const handler = () => {
+          const mobile = window.innerWidth < 768;
+          setIsMobile(mobile);
+          if (mobile) setSidebarOpen(false);
+        };
+        window.addEventListener("resize", handler);
+        if (window.innerWidth < 768) setSidebarOpen(false);
+        return () => window.removeEventListener("resize", handler);
+      }, []);
 
       const notify = (msg, type="success") => {
         setNotif({ msg, type });
@@ -201,8 +215,8 @@
       // ── LOGIN ──────────────────────────────────────────────
       if (!currentUser) {
         return (
-          <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#0f2027,#203a43,#2c5364)", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <div style={{ background:"rgba(255,255,255,.97)", borderRadius:22, padding:"46px 40px", width:420, boxShadow:"0 30px 80px rgba(0,0,0,.4)" }}>
+          <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#0f2027,#203a43,#2c5364)", display:"flex", alignItems:"center", justifyContent:"center", padding:"16px" }}>
+            <div style={{ background:"rgba(255,255,255,.97)", borderRadius:22, padding: isMobile ? "32px 24px" : "46px 40px", width:"100%", maxWidth:420, boxShadow:"0 30px 80px rgba(0,0,0,.4)" }}>
               <div style={{ textAlign:"center", marginBottom:30 }}>
                 <div style={{ width:72, height:72, background:"linear-gradient(135deg,#1a6b3c,#2ecc71)", borderRadius:18, display:"flex", alignItems:"center", justifyContent:"center", fontSize:38, margin:"0 auto 14px" }}>📚</div>
                 <h1 style={{ fontSize:24, fontWeight:900, color:"#1a2332" }}>EduAccounts Pro</h1>
@@ -252,96 +266,115 @@
 
           {/* Notification */}
           {notif && (
-            <div style={{ position:"fixed", top:20, right:20, zIndex:9999, background: notif.type==="success"?"#166534":"#9b1c1c", color:"#fff", padding:"12px 22px", borderRadius:12, boxShadow:"0 8px 30px rgba(0,0,0,.25)", fontSize:14, fontWeight:700 }}>
+            <div style={{ position:"fixed", top:16, left:"50%", transform:"translateX(-50%)", zIndex:9999, background: notif.type==="success"?"#166534":"#9b1c1c", color:"#fff", padding:"12px 22px", borderRadius:12, boxShadow:"0 8px 30px rgba(0,0,0,.25)", fontSize:14, fontWeight:700, whiteSpace:"nowrap" }}>
               {notif.type==="success"?"✅":"❌"} {notif.msg}
             </div>
           )}
 
-          {/* ── SIDEBAR ─────────────────────────────────────── */}
-          <div style={{ width: sidebarOpen ? 248 : 68, background:"linear-gradient(180deg,#0f172a,#1e293b)", transition:"width .3s", overflow:"hidden", display:"flex", flexDirection:"column", flexShrink:0, boxShadow:"4px 0 20px rgba(0,0,0,.3)" }}>
-
-            {/* Brand */}
-            <div style={{ padding:"18px 14px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:10 }}>
-              <div style={{ width:40, height:40, background: sc ? sc.color : "#1a6b3c", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
-                {sc?.logo ? <img src={sc.logo} style={{ width:40, height:40, objectFit:"cover" }} /> : "🏫"}
+          {/* ── SIDEBAR (desktop only) ───────────────────────── */}
+          {!isMobile && (
+            <div style={{ width: sidebarOpen ? 248 : 68, background:"linear-gradient(180deg,#0f172a,#1e293b)", transition:"width .3s", overflow:"hidden", display:"flex", flexDirection:"column", flexShrink:0, boxShadow:"4px 0 20px rgba(0,0,0,.3)" }}>
+              <div style={{ padding:"18px 14px", borderBottom:"1px solid rgba(255,255,255,.08)", display:"flex", alignItems:"center", gap:10 }}>
+                <div style={{ width:40, height:40, background: sc ? sc.color : "#1a6b3c", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0, overflow:"hidden" }}>
+                  {sc?.logo ? <img src={sc.logo} style={{ width:40, height:40, objectFit:"cover" }} /> : "🏫"}
+                </div>
+                {sidebarOpen && (
+                  <div style={{ overflow:"hidden" }}>
+                    <div style={{ color:"#fff", fontWeight:800, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:165 }}>{sc?.name || "EduAccounts"}</div>
+                    <div style={{ color:"#64748b", fontSize:11 }}>Pro Edition</div>
+                  </div>
+                )}
               </div>
-              {sidebarOpen && (
-                <div style={{ overflow:"hidden" }}>
-                  <div style={{ color:"#fff", fontWeight:800, fontSize:13, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:165 }}>{sc?.name || "EduAccounts"}</div>
-                  <div style={{ color:"#64748b", fontSize:11 }}>Pro Edition</div>
+              {isAdmin && sidebarOpen && (
+                <div style={{ padding:"10px 14px", borderBottom:"1px solid rgba(255,255,255,.06)" }}>
+                  <select value={activeSchool?.id || ""} onChange={e => setActiveSchool(schools.find(s => s.id === Number(e.target.value)))}
+                    style={{ width:"100%", padding:"7px 10px", background:"rgba(255,255,255,.08)", color:"#e2e8f0", border:"1px solid rgba(255,255,255,.12)", borderRadius:8, fontSize:12, outline:"none" }}>
+                    {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
                 </div>
               )}
-            </div>
-
-            {/* School switcher */}
-            {isAdmin && sidebarOpen && (
-              <div style={{ padding:"10px 14px", borderBottom:"1px solid rgba(255,255,255,.06)" }}>
-                <select value={activeSchool?.id || ""} onChange={e => setActiveSchool(schools.find(s => s.id === Number(e.target.value)))}
-                  style={{ width:"100%", padding:"7px 10px", background:"rgba(255,255,255,.08)", color:"#e2e8f0", border:"1px solid rgba(255,255,255,.12)", borderRadius:8, fontSize:12, outline:"none" }}>
-                  {schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-            )}
-
-            {/* Nav */}
-            <nav style={{ flex:1, padding:"10px 0" }}>
-              {navItems.map(item => (
-                <button key={item.id} onClick={() => setPage(item.id)}
-                  style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"11px 14px", background: page===item.id ? "rgba(46,204,113,.18)" : "transparent", border:"none", cursor:"pointer", color: page===item.id ? "#2ecc71" : "#94a3b8", fontSize:13, fontWeight: page===item.id ? 700 : 400, borderLeft: page===item.id ? "3px solid #2ecc71" : "3px solid transparent", textAlign:"left" }}>
-                  <span style={{ fontSize:18, flexShrink:0 }}>{item.icon}</span>
-                  {sidebarOpen && <span style={{ whiteSpace:"nowrap" }}>{item.label}</span>}
+              <nav style={{ flex:1, padding:"10px 0" }}>
+                {navItems.map(item => (
+                  <button key={item.id} onClick={() => setPage(item.id)}
+                    style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"11px 14px", background: page===item.id ? "rgba(46,204,113,.18)" : "transparent", border:"none", cursor:"pointer", color: page===item.id ? "#2ecc71" : "#94a3b8", fontSize:13, fontWeight: page===item.id ? 700 : 400, borderLeft: page===item.id ? "3px solid #2ecc71" : "3px solid transparent", textAlign:"left" }}>
+                    <span style={{ fontSize:18, flexShrink:0 }}>{item.icon}</span>
+                    {sidebarOpen && <span style={{ whiteSpace:"nowrap" }}>{item.label}</span>}
+                  </button>
+                ))}
+              </nav>
+              <div style={{ padding:"12px 14px", borderTop:"1px solid rgba(255,255,255,.08)" }}>
+                {sidebarOpen && (
+                  <div style={{ marginBottom:8 }}>
+                    <div style={{ color:"#e2e8f0", fontWeight:700, fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{currentUser.name}</div>
+                    <div style={{ color:"#64748b", fontSize:11 }}>{ROLE_META[currentUser.role]?.icon} {ROLE_META[currentUser.role]?.label}</div>
+                  </div>
+                )}
+                <button onClick={handleLogout}
+                  style={{ width:"100%", padding:"8px", background:"rgba(239,68,68,.15)", color:"#f87171", border:"1px solid rgba(239,68,68,.25)", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
+                  {sidebarOpen ? "🚪 Ka Bax" : "🚪"}
                 </button>
-              ))}
-            </nav>
-
-            {/* User */}
-            <div style={{ padding:"12px 14px", borderTop:"1px solid rgba(255,255,255,.08)" }}>
-              {sidebarOpen && (
-                <div style={{ marginBottom:8 }}>
-                  <div style={{ color:"#e2e8f0", fontWeight:700, fontSize:13, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{currentUser.name}</div>
-                  <div style={{ color:"#64748b", fontSize:11 }}>{ROLE_META[currentUser.role]?.icon} {ROLE_META[currentUser.role]?.label}</div>
-                </div>
-              )}
-              <button onClick={handleLogout}
-                style={{ width:"100%", padding:"8px", background:"rgba(239,68,68,.15)", color:"#f87171", border:"1px solid rgba(239,68,68,.25)", borderRadius:8, cursor:"pointer", fontSize:12, fontWeight:700 }}>
-                {sidebarOpen ? "🚪 Ka Bax" : "🚪"}
-              </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── MAIN ──────────────────────────────────────────── */}
-          <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0 }}>
+          <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom: isMobile ? 70 : 0 }}>
 
             {/* Topbar */}
-            <div style={{ background:"#fff", padding:"13px 22px", display:"flex", alignItems:"center", gap:14, borderBottom:"1px solid #e5e7eb", position:"sticky", top:0, zIndex:100, boxShadow:"0 1px 6px rgba(0,0,0,.05)" }}>
-              <button onClick={() => setSidebarOpen(p => !p)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:22, color:"#64748b", padding:0 }}>☰</button>
-              <div style={{ flex:1 }}>
-                <h2 style={{ fontSize:17, fontWeight:800, color:"#1e293b" }}>{curNav?.icon} {curNav?.label}</h2>
-                <p style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{sc?.name} · {new Date().toLocaleDateString("so-SO")}</p>
+            <div style={{ background:"#fff", padding: isMobile ? "12px 16px" : "13px 22px", display:"flex", alignItems:"center", gap:10, borderBottom:"1px solid #e5e7eb", position:"sticky", top:0, zIndex:100, boxShadow:"0 1px 6px rgba(0,0,0,.05)" }}>
+              {!isMobile && <button onClick={() => setSidebarOpen(p => !p)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:22, color:"#64748b", padding:0 }}>☰</button>}
+              {isMobile && (
+                <div style={{ width:32, height:32, background: sc ? sc.color : "#1a6b3c", borderRadius:8, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>
+                  {sc?.logo ? <img src={sc.logo} style={{ width:32, height:32, objectFit:"cover", borderRadius:8 }} /> : "🏫"}
+                </div>
+              )}
+              <div style={{ flex:1, minWidth:0 }}>
+                <h2 style={{ fontSize: isMobile ? 15 : 17, fontWeight:800, color:"#1e293b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{curNav?.icon} {curNav?.label}</h2>
+                {!isMobile && <p style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{sc?.name} · {new Date().toLocaleDateString("so-SO")}</p>}
               </div>
-              <span style={{ padding:"5px 14px", background: balance>=0?"#f0fdf4":"#fef2f2", color: balance>=0?"#166534":"#991b1b", borderRadius:20, fontSize:12, fontWeight:800 }}>
+              <span style={{ padding:"5px 10px", background: balance>=0?"#f0fdf4":"#fef2f2", color: balance>=0?"#166534":"#991b1b", borderRadius:20, fontSize:11, fontWeight:800, whiteSpace:"nowrap" }}>
                 {balance>=0?"✅":"⚠️"} {fmt(balance)}
               </span>
-              {/* PWA Install button */}
               <button id="pwa-install-btn" onClick={() => window._installPWA && window._installPWA()}
                 style={{ display:"none", alignItems:"center", gap:6, padding:"7px 14px", background:"linear-gradient(135deg,#1a6b3c,#2ecc71)", color:"#fff", border:"none", borderRadius:20, cursor:"pointer", fontSize:12, fontWeight:800, whiteSpace:"nowrap" }}>
-                📲 App Ku Rakib
+                📲
               </button>
             </div>
 
             {/* Content */}
-            <div style={{ flex:1, padding:22, overflowY:"auto" }}>
-              {page==="dashboard" && <DashboardPage schools={schools} transactions={transactions} activeSchool={activeSchool} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} setPage={setPage} limits={limits} />}
-              {page==="income"    && <TxPage type="income"  transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={INCOME_CATS}  notify={notify} limits={limits} />}
-              {page==="expense"   && <TxPage type="expense" transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={EXPENSE_CATS} notify={notify} limits={limits} />}
-              {page==="cashbook"  && <CashBookPage transactions={schoolTxs} activeSchool={activeSchool} notify={notify} />}
-              {page==="reports"   && <ReportsPage  transactions={schoolTxs} activeSchool={activeSchool} notify={notify} />}
+            <div style={{ flex:1, padding: isMobile ? 14 : 22, overflowY:"auto" }}>
+              {page==="dashboard" && <DashboardPage schools={schools} transactions={transactions} activeSchool={activeSchool} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} setPage={setPage} limits={limits} isMobile={isMobile} />}
+              {page==="income"    && <TxPage type="income"  transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={INCOME_CATS}  notify={notify} limits={limits} isMobile={isMobile} />}
+              {page==="expense"   && <TxPage type="expense" transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={EXPENSE_CATS} notify={notify} limits={limits} isMobile={isMobile} />}
+              {page==="cashbook"  && <CashBookPage transactions={schoolTxs} activeSchool={activeSchool} notify={notify} isMobile={isMobile} />}
+              {page==="reports"   && <ReportsPage  transactions={schoolTxs} activeSchool={activeSchool} notify={notify} isMobile={isMobile} />}
               {page==="limits"    && <LimitsPage   limits={limits} setLimits={setLimits} activeSchool={activeSchool} canEdit={canEdit} notify={notify} />}
               {page==="schools"  && isAdmin && <SchoolsPage  schools={schools}  setSchools={setSchools}   notify={notify} />}
               {page==="users"    && isAdmin && <UsersPage    users={users}      setUsers={setUsers}       schools={schools} notify={notify} currentUser={currentUser} />}
               {page==="settings" && isAdmin && <SettingsPage settings={settings} setSettings={setSettings} notify={notify} currentUser={currentUser} setUsers={setUsers} users={users} />}
             </div>
           </div>
+
+          {/* ── BOTTOM NAV (mobile only) ─────────────────────── */}
+          {isMobile && (
+            <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#0f172a", borderTop:"1px solid rgba(255,255,255,.1)", display:"flex", zIndex:200, paddingBottom:"env(safe-area-inset-bottom)" }}>
+              {navItems.slice(0, 5).map(item => (
+                <button key={item.id} onClick={() => setPage(item.id)}
+                  style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"10px 4px 8px", background:"transparent", border:"none", cursor:"pointer", color: page===item.id ? "#2ecc71" : "#64748b", gap:3 }}>
+                  <span style={{ fontSize:20 }}>{item.icon}</span>
+                  <span style={{ fontSize:9, fontWeight: page===item.id ? 800 : 400, whiteSpace:"nowrap" }}>{item.label}</span>
+                  {page===item.id && <div style={{ width:16, height:2, background:"#2ecc71", borderRadius:2 }} />}
+                </button>
+              ))}
+              {/* More button for extra pages */}
+              <button onClick={() => setPage(navItems[5]?.id || "limits")}
+                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"10px 4px 8px", background:"transparent", border:"none", cursor:"pointer", color: !navItems.slice(0,5).find(n=>n.id===page) ? "#2ecc71" : "#64748b", gap:3 }}>
+                <span style={{ fontSize:20 }}>⋯</span>
+                <span style={{ fontSize:9, fontWeight:400 }}>Dheeraad</span>
+                {!navItems.slice(0,5).find(n=>n.id===page) && <div style={{ width:16, height:2, background:"#2ecc71", borderRadius:2 }} />}
+              </button>
+            </div>
+          )}
         </div>
       );
     }
@@ -349,7 +382,7 @@
     // ══════════════════════════════════════════════════════════
     //  DASHBOARD
     // ══════════════════════════════════════════════════════════
-    function DashboardPage({ schools, transactions, activeSchool, totalIncome, totalExpense, balance, setPage, limits }) {
+    function DashboardPage({ schools, transactions, activeSchool, totalIncome, totalExpense, balance, setPage, limits, isMobile }) {
 
       // Current month filter
       const nowMonth = new Date().toISOString().substring(0,7); // "2026-05"
@@ -464,7 +497,7 @@
           </div>
 
           {/* ── Agg Cards ────────────────────────────────── */}
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:14, marginBottom:20 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap:14, marginBottom:20 }}>
             {aggCards.map((c,i) => (
               <div key={i} style={{ background:c.bg, borderRadius:14, padding:"18px 20px", border:`1px solid ${c.color}22` }}>
                 <div style={{ fontSize:28, marginBottom:6 }}>{c.icon}</div>
@@ -475,7 +508,7 @@
           </div>
 
           {/* ── Chart + Per-school table ──────────────────── */}
-          <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr" : "2fr 1fr", gap:16 }}>
 
             {/* Chart */}
             <div style={{ background:"#fff", borderRadius:14, padding:22, border:"1px solid #e5e7eb" }}>
@@ -573,7 +606,7 @@
     // ══════════════════════════════════════════════════════════
     //  TRANSACTIONS
     // ══════════════════════════════════════════════════════════
-    function TxPage({ type, transactions, setTransactions, activeSchool, canEdit, cats, notify, limits }) {
+    function TxPage({ type, transactions, setTransactions, activeSchool, canEdit, cats, notify, limits, isMobile }) {
       const [showForm, setShowForm] = useState(false);
       const [editId,   setEditId]   = useState(null);
       const [form,     setForm]     = useState({ date:todayS(), category:cats[0], amount:"", description:"", ref:"" });
@@ -633,7 +666,7 @@
           {showForm && canEdit && (
             <div style={{ background:"#fff", borderRadius:14, padding:22, marginBottom:18, border:`2px solid ${accent}22` }}>
               <h3 style={{ marginBottom:16, color:accent, fontSize:15 }}>{editId ? "✏️ Wax Ka Beddel" : isIncome ? "💰 Dakhli Cusub" : "💸 Kharash Cusub"}</h3>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+              <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr 1fr 1fr", gap:12 }}>
                 {[["date","Taariikhda","date"],["amount","Xaddiga (SOS)","number"],["ref","Tixraaca / Ref","text"]].map(([k,l,t]) => (
                   <div key={k}>
                     <label style={{ fontSize:12, fontWeight:700, color:"#374151", display:"block", marginBottom:5 }}>{l}</label>
