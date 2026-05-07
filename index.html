@@ -121,27 +121,51 @@
       const [settings,     setSettingsRaw] = useState(() => load("edu_settings",     { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }));
       const [fbLoaded,     setFbLoaded]    = useState(false);
 
-      // ── Firebase real-time sync ────────────────────────────
+      // ── Firebase real-time sync + migration ───────────────
       useEffect(() => {
         const setupListeners = () => {
           if (!window._fbDb) return;
-          const paths = [
-            ["app/schools",      v => { setSchoolsRaw(v);  localStorage.setItem("edu_schools",      JSON.stringify(v)); }, INITIAL_SCHOOLS],
-            ["app/users",        v => { setUsersRaw(v);    localStorage.setItem("edu_users",        JSON.stringify(v)); }, INITIAL_USERS],
-            ["app/transactions", v => { setTxRaw(v);       localStorage.setItem("edu_transactions", JSON.stringify(v)); }, []],
-            ["app/limits",       v => { setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }, {}],
-            ["app/settings",     v => { setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }, { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
-          ];
-          const unsubs = paths.map(([path, setter, def]) => {
-            const r = window._fbRef(window._fbDb, path);
-            return window._fbOnValue(r, snap => {
-              setter(snap.exists() ? snap.val() : def);
-              setFbLoaded(true);
-            }, () => setFbLoaded(true));
+
+          // Migration: haddii Firebase empty yahay, localStorage xogta u dir
+          const migrateToFirebase = async () => {
+            const snap = await window._fbGet(window._fbRef(window._fbDb, "app"));
+            if (!snap.exists()) {
+              // Firebase empty — localStorage xogta u guri
+              const migrations = [
+                ["app/schools",      "edu_schools",      INITIAL_SCHOOLS],
+                ["app/users",        "edu_users",        INITIAL_USERS],
+                ["app/transactions", "edu_transactions", []],
+                ["app/limits",       "edu_limits",       {}],
+                ["app/settings",     "edu_settings",     { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
+              ];
+              for (const [fbPath, lsKey, def] of migrations) {
+                const lsVal = load(lsKey, def);
+                await window._fbSet(window._fbRef(window._fbDb, fbPath), lsVal).catch(()=>{});
+              }
+              console.log("✅ Migration complete — xogta Firebase la diray");
+            }
+          };
+
+          migrateToFirebase().then(() => {
+            // Real-time listeners
+            const paths = [
+              ["app/schools",      v => { const d = Array.isArray(v)?v:Object.values(v||{}); setSchoolsRaw(d);  localStorage.setItem("edu_schools",      JSON.stringify(d)); }, INITIAL_SCHOOLS],
+              ["app/users",        v => { const d = Array.isArray(v)?v:Object.values(v||{}); setUsersRaw(d);    localStorage.setItem("edu_users",        JSON.stringify(d)); }, INITIAL_USERS],
+              ["app/transactions", v => { const d = Array.isArray(v)?v:Object.values(v||{}); setTxRaw(d);       localStorage.setItem("edu_transactions", JSON.stringify(d)); }, []],
+              ["app/limits",       v => {                                                     setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }, {}],
+              ["app/settings",     v => {                                                     setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }, { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
+            ];
+            paths.forEach(([path, setter, def]) => {
+              const r = window._fbRef(window._fbDb, path);
+              window._fbOnValue(r, snap => {
+                setter(snap.exists() ? snap.val() : def);
+                setFbLoaded(true);
+              }, () => setFbLoaded(true));
+            });
           });
-          return () => unsubs.forEach(u => u());
         };
-        if (window._firebaseReady) return setupListeners();
+
+        if (window._firebaseReady) { setupListeners(); return; }
         const handler = () => setupListeners();
         window.addEventListener("firebaseReady", handler, { once: true });
         return () => window.removeEventListener("firebaseReady", handler);
@@ -149,7 +173,12 @@
 
       const setSchools      = v => { setSchoolsRaw(v);  save("edu_schools",      v); };
       const setUsers        = v => { setUsersRaw(v);    save("edu_users",        v); };
-      const setTransactions = v => { setTxRaw(v);       save("edu_transactions", v); };
+      const setTransactions = v => {
+        // Firebase arrays ku kaydiya sida object — toos u beddel array
+        const arr = Array.isArray(v) ? v : Object.values(v || {});
+        setTxRaw(arr);
+        save("edu_transactions", arr);
+      };
       const setLimits       = v => { setLimitsRaw(v);   save("edu_limits",       v); };
       const setSettings     = v => { setSettingsRaw(v); save("edu_settings",     v); };
 
