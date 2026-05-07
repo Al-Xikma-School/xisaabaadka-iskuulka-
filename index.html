@@ -103,9 +103,14 @@
 
     // ── Firebase + localStorage helpers ──────────────────────
     const fbPath = { edu_schools:"app/schools", edu_users:"app/users", edu_transactions:"app/transactions", edu_limits:"app/limits", edu_settings:"app/settings" };
+    window._fbWriting = window._fbWriting || {};
     const fbSet = (k, v) => {
       if (!window._fbDb) return;
-      window._fbSet(window._fbRef(window._fbDb, fbPath[k]||("app/"+k)), v).catch(err=>console.error("FB write:", err));
+      const path = fbPath[k]||("app/"+k);
+      window._fbWriting[path] = true;
+      window._fbSet(window._fbRef(window._fbDb, path), v)
+        .then(() => { setTimeout(() => { window._fbWriting[path] = false; }, 1500); })
+        .catch(err => { console.error("FB write:", err); window._fbWriting[path] = false; });
     };
     const load = (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } };
     const save = (k, v)   => { try { localStorage.setItem(k, JSON.stringify(v)); fbSet(k, v); } catch {} };
@@ -149,11 +154,11 @@
           migrateToFirebase().then(() => {
             // Real-time listeners
             const paths = [
-              ["app/schools",      v => { const d = Array.isArray(v)?v:Object.values(v||{}); setSchoolsRaw(d);  localStorage.setItem("edu_schools",      JSON.stringify(d)); }, INITIAL_SCHOOLS],
-              ["app/users",        v => { const d = Array.isArray(v)?v:Object.values(v||{}); setUsersRaw(d);    localStorage.setItem("edu_users",        JSON.stringify(d)); }, INITIAL_USERS],
-              ["app/transactions", v => { const d = Array.isArray(v)?v:Object.values(v||{}); setTxRaw(d);       localStorage.setItem("edu_transactions", JSON.stringify(d)); }, []],
-              ["app/limits",       v => {                                                     setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }, {}],
-              ["app/settings",     v => {                                                     setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }, { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
+              ["app/schools",      v => { if(window._fbWriting["app/schools"]) return; const d = Array.isArray(v)?v:Object.values(v||{}); setSchoolsRaw(d);  localStorage.setItem("edu_schools",      JSON.stringify(d)); }, INITIAL_SCHOOLS],
+              ["app/users",        v => { if(window._fbWriting["app/users"]) return; const d = Array.isArray(v)?v:Object.values(v||{}); setUsersRaw(d);    localStorage.setItem("edu_users",        JSON.stringify(d)); }, INITIAL_USERS],
+              ["app/transactions", v => { if(window._fbWriting["app/transactions"]) return; const d = Array.isArray(v)?v:Object.values(v||{}); setTxRaw(d);       localStorage.setItem("edu_transactions", JSON.stringify(d)); }, []],
+              ["app/limits",       v => { if(window._fbWriting["app/limits"]) return;                                                     setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }, {}],
+              ["app/settings",     v => { if(window._fbWriting["app/settings"]) return;                                                   setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }, { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
             ];
             paths.forEach(([path, setter, def]) => {
               const r = window._fbRef(window._fbDb, path);
