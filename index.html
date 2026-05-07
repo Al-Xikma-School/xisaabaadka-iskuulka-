@@ -97,20 +97,17 @@
     };
 
     const genId  = () => Date.now() + Math.random();
-    const fmt    = n => "SOS " + Number(n || 0).toLocaleString();
+    // fmt will be overridden per-component using settings currency
+    const fmtWithCurrency = (n, currency) => (currency || "SOS") + " " + Number(n || 0).toLocaleString();
+    const fmt    = n => fmtWithCurrency(n, window._appCurrency || "SOS");
     const fmtD   = d => d ? new Date(d).toLocaleDateString("so-SO",{year:"numeric",month:"short",day:"numeric"}) : "—";
     const todayS = () => new Date().toISOString().split("T")[0];
 
     // ── Firebase + localStorage helpers ──────────────────────
     const fbPath = { edu_schools:"app/schools", edu_users:"app/users", edu_transactions:"app/transactions", edu_limits:"app/limits", edu_settings:"app/settings" };
-    window._fbWriting = window._fbWriting || {};
     const fbSet = (k, v) => {
       if (!window._fbDb) return;
-      const path = fbPath[k]||("app/"+k);
-      window._fbWriting[path] = true;
-      window._fbSet(window._fbRef(window._fbDb, path), v)
-        .then(() => { setTimeout(() => { window._fbWriting[path] = false; }, 1500); })
-        .catch(err => { console.error("FB write:", err); window._fbWriting[path] = false; });
+      window._fbSet(window._fbRef(window._fbDb, fbPath[k]||("app/"+k)), v).catch(err=>console.error("FB write:", err));
     };
     const load = (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } };
     const save = (k, v)   => { try { localStorage.setItem(k, JSON.stringify(v)); fbSet(k, v); } catch {} };
@@ -154,11 +151,11 @@
           migrateToFirebase().then(() => {
             // Real-time listeners
             const paths = [
-              ["app/schools",      v => { if(window._fbWriting["app/schools"]) return; const d = Array.isArray(v)?v:Object.values(v||{}); setSchoolsRaw(d);  localStorage.setItem("edu_schools",      JSON.stringify(d)); }, INITIAL_SCHOOLS],
-              ["app/users",        v => { if(window._fbWriting["app/users"]) return; const d = Array.isArray(v)?v:Object.values(v||{}); setUsersRaw(d);    localStorage.setItem("edu_users",        JSON.stringify(d)); }, INITIAL_USERS],
-              ["app/transactions", v => { if(window._fbWriting["app/transactions"]) return; const d = Array.isArray(v)?v:Object.values(v||{}); setTxRaw(d);       localStorage.setItem("edu_transactions", JSON.stringify(d)); }, []],
-              ["app/limits",       v => { if(window._fbWriting["app/limits"]) return;                                                     setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }, {}],
-              ["app/settings",     v => { if(window._fbWriting["app/settings"]) return;                                                   setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }, { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
+              ["app/schools",      v => { const d = Array.isArray(v)?v:Object.values(v||{}); setSchoolsRaw(d);  localStorage.setItem("edu_schools",      JSON.stringify(d)); }, INITIAL_SCHOOLS],
+              ["app/users",        v => { const d = Array.isArray(v)?v:Object.values(v||{}); setUsersRaw(d);    localStorage.setItem("edu_users",        JSON.stringify(d)); }, INITIAL_USERS],
+              ["app/transactions", v => { const d = Array.isArray(v)?v:Object.values(v||{}); setTxRaw(d);       localStorage.setItem("edu_transactions", JSON.stringify(d)); }, []],
+              ["app/limits",       v => {                                                     setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }, {}],
+              ["app/settings",     v => {                                                     setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }, { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }],
             ];
             paths.forEach(([path, setter, def]) => {
               const r = window._fbRef(window._fbDb, path);
@@ -185,7 +182,7 @@
         save("edu_transactions", arr);
       };
       const setLimits       = v => { setLimitsRaw(v);   save("edu_limits",       v); };
-      const setSettings     = v => { setSettingsRaw(v); save("edu_settings",     v); };
+      const setSettings     = v => { setSettingsRaw(v); save("edu_settings",     v); window._appCurrency = v?.currency || "SOS"; };
 
       const [currentUser,  setCurrentUser]  = useState(null);
       const [activeSchool, setActiveSchool] = useState(null);
@@ -195,6 +192,9 @@
       const [sidebarOpen,  setSidebarOpen]  = useState(true);
       const [notif,        setNotif]        = useState(null);
       const [isMobile,     setIsMobile]     = useState(() => window.innerWidth < 768);
+
+      // Sync global currency on load
+      useEffect(() => { window._appCurrency = settings?.currency || "SOS"; }, [settings?.currency]);
 
       // Track screen size
       useEffect(() => {
@@ -390,25 +390,52 @@
           </div>
 
           {/* ── BOTTOM NAV (mobile only) ─────────────────────── */}
-          {isMobile && (
-            <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#0f172a", borderTop:"1px solid rgba(255,255,255,.1)", display:"flex", zIndex:200, paddingBottom:"env(safe-area-inset-bottom)" }}>
-              {navItems.slice(0, 5).map(item => (
-                <button key={item.id} onClick={() => setPage(item.id)}
-                  style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"10px 4px 8px", background:"transparent", border:"none", cursor:"pointer", color: page===item.id ? "#2ecc71" : "#64748b", gap:3 }}>
-                  <span style={{ fontSize:20 }}>{item.icon}</span>
-                  <span style={{ fontSize:9, fontWeight: page===item.id ? 800 : 400, whiteSpace:"nowrap" }}>{item.label}</span>
-                  {page===item.id && <div style={{ width:16, height:2, background:"#2ecc71", borderRadius:2 }} />}
-                </button>
-              ))}
-              {/* More button for extra pages */}
-              <button onClick={() => setPage(navItems[5]?.id || "limits")}
-                style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"10px 4px 8px", background:"transparent", border:"none", cursor:"pointer", color: !navItems.slice(0,5).find(n=>n.id===page) ? "#2ecc71" : "#64748b", gap:3 }}>
-                <span style={{ fontSize:20 }}>⋯</span>
-                <span style={{ fontSize:9, fontWeight:400 }}>Dheeraad</span>
-                {!navItems.slice(0,5).find(n=>n.id===page) && <div style={{ width:16, height:2, background:"#2ecc71", borderRadius:2 }} />}
-              </button>
-            </div>
-          )}
+          {isMobile && (() => {
+            const mainItems = navItems.slice(0, 5);
+            const extraItems = navItems.slice(5);
+            const isOnExtra = !mainItems.find(n => n.id === page);
+            const [showMoreMenu, setShowMoreMenu] = React.useState(false);
+            return (
+              <>
+                {showMoreMenu && (
+                  <div onClick={() => setShowMoreMenu(false)}
+                    style={{ position:"fixed", inset:0, zIndex:198, background:"rgba(0,0,0,.4)" }}>
+                    <div onClick={e => e.stopPropagation()}
+                      style={{ position:"absolute", bottom:70, left:0, right:0, background:"#1e293b", borderTop:"1px solid rgba(255,255,255,.15)", padding:"12px 8px 8px", borderRadius:"16px 16px 0 0" }}>
+                      <div style={{ textAlign:"center", fontSize:11, color:"#64748b", marginBottom:10, fontWeight:700, textTransform:"uppercase", letterSpacing:1 }}>Dheeraad</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:8 }}>
+                        {extraItems.map(item => (
+                          <button key={item.id} onClick={() => { setPage(item.id); setShowMoreMenu(false); }}
+                            style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"12px 4px", background: page===item.id?"rgba(46,204,113,.18)":"rgba(255,255,255,.05)", border: page===item.id?"1px solid #2ecc71":"1px solid transparent", borderRadius:12, cursor:"pointer", color: page===item.id?"#2ecc71":"#94a3b8", gap:5 }}>
+                            <span style={{ fontSize:24 }}>{item.icon}</span>
+                            <span style={{ fontSize:10, fontWeight: page===item.id?800:400, textAlign:"center" }}>{item.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div style={{ position:"fixed", bottom:0, left:0, right:0, background:"#0f172a", borderTop:"1px solid rgba(255,255,255,.1)", display:"flex", zIndex:200, paddingBottom:"env(safe-area-inset-bottom)" }}>
+                  {mainItems.map(item => (
+                    <button key={item.id} onClick={() => { setPage(item.id); setShowMoreMenu(false); }}
+                      style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"10px 4px 8px", background:"transparent", border:"none", cursor:"pointer", color: page===item.id ? "#2ecc71" : "#64748b", gap:3 }}>
+                      <span style={{ fontSize:20 }}>{item.icon}</span>
+                      <span style={{ fontSize:9, fontWeight: page===item.id ? 800 : 400, whiteSpace:"nowrap" }}>{item.label}</span>
+                      {page===item.id && <div style={{ width:16, height:2, background:"#2ecc71", borderRadius:2 }} />}
+                    </button>
+                  ))}
+                  {extraItems.length > 0 && (
+                    <button onClick={() => setShowMoreMenu(p => !p)}
+                      style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"10px 4px 8px", background:"transparent", border:"none", cursor:"pointer", color: isOnExtra ? "#2ecc71" : "#64748b", gap:3 }}>
+                      <span style={{ fontSize:20 }}>⋯</span>
+                      <span style={{ fontSize:9, fontWeight: isOnExtra ? 800 : 400 }}>Dheeraad</span>
+                      {isOnExtra && <div style={{ width:16, height:2, background:"#2ecc71", borderRadius:2 }} />}
+                    </button>
+                  )}
+                </div>
+              </>
+            );
+          })()}
         </div>
       );
     }
@@ -1251,7 +1278,11 @@
       // Sync form when settings prop changes (e.g. after Firebase loads)
       useEffect(() => { setForm(settings); }, [JSON.stringify(settings)]);
 
-      const handleSaveSettings = () => { setSettings(form); notify("Goobaha waa la kaydiyey ✅"); };
+      const handleSaveSettings = () => {
+        setSettings(form);
+        window._appCurrency = form.currency || "SOS";
+        notify("Goobaha waa la kaydiyey ✅");
+      };
 
       const handleChangePw = () => {
         const u = users.find(x => x.username === pwForm.username);
