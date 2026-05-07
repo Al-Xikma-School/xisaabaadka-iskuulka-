@@ -373,8 +373,8 @@
             {/* Content */}
             <div style={{ flex:1, padding: isMobile ? 14 : 22, overflowY:"auto" }}>
               {page==="dashboard" && <DashboardPage schools={schools} transactions={transactions} activeSchool={activeSchool} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} setPage={setPage} limits={limits} isMobile={isMobile} />}
-              {page==="income"    && <TxPage type="income"  transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={INCOME_CATS}  notify={notify} limits={limits} isMobile={isMobile} />}
-              {page==="expense"   && <TxPage type="expense" transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={EXPENSE_CATS} notify={notify} limits={limits} isMobile={isMobile} />}
+              {page==="income"    && <TxPage type="income"  transactions={schoolTxs} allTransactions={transactions} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={INCOME_CATS}  notify={notify} limits={limits} isMobile={isMobile} />}
+              {page==="expense"   && <TxPage type="expense" transactions={schoolTxs} allTransactions={transactions} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={EXPENSE_CATS} notify={notify} limits={limits} isMobile={isMobile} />}
               {page==="cashbook"  && <CashBookPage transactions={schoolTxs} activeSchool={activeSchool} notify={notify} isMobile={isMobile} />}
               {page==="reports"   && <ReportsPage  transactions={schoolTxs} activeSchool={activeSchool} notify={notify} isMobile={isMobile} />}
               {page==="limits"    && <LimitsPage   limits={limits} setLimits={setLimits} activeSchool={activeSchool} canEdit={canEdit} notify={notify} />}
@@ -635,7 +635,7 @@
     // ══════════════════════════════════════════════════════════
     //  TRANSACTIONS
     // ══════════════════════════════════════════════════════════
-    function TxPage({ type, transactions, setTransactions, activeSchool, canEdit, cats, notify, limits, isMobile }) {
+    function TxPage({ type, transactions, allTransactions, setTransactions, activeSchool, canEdit, cats, notify, limits, isMobile }) {
       const [showForm, setShowForm] = useState(false);
       const [editId,   setEditId]   = useState(null);
       const [form,     setForm]     = useState({ date:todayS(), category:cats[0], amount:"", description:"", ref:"" });
@@ -660,17 +660,19 @@
         if (!form.amount || isNaN(form.amount)) return notify("Xaddiga geli si sax ah","error");
         const entry = { ...form, amount:Number(form.amount), type, schoolId:activeSchool.id };
         if (editId) {
-          setTransactions(prev => prev.map(t => t.id===editId ? { ...t, ...entry } : t));
+          const updated = (allTransactions||[]).map(t => t.id===editId ? { ...t, ...entry } : t);
+          setTransactions(updated);
           notify("Waa la cusbooneysiiyey ✅");
         } else {
-          setTransactions(prev => [...prev, { id:genId(), ...entry, createdAt:new Date().toISOString() }]);
+          const newTx = { id:genId(), ...entry, createdAt:new Date().toISOString() };
+          setTransactions([...(allTransactions||[]), newTx]);
           notify(isIncome ? "Dakhliga waa la geliyey ✅" : "Kharashaadka waa la geliyey ✅");
         }
         resetForm();
       };
 
       const handleEdit   = t => { setForm({ date:t.date, category:t.category, amount:t.amount, description:t.description||"", ref:t.ref||"" }); setEditId(t.id); setShowForm(true); };
-      const handleDelete = id => { if (window.confirm("Sidaad u tirtiraysaa?")) { setTransactions(prev => prev.filter(t => t.id!==id)); notify("Waa la tirtirtay","error"); } };
+      const handleDelete = id => { if (window.confirm("Sidaad u tirtiraysaa?")) { setTransactions((allTransactions||[]).filter(t => t.id!==id)); notify("Waa la tirtirtay","error"); } };
 
       return (
         <div>
