@@ -2,8 +2,30 @@
 <html lang="so">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>EduAccounts Pro · Nidaamka Xisaabta Iskuulka</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a6b3c" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="EduAccounts" />
+  <meta name="application-name" content="EduAccounts Pro" />
+  <meta name="description" content="Nidaamka Xisaabta Iskuulka" />
+
+  <!-- Apple Icons -->
+  <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+  <link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="icons/icon-512.png" />
+
+  <!-- Safe area for notched phones -->
+  <style>
+    body { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+  </style>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f1f5f9; }
@@ -23,14 +45,10 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
   <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-
-  <script type="text/babel">
-    const { useState, useEffect, useRef, useCallback } = React;
-
-    // 🔥 Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyB_ZgWHivBz_Z-_KbNiGrtTGU3R1Dtq7gw",
       authDomain: "alxikma-xisaabaad.firebaseapp.com",
@@ -42,10 +60,20 @@
       measurementId: "G-G4KTN9388C"
     };
 
-    firebase.initializeApp(firebaseConfig);
-    const database = firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db  = getDatabase(app);
 
+    window._fbDb  = db;
+    window._fbRef = ref;
+    window._fbSet = set;
+    window._fbGet = get;
+    window._fbOnValue = onValue;
+    window._firebaseReady = true;
+    window.dispatchEvent(new Event("firebaseReady"));
+  </script>
 
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
 
     // ── Data ──────────────────────────────────────────────────
     const INITIAL_SCHOOLS = [
@@ -73,9 +101,14 @@
     const fmtD   = d => d ? new Date(d).toLocaleDateString("so-SO",{year:"numeric",month:"short",day:"numeric"}) : "—";
     const todayS = () => new Date().toISOString().split("T")[0];
 
-    // ── localStorage helpers ──────────────────────────────────
+    // ── Firebase + localStorage helpers ──────────────────────
+    const fbPath = { edu_schools:"app/schools", edu_users:"app/users", edu_transactions:"app/transactions", edu_limits:"app/limits", edu_settings:"app/settings" };
+    const fbSet = (k, v) => {
+      if (!window._fbDb) return;
+      window._fbSet(window._fbRef(window._fbDb, fbPath[k]||("app/"+k)), v).catch(err=>console.error("FB write:", err));
+    };
     const load = (k, def) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch { return def; } };
-    const save = (k, v)   => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+    const save = (k, v)   => { try { localStorage.setItem(k, JSON.stringify(v)); fbSet(k, v); } catch {} };
 
     // ══════════════════════════════════════════════════════════
     //  ROOT APP
@@ -85,14 +118,33 @@
       const [users,        setUsersRaw]    = useState(() => load("edu_users",        INITIAL_USERS));
       const [transactions, setTxRaw]       = useState(() => load("edu_transactions", []));
       const [limits,       setLimitsRaw]   = useState(() => load("edu_limits",       {}));
-      const [settings,     setSettingsRaw] = useState(() => load("edu_settings",     { 
-        currency:"SOS", 
-        language:"Somali", 
-        fiscalYear:"2024", 
-        orgName:"Hay'adda Xisaabta",
-        incomeCategories:["Kharashka Dugsi","Deeqda Dowladda","Kaalmada Shirkadaha","Lacagaha Imtixaanka","Lacag Kale"],
-        expenseCategories:["Mushahar Macallimiinta","Biyo & Korontada","Alaabta Dugsiga","Dayactirka","Gaadiidka","Kharash Kale"]
-      }));
+      const [settings,     setSettingsRaw] = useState(() => load("edu_settings",     { currency:"SOS", language:"Somali", fiscalYear:"2024", orgName:"Hay'adda Xisaabta" }));
+      const [fbLoaded,     setFbLoaded]    = useState(false);
+
+      // ── Load from Firebase on startup ──────────────────────
+      useEffect(() => {
+        const doLoad = async () => {
+          if (!window._fbDb) return;
+          try {
+            const [sc, us, tx, lm, st] = await Promise.all([
+              window._fbGet(window._fbRef(window._fbDb, "app/schools")),
+              window._fbGet(window._fbRef(window._fbDb, "app/users")),
+              window._fbGet(window._fbRef(window._fbDb, "app/transactions")),
+              window._fbGet(window._fbRef(window._fbDb, "app/limits")),
+              window._fbGet(window._fbRef(window._fbDb, "app/settings")),
+            ]);
+            if (sc.exists())  { const v = sc.val();  setSchoolsRaw(v);  localStorage.setItem("edu_schools",      JSON.stringify(v)); }
+            if (us.exists())  { const v = us.val();  setUsersRaw(v);    localStorage.setItem("edu_users",        JSON.stringify(v)); }
+            if (tx.exists())  { const v = tx.val();  setTxRaw(v);       localStorage.setItem("edu_transactions", JSON.stringify(v)); }
+            if (lm.exists())  { const v = lm.val();  setLimitsRaw(v);   localStorage.setItem("edu_limits",       JSON.stringify(v)); }
+            if (st.exists())  { const v = st.val();  setSettingsRaw(v); localStorage.setItem("edu_settings",     JSON.stringify(v)); }
+            setFbLoaded(true);
+          } catch(e) { console.error("FB load:", e); setFbLoaded(true); }
+        };
+        if (window._firebaseReady) { doLoad(); }
+        else { window.addEventListener("firebaseReady", doLoad, { once: true }); }
+        return () => window.removeEventListener("firebaseReady", doLoad);
+      }, []);
 
       const setSchools      = v => { setSchoolsRaw(v);  save("edu_schools",      v); };
       const setUsers        = v => { setUsersRaw(v);    save("edu_users",        v); };
@@ -107,17 +159,6 @@
       const [loginError,   setLoginError]   = useState("");
       const [sidebarOpen,  setSidebarOpen]  = useState(true);
       const [notif,        setNotif]        = useState(null);
-
-      // 🔥 Firebase Sync
-      useEffect(() => {
-        database.ref("edu_settings").once("value").then(snapshot => {
-          const data = snapshot.val();
-          if (data) {
-            setSettingsRaw(data);
-          }
-        });
-      }, []);
-
 
       const notify = (msg, type="success") => {
         setNotif({ msg, type });
@@ -144,11 +185,18 @@
       const totalExpense = schoolTxs.filter(t => t.type === "expense").reduce((a,b) => a + Number(b.amount), 0);
       const balance = totalIncome - totalExpense;
 
-      useEffect(() => {
-        document.documentElement.lang = settings.language || "so";
-        document.title = settings.orgName || "EduAccounts Pro";
-      }, [settings]);
-
+      // ── LOADING (Firebase) ────────────────────────────────
+      if (!fbLoaded && !load("edu_settings", null)) {
+        return (
+          <div style={{ minHeight:"100vh", background:"linear-gradient(135deg,#0f2027,#203a43,#2c5364)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            <div style={{ textAlign:"center", color:"#fff" }}>
+              <div style={{ fontSize:56, marginBottom:20 }}>🔥</div>
+              <div style={{ fontSize:18, fontWeight:800, marginBottom:8 }}>Firebase la xidhayaa...</div>
+              <div style={{ fontSize:13, color:"#94a3b8" }}>Fadlan sug xogtaada waa la soo rarayo</div>
+            </div>
+          </div>
+        );
+      }
 
       // ── LOGIN ──────────────────────────────────────────────
       if (!currentUser) {
@@ -174,7 +222,9 @@
                 style={{ width:"100%", padding:"13px", background:"linear-gradient(135deg,#1a6b3c,#2ecc71)", color:"#fff", border:"none", borderRadius:10, fontSize:16, fontWeight:800, cursor:"pointer", marginTop:6 }}>
                 Gal Nidaamka →
               </button>
-              
+              <div style={{ marginTop:18, padding:"12px 14px", background:"#f0fdf4", borderRadius:10, fontSize:12, color:"#166534", lineHeight:1.8 }}>
+                <strong>Admin:</strong> admin / admin123 &nbsp;|&nbsp; <strong>Editor:</strong> xasan / pass123
+              </div>
             </div>
           </div>
         );
@@ -272,13 +322,18 @@
               <span style={{ padding:"5px 14px", background: balance>=0?"#f0fdf4":"#fef2f2", color: balance>=0?"#166534":"#991b1b", borderRadius:20, fontSize:12, fontWeight:800 }}>
                 {balance>=0?"✅":"⚠️"} {fmt(balance)}
               </span>
+              {/* PWA Install button */}
+              <button id="pwa-install-btn" onClick={() => window._installPWA && window._installPWA()}
+                style={{ display:"none", alignItems:"center", gap:6, padding:"7px 14px", background:"linear-gradient(135deg,#1a6b3c,#2ecc71)", color:"#fff", border:"none", borderRadius:20, cursor:"pointer", fontSize:12, fontWeight:800, whiteSpace:"nowrap" }}>
+                📲 App Ku Rakib
+              </button>
             </div>
 
             {/* Content */}
             <div style={{ flex:1, padding:22, overflowY:"auto" }}>
               {page==="dashboard" && <DashboardPage schools={schools} transactions={transactions} activeSchool={activeSchool} totalIncome={totalIncome} totalExpense={totalExpense} balance={balance} setPage={setPage} limits={limits} />}
-              {page==="income"    && <TxPage type="income"  transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={settings.incomeCategories || INCOME_CATS}  notify={notify} limits={limits} />}
-              {page==="expense"   && <TxPage type="expense" transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={settings.expenseCategories || EXPENSE_CATS} notify={notify} limits={limits} />}
+              {page==="income"    && <TxPage type="income"  transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={INCOME_CATS}  notify={notify} limits={limits} />}
+              {page==="expense"   && <TxPage type="expense" transactions={schoolTxs} setTransactions={setTransactions} activeSchool={activeSchool} canEdit={canEdit} cats={EXPENSE_CATS} notify={notify} limits={limits} />}
               {page==="cashbook"  && <CashBookPage transactions={schoolTxs} activeSchool={activeSchool} notify={notify} />}
               {page==="reports"   && <ReportsPage  transactions={schoolTxs} activeSchool={activeSchool} notify={notify} />}
               {page==="limits"    && <LimitsPage   limits={limits} setLimits={setLimits} activeSchool={activeSchool} canEdit={canEdit} notify={notify} />}
@@ -1122,26 +1177,12 @@
     // ══════════════════════════════════════════════════════════
     function SettingsPage({ settings, setSettings, notify, currentUser, setUsers, users }) {
       const [form,   setForm]   = useState(settings);
-
-      useEffect(() => {
-        setForm(settings);
-      }, [settings]);
       const [pwForm, setPwForm] = useState({ username:"", oldPw:"", newPw:"", confirmPw:"" });
 
-      const handleSaveSettings = () => {
-        try {
-          setSettings(form);
-          localStorage.setItem("edu_settings", JSON.stringify(form));
+      // Sync form when settings prop changes (e.g. after Firebase loads)
+      useEffect(() => { setForm(settings); }, [JSON.stringify(settings)]);
 
-          // Firebase save
-          database.ref("edu_settings").set(form);
-
-          notify("Goobaha waa la kaydiyey ✅");
-        } catch(err) {
-          console.error(err);
-          notify("Settings save error","error");
-        }
-      };
+      const handleSaveSettings = () => { setSettings(form); notify("Goobaha waa la kaydiyey ✅"); };
 
       const handleChangePw = () => {
         const u = users.find(x => x.username === pwForm.username);
@@ -1157,6 +1198,12 @@
       const clearData = () => {
         if (!window.confirm("Xogta oo dhan tirtir? Tani ma soo noqon karto!")) return;
         localStorage.clear();
+        // Tirtir Firebase xogta
+        if (window._fbDb) {
+          ["app/schools","app/users","app/transactions","app/limits","app/settings"].forEach(p => {
+            window._fbSet(window._fbRef(window._fbDb, p), null).catch(()=>{});
+          });
+        }
         window.location.reload();
       };
 
@@ -1209,11 +1256,11 @@
               <div style={{ width:56, height:56, background:"linear-gradient(135deg,#1a6b3c,#2ecc71)", borderRadius:14, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28 }}>📚</div>
               <div>
                 <h2 style={{ margin:0, color:"#fff", fontWeight:900 }}>EduAccounts Pro</h2>
-                <p style={{ margin:"4px 0 0", color:"#64748b", fontSize:13 }}>Nidaamka Xisaabta Iskuulka · localStorage Edition · v1.0</p>
+                <p style={{ margin:"4px 0 0", color:"#64748b", fontSize:13 }}>Nidaamka Xisaabta Iskuulka · Firebase Edition · v2.0</p>
               </div>
               <div style={{ marginLeft:"auto", textAlign:"right" }}>
-                <div style={{ color:"#2ecc71", fontWeight:700, fontSize:13 }}>💾 localStorage</div>
-                <div style={{ color:"#64748b", fontSize:12 }}>Xogtu browser-ka ku jirto</div>
+                <div style={{ color:"#f59e0b", fontWeight:700, fontSize:13 }}>🔥 Firebase</div>
+                <div style={{ color:"#64748b", fontSize:12 }}>Xogtu cloud-ka ku jirto</div>
               </div>
             </div>
             <div style={{ background:"rgba(239,68,68,.1)", border:"1px solid rgba(239,68,68,.3)", borderRadius:10, padding:"14px 18px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -1231,6 +1278,34 @@
     // ── Render ────────────────────────────────────────────────
     const root = ReactDOM.createRoot(document.getElementById("root"));
     root.render(<App />);
+  </script>
+  <!-- PWA Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(reg => console.log('SW registered:', reg.scope))
+          .catch(err => console.log('SW error:', err));
+      });
+    }
+    let deferredPrompt;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.getElementById('pwa-install-btn');
+      if (btn) btn.style.display = 'flex';
+    });
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      const btn = document.getElementById('pwa-install-btn');
+      if (btn) btn.style.display = 'none';
+    });
+    window._installPWA = async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+    };
   </script>
 </body>
 </html>
