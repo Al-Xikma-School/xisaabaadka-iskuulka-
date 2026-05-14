@@ -1,39 +1,807 @@
 <!DOCTYPE html>
-<html>
+<html lang="so">
 <head>
-  <title>User App</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AL-XIKMA — Nidaamka Xisaab Xirka</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+    #root { height: 100vh; }
+  </style>
 </head>
 <body>
+  <div id="root"></div>
 
-<h2>User Form</h2>
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-<input id="name" placeholder="Name">
-<input id="email" placeholder="Email">
-<button onclick="saveData()">Save</button>
+  <!-- Recharts -->
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, set, get, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-<script>
-const supabaseUrl = "https://wpeffyylavcxifcgwxyr.supabase.co";
-const supabaseKey = "sb_publishable_e5JVnUsWJTHcvep4lbM_LA_Lg8pWND2";
+    const firebaseConfig = {
+      apiKey: "AIzaSyB_ZgWHivBz_Z-_KbNiGrtTGU3R1Dtq7gw",
+      authDomain: "alxikma-xisaabaad.firebaseapp.com",
+      databaseURL: "https://alxikma-xisaabaad-default-rtdb.firebaseio.com",
+      projectId: "alxikma-xisaabaad",
+      storageBucket: "alxikma-xisaabaad.firebasestorage.app",
+      messagingSenderId: "842183507563",
+      appId: "1:842183507563:web:f197771bb6924a7ae07b2e",
+      measurementId: "G-G4KTN9388C"
+    };
 
-const client = supabase.createClient(supabaseUrl, supabaseKey);
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-async function saveData() {
-  const name = document.getElementById("name").value;
-  const email = document.getElementById("email").value;
+    window._fbDb = db;
+    window._fbRef = ref;
+    window._fbSet = set;
+    window._fbGet = get;
+    window._fbOnValue = onValue;
+    window._fbReady = true;
+    window.dispatchEvent(new Event("firebase-ready"));
+  </script>
 
-  const { data, error } = await client
-    .from("users") // ❗ hubi magaca table-ka
-    .insert([{ al xikma xisaab, farxaan109@gmail.com }]);
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const {
+      BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
+      PieChart, Pie, Cell, ResponsiveContainer
+    } = Recharts;
 
-  if (error) {
-    alert("Error: " + error.message);
-  } else {
-    alert("Waa la keydiyay!");
-  }
-}
-</script>
+    // ── Firebase helpers (via globals injected by module script) ──
+    const fbKey = (bisha) => `xisaab_${bisha.replace(/[^a-zA-Z0-9]/g,"_")}`;
 
+    const saveToFirebase = async (bisha, data) => {
+      try {
+        const db = window._fbDb, ref = window._fbRef, set = window._fbSet;
+        if (!db) return;
+        await set(ref(db, fbKey(bisha)), data);
+      } catch(e) { console.warn("Firebase save error:", e); }
+    };
+
+    const loadFromFirebase = async (bisha) => {
+      try {
+        const db = window._fbDb, ref = window._fbRef, get = window._fbGet;
+        if (!db) return null;
+        const snap = await get(ref(db, fbKey(bisha)));
+        return snap.exists() ? snap.val() : null;
+      } catch(e) { console.warn("Firebase load error:", e); return null; }
+    };
+
+    // ── Constants ──
+    const USERS = {
+      maamul: { password:"maamul@2024", role:"maamul", label:"Maamulka" },
+      sare:   { password:"sare@2024",   role:"sare",   label:"Dugsiga Sare" },
+      dhexe:  { password:"dhexe@2024",  role:"dhexe",  label:"Dugsiga Dhexe" },
+      hoose1: { password:"hoose1@2024", role:"hoose1", label:"Hoose 1" },
+      hoose2: { password:"hoose2@2024", role:"hoose2", label:"Hoose 2" },
+    };
+
+    const FARAC_COLORS = { sare:"#0d6e4f", dhexe:"#7b3f00", hoose1:"#4a1a6b", hoose2:"#8b1a2a" };
+    const FARAC_LABELS = { sare:"Dugsiga Sare", dhexe:"Dugsiga Dhexe", hoose1:"Hoose 1", hoose2:"Hoose 2" };
+    const BILAHA = ["Janaayo","Febraayo","Maarso","Abriil","May","Juun","Luuliyo","Ogosto","Sebtembar","Oktoobar","Noofembar","Disembar"];
+    const BISHA_KEY = "alxikma_bisha";
+
+    const DEFAULT_FASALADA = {
+      sare:   ["Level One","Level Two"],
+      dhexe:  ["1aad","2aad","3aad"],
+      hoose1: ["Fasalka 1","Fasalka 2","Fasalka 3"],
+      hoose2: ["Fasalka 4","Fasalka 5","Basaska"],
+    };
+
+    const emptyFasal = (name) => ({ magaca:name, tiradaBixisay:0, qiimaha:13, lacagtaSooHormartay:0, previewPayment:0, tiradaAanBixin:0, lacagtaAanBixin:0, scholarship:0, freeStudents:0 });
+
+    const buildInitFarac = () => {
+      const d = {};
+      Object.keys(DEFAULT_FASALADA).forEach((farac) => {
+        d[farac] = { fasalada: DEFAULT_FASALADA[farac].map(emptyFasal), kharash:{ maamulka:0, macalimiinta:0, shaqaalaha:0, canshuurta:0, dareewalada:0, kharashDugsiga:0 }, discount:0, lacagKhususi:0, submitted:false, savedAt:null };
+      });
+      return d;
+    };
+
+    const calcFarac = (fd) => {
+      let totalBixisay=0,totalLacag=0,totalHormartay=0,totalPreview=0,totalAanBixin=0,totalLacagAanBixin=0,totalScholarship=0,totalFree=0;
+      fd.fasalada.forEach((f) => {
+        totalBixisay    += +f.tiradaBixisay;
+        totalLacag      += +f.tiradaBixisay * +f.qiimaha;
+        totalHormartay  += +f.lacagtaSooHormartay;
+        totalPreview    += +f.previewPayment;
+        totalAanBixin   += +f.tiradaAanBixin;
+        totalLacagAanBixin += +f.lacagtaAanBixin;
+        totalScholarship+= +f.scholarship;
+        totalFree       += +f.freeStudents;
+      });
+      const kharashWadar = Object.values(fd.kharash).reduce((a,b)=>a+(+b),0);
+      const xarooday = totalLacag + totalHormartay + totalPreview;
+      const saafi = xarooday - (+fd.discount) - (+fd.lacagKhususi);
+      const totalArdayda = totalBixisay + totalAanBixin + totalScholarship + totalFree;
+      return { totalBixisay, totalLacag, totalHormartay, totalPreview, totalAanBixin, totalLacagAanBixin, totalScholarship, totalFree, kharashWadar, xarooday, saafi, totalArdayda };
+    };
+
+    const PIE_COLORS = ["#0d6e4f","#1565c0","#7b3f00","#8b1a2a"];
+    const TH = { padding:"9px 8px", textAlign:"center", fontWeight:600, color:"#555", fontSize:12, borderBottom:"2px solid #e0e0e0", whiteSpace:"nowrap" };
+    const TD = { padding:"7px 7px", textAlign:"center", color:"#333" };
+
+    // ── Small components ──
+    function ArdaydaChart({ fasalada }) {
+      const data = fasalada.map(f => ({ name:f.magaca, "Bixisay":+f.tiradaBixisay, "Aan Bixin":+f.tiradaAanBixin, "Scholarship":+f.scholarship, "Free":+f.freeStudents }));
+      return (
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={data} margin={{top:4,right:8,left:-10,bottom:0}}>
+            <XAxis dataKey="name" tick={{fontSize:10}} />
+            <YAxis tick={{fontSize:10}} />
+            <Tooltip />
+            <Legend iconSize={9} wrapperStyle={{fontSize:11}} />
+            <Bar dataKey="Bixisay" fill="#0d6e4f" radius={[3,3,0,0]} />
+            <Bar dataKey="Aan Bixin" fill="#c62828" radius={[3,3,0,0]} />
+            <Bar dataKey="Scholarship" fill="#1565c0" radius={[3,3,0,0]} />
+            <Bar dataKey="Free" fill="#e65100" radius={[3,3,0,0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    function LacagChart({ fasalada }) {
+      const data = fasalada.map(f => ({ name:f.magaca, Lacag: +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment }));
+      return (
+        <ResponsiveContainer width="100%" height={200}>
+          <BarChart data={data} margin={{top:4,right:8,left:0,bottom:0}}>
+            <XAxis dataKey="name" tick={{fontSize:10}} />
+            <YAxis tick={{fontSize:10}} tickFormatter={v=>`$${v}`} />
+            <Tooltip formatter={v=>`$${v.toLocaleString()}`} />
+            <Bar dataKey="Lacag" fill="#1a3a5c" radius={[4,4,0,0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    function PieFarac({ calc }) {
+      const data = [
+        { name:"Bixisay", value:calc.totalBixisay },
+        { name:"Aan Bixin", value:calc.totalAanBixin },
+        { name:"Scholarship", value:calc.totalScholarship },
+        { name:"Free", value:calc.totalFree }
+      ].filter(d=>d.value>0);
+      if (!data.length) return <div style={{textAlign:"center",color:"#aaa",padding:30,fontSize:13}}>Xog ma jirto</div>;
+      return (
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie data={data} cx="50%" cy="50%" outerRadius={72} dataKey="value"
+              label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`}
+              labelLine={false} style={{fontSize:10}}>
+              {data.map((_,i)=><Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]} />)}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    function StatCard({ label, value, icon, color, small }) {
+      return (
+        <div style={{background:"#fff",borderRadius:10,padding:small?11:20,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderLeft:`4px solid ${color}`}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+            <div>
+              <div style={{color:"#888",fontSize:10,marginBottom:3}}>{label}</div>
+              <div style={{color,fontWeight:700,fontSize:small?15:22}}>{value}</div>
+            </div>
+            <span style={{fontSize:small?17:24}}>{icon}</span>
+          </div>
+        </div>
+      );
+    }
+
+    function MiniStat({ label, value }) {
+      return (
+        <div style={{background:"#f8f9fa",borderRadius:6,padding:"7px 10px"}}>
+          <div style={{color:"#888",fontSize:11}}>{label}</div>
+          <div style={{fontWeight:600,color:"#333",fontSize:13}}>{value}</div>
+        </div>
+      );
+    }
+
+    function Row({ label, value, color }) {
+      return (
+        <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
+          <span style={{color:"#555",fontSize:13}}>{label}</span>
+          <span style={{fontWeight:600,color:color||"#333",fontSize:13}}>{value}</span>
+        </div>
+      );
+    }
+
+    // ── Main App ──
+    function App() {
+      const [fbReady, setFbReady] = useState(!!window._fbReady);
+      const [user, setUser]           = useState(null);
+      const [loginUser, setLoginUser] = useState("");
+      const [loginPass, setLoginPass] = useState("");
+      const [loginErr, setLoginErr]   = useState("");
+      const [showPwd, setShowPwd]     = useState(false);
+
+      const [bisha, setBisha] = useState(() => localStorage.getItem(BISHA_KEY) || BILAHA[new Date().getMonth()]);
+      const [data, setData]   = useState(buildInitFarac);
+      const [fbLoading, setFbLoading] = useState(true);
+      const saveTimer = useRef(null);
+
+      const [activeFarac, setActiveFarac] = useState(null);
+      const [activeTab, setActiveTab] = useState("xisaab");
+      const [toast, setToast]         = useState(null);
+      const [confirmModal, setConfirmModal] = useState(null);
+      const [newFasalName, setNewFasalName] = useState("");
+      const [newFasalFarac, setNewFasalFarac] = useState("sare");
+
+      // Wait for Firebase to be ready
+      useEffect(() => {
+        if (window._fbReady) { setFbReady(true); return; }
+        const handler = () => setFbReady(true);
+        window.addEventListener("firebase-ready", handler);
+        return () => window.removeEventListener("firebase-ready", handler);
+      }, []);
+
+      // Load from Firebase when bisha changes
+      useEffect(() => {
+        if (!fbReady) return;
+        setFbLoading(true);
+        loadFromFirebase(bisha).then((fbData) => {
+          setData(fbData || buildInitFarac());
+          setFbLoading(false);
+        });
+        // Real-time listener
+        const db = window._fbDb, ref = window._fbRef, onValue = window._fbOnValue;
+        if (!db) { setFbLoading(false); return; }
+        const unsub = onValue(ref(db, fbKey(bisha)), (snap) => {
+          if (snap.exists()) setData(snap.val());
+        });
+        return () => unsub();
+      }, [bisha, fbReady]);
+
+      // Auto-save (debounced 1.5s)
+      useEffect(() => {
+        if (fbLoading) return;
+        if (saveTimer.current) clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => {
+          saveToFirebase(bisha, data);
+        }, 1500);
+        return () => clearTimeout(saveTimer.current);
+      }, [data, bisha, fbLoading]);
+
+      const handleBishaChange = (newBisha) => {
+        saveToFirebase(bisha, data);
+        setBisha(newBisha);
+        localStorage.setItem(BISHA_KEY, newBisha);
+      };
+
+      const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
+
+      const handleLogin = () => {
+        const u = USERS[loginUser.toLowerCase()];
+        if (u && u.password === loginPass) {
+          setUser({ username:loginUser.toLowerCase(), ...u });
+          setLoginErr("");
+          setActiveFarac(u.role !== "maamul" ? u.role : "sare");
+          setActiveTab("xisaab");
+        } else setLoginErr("Magaca ama sirta waa khalad.");
+      };
+
+      const canEdit = (faracKey) => !data[faracKey]?.submitted || user?.role === "maamul";
+
+      const updateFasal = (faracKey, idx, field, val) => {
+        if (!canEdit(faracKey)) return;
+        setData(prev => { const f=[...prev[faracKey].fasalada]; f[idx]={...f[idx],[field]:val}; return {...prev,[faracKey]:{...prev[faracKey],fasalada:f}}; });
+      };
+      const updateKharash = (faracKey, field, val) => {
+        if (!canEdit(faracKey)) return;
+        setData(prev => ({...prev,[faracKey]:{...prev[faracKey],kharash:{...prev[faracKey].kharash,[field]:val}}}));
+      };
+      const updateMeta = (faracKey, field, val) => {
+        if (!canEdit(faracKey)) return;
+        setData(prev => ({...prev,[faracKey]:{...prev[faracKey],[field]:val}}));
+      };
+
+      const saveDraft = (faracKey) => {
+        setData(prev => ({...prev,[faracKey]:{...prev[faracKey],savedAt:new Date().toISOString()}}));
+        showToast("✅ Xogtu waa la kaydiyey");
+      };
+
+      const submitFarac = (faracKey) => {
+        setData(prev => ({...prev,[faracKey]:{...prev[faracKey],submitted:true,savedAt:new Date().toISOString()}}));
+        setConfirmModal(null);
+        showToast("📤 Xogtu waa la gudbiyey maamulka!","info");
+      };
+
+      const unlockFarac = (faracKey) => { setData(prev=>({...prev,[faracKey]:{...prev[faracKey],submitted:false}})); showToast("🔓 Faracka waa la furiye","info"); };
+
+      const addFasal = () => {
+        if (!newFasalName.trim()) return;
+        setData(prev=>({...prev,[newFasalFarac]:{...prev[newFasalFarac],fasalada:[...prev[newFasalFarac].fasalada,emptyFasal(newFasalName.trim())]}}));
+        showToast(`✅ "${newFasalName}" waa lagu daray ${FARAC_LABELS[newFasalFarac]}`);
+        setNewFasalName("");
+      };
+
+      const removeFasal = (faracKey, idx) => {
+        setData(prev=>({...prev,[faracKey]:{...prev[faracKey],fasalada:prev[faracKey].fasalada.filter((_,i)=>i!==idx)}}));
+        showToast("🗑️ Fasalku waa la tirtirray","warning");
+      };
+
+      const resetFarac = (faracKey) => {
+        setData(prev=>({...prev,[faracKey]:{fasalada:DEFAULT_FASALADA[faracKey].map(emptyFasal),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,submitted:false,savedAt:null}}));
+        setConfirmModal(null);
+        showToast("♻️ Faracka waa la nadiifiyey","warning");
+      };
+
+      // ── LOGIN SCREEN ──
+      if (!user) {
+        return (
+          <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0d2137 100%)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',sans-serif",padding:"16px",boxSizing:"border-box",overflowY:"auto"}}>
+            <div style={{background:"rgba(255,255,255,0.05)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"36px 28px",width:"100%",maxWidth:400,boxShadow:"0 32px 64px rgba(0,0,0,0.4)",boxSizing:"border-box"}}>
+              <div style={{textAlign:"center",marginBottom:28}}>
+                <div style={{width:56,height:56,background:"linear-gradient(135deg,#ffd700,#ff8c00)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:24}}>🏫</div>
+                <h1 style={{color:"#ffd700",fontSize:20,fontWeight:700,margin:0}}>AL-XIKMA SCHOOL</h1>
+                <p style={{color:"rgba(255,255,255,0.5)",fontSize:12,marginTop:6}}>Nidaamka Xisaab Xirka</p>
+                {!fbReady && <p style={{color:"#ff8c00",fontSize:11,marginTop:8}}>⏳ Firebase ku xidanaya...</p>}
+              </div>
+              <div style={{marginBottom:14}}>
+                <label style={{color:"rgba(255,255,255,0.7)",fontSize:13,display:"block",marginBottom:6}}>Magaca Isticmaalaha</label>
+                <input value={loginUser} onChange={e=>setLoginUser(e.target.value)} placeholder="tusaale: sare"
+                  onKeyDown={e=>e.key==="Enter"&&handleLogin()}
+                  style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:10,color:"#fff",fontSize:15,outline:"none",boxSizing:"border-box"}} />
+              </div>
+              <div style={{marginBottom:8}}>
+                <label style={{color:"rgba(255,255,255,0.7)",fontSize:13,display:"block",marginBottom:6}}>Sirta</label>
+                <input type="password" value={loginPass} onChange={e=>setLoginPass(e.target.value)} placeholder="Geli sirta"
+                  onKeyDown={e=>e.key==="Enter"&&handleLogin()}
+                  style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:10,color:"#fff",fontSize:15,outline:"none",boxSizing:"border-box"}} />
+              </div>
+              {loginErr && <p style={{color:"#ff6b6b",fontSize:13,marginBottom:12}}>{loginErr}</p>}
+              <button onClick={handleLogin} style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#ffd700,#ff8c00)",border:"none",borderRadius:10,color:"#1a1a1a",fontWeight:700,fontSize:16,cursor:"pointer",marginTop:8,marginBottom:20}}>Gal →</button>
+              <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",paddingTop:16}}>
+                <button onClick={()=>setShowPwd(!showPwd)} style={{background:"none",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.5)",fontSize:12,borderRadius:6,padding:"6px 12px",cursor:"pointer",width:"100%"}}>
+                  {showPwd?"Qari":"Muuji"} Login-yada
+                </button>
+                {showPwd && (
+                  <div style={{marginTop:12,background:"rgba(0,0,0,0.3)",borderRadius:8,padding:12}}>
+                    {Object.entries(USERS).map(([k,v])=>(
+                      <div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:4,fontSize:12}}>
+                        <span style={{color:"#ffd700"}}>{k}</span>
+                        <span style={{color:"rgba(255,255,255,0.5)"}}>{v.password}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const isMaamul = user.role === "maamul";
+      const faracList = isMaamul ? Object.keys(FARAC_COLORS) : [user.role];
+      const currentFaracData = activeFarac ? data[activeFarac] : null;
+      const calc = currentFaracData ? calcFarac(currentFaracData) : null;
+      const isLocked = currentFaracData?.submitted && !isMaamul;
+      const allStats = Object.keys(FARAC_COLORS).map(k=>({key:k,label:FARAC_LABELS[k],color:FARAC_COLORS[k],submitted:data[k]?.submitted,...calcFarac(data[k])}));
+      const grandTotal = allStats.reduce((acc,s)=>({saafi:acc.saafi+s.saafi,kharashWadar:acc.kharashWadar+s.kharashWadar,totalArdayda:acc.totalArdayda+s.totalArdayda}),{saafi:0,kharashWadar:0,totalArdayda:0});
+      const fieldLabel = { tiradaBixisay:"Tirada Bixisay", qiimaha:"Qiimaha ($)", lacagtaSooHormartay:"Soo Hormartay ($)", previewPayment:"Preview Pay ($)", tiradaAanBixin:"Aan Bixin", lacagtaAanBixin:"Lacag Aan Bixin ($)", scholarship:"Scholarship", freeStudents:"Free Students" };
+      const kharashLabels = { maamulka:"Maamulka", macalimiinta:"Macalimiinta", shaqaalaha:"Shaqaalaha", canshuurta:"Canshuurta", dareewalada:"Dareewalada", kharashDugsiga:"Kharash Dugsiga" };
+      const tabList = [
+        { id:"xisaab", icon:"💰", label:"Xisaab Xirka" },
+        { id:"kharash", icon:"📋", label:"Kharashka" },
+        { id:"charts", icon:"📊", label:"Charts" },
+        ...(isMaamul?[{id:"settings",icon:"⚙️",label:"Settings"}]:[])
+      ];
+
+      return (
+        <div style={{minHeight:"100vh",maxHeight:"100vh",background:"#f0f2f5",fontFamily:"'Segoe UI',sans-serif",position:"relative",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+          <style>{`
+            @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+            @keyframes spin{to{transform:rotate(360deg)}}
+            @media (max-width:768px){
+              .main-layout{flex-direction:column!important;}
+              .sidebar{width:100%!important;height:auto!important;flex-direction:row!important;overflow-x:auto!important;overflow-y:hidden!important;padding:8px!important;display:flex!important;gap:6px!important;flex-shrink:0!important;}
+              .sidebar-farac-btn{white-space:nowrap!important;margin-bottom:0!important;padding:7px 10px!important;font-size:12px!important;}
+              .sidebar-tab-btn{white-space:nowrap!important;padding:6px 10px!important;font-size:11px!important;}
+              .sidebar-section-label{display:none!important;}
+              .sidebar-divider{display:none!important;}
+              .stat-grid-5{grid-template-columns:repeat(2,1fr)!important;}
+              .stat-grid-3{grid-template-columns:repeat(2,1fr)!important;}
+              .chart-grid{grid-template-columns:1fr!important;}
+              .summary-grid{grid-template-columns:1fr!important;}
+              .settings-grid{grid-template-columns:1fr!important;}
+              .header-bisha-label{display:none!important;}
+              .header-divider{display:none!important;}
+              .farac-title h2{font-size:14px!important;}
+              .action-btns{gap:5px!important;}
+              .action-btns button{padding:6px 10px!important;font-size:11px!important;}
+            }
+            @media (max-width:480px){
+              .header{padding:0 10px!important;height:50px!important;}
+              .header-logo-text{display:none!important;}
+              .main-content{padding:10px!important;}
+              .stat-grid-5{grid-template-columns:1fr 1fr!important;}
+              .farac-detail-header{flex-wrap:wrap!important;gap:8px!important;}
+            }
+          `}</style>
+
+          {toast && <div style={{position:"fixed",top:16,right:16,zIndex:9999,background:toast.type==="info"?"#1565c0":toast.type==="warning"?"#e65100":"#0d6e4f",color:"#fff",padding:"12px 20px",borderRadius:10,boxShadow:"0 4px 16px rgba(0,0,0,0.2)",fontSize:14,fontWeight:600,animation:"fadeIn 0.3s",maxWidth:"calc(100vw - 32px)"}}>{toast.msg}</div>}
+
+          {confirmModal && (
+            <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9998,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+              <div style={{background:"#fff",borderRadius:16,padding:28,width:"100%",maxWidth:380,boxShadow:"0 16px 48px rgba(0,0,0,0.3)",boxSizing:"border-box"}}>
+                <h3 style={{margin:"0 0 12px",color:"#1a3a5c"}}>{confirmModal.action==="submit"?"📤 Xogta Gudbi":"♻️ Xog Nadiifi"}</h3>
+                <p style={{color:"#555",fontSize:14,marginBottom:24}}>
+                  {confirmModal.action==="submit"
+                    ? `Ma hubtaa inaad u gudbinayso maamulka xogta ${FARAC_LABELS[confirmModal.farac]}? Kadib ma beddeli kartid.`
+                    : `Ma hubtaa inaad nadiifin lahayd dhammaan xogta ${FARAC_LABELS[confirmModal.farac]}?`}
+                </p>
+                <div style={{display:"flex",gap:12,justifyContent:"flex-end"}}>
+                  <button onClick={()=>setConfirmModal(null)} style={{padding:"10px 20px",border:"1px solid #ddd",borderRadius:8,background:"#f5f5f5",cursor:"pointer",fontSize:14}}>Jooji</button>
+                  <button onClick={()=>confirmModal.action==="submit"?submitFarac(confirmModal.farac):resetFarac(confirmModal.farac)}
+                    style={{padding:"10px 20px",border:"none",borderRadius:8,background:confirmModal.action==="submit"?"#1565c0":"#c62828",color:"#fff",cursor:"pointer",fontSize:14,fontWeight:600}}>
+                    {confirmModal.action==="submit"?"Haa, Gudbi":"Haa, Nadiifi"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* HEADER */}
+          <div className="header" style={{background:"linear-gradient(135deg,#0a1628,#1a3a5c)",padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:58,boxShadow:"0 2px 12px rgba(0,0,0,0.3)",flexShrink:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <span style={{fontSize:20}}>🏫</span>
+              <span style={{color:"#ffd700",fontWeight:700,fontSize:15}}>AL-XIKMA</span>
+              <span className="header-logo-text" style={{color:"rgba(255,255,255,0.4)",fontSize:12,marginLeft:4}}>Nidaamka Xisaab Xirka</span>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span className="header-bisha-label" style={{color:"rgba(255,255,255,0.6)",fontSize:12}}>📅 Bisha:</span>
+              <select value={bisha} onChange={e=>handleBishaChange(e.target.value)} style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",color:"#ffd700",borderRadius:6,padding:"4px 8px",fontSize:12,outline:"none",cursor:"pointer",maxWidth:100}}>
+                {BILAHA.map(b=><option key={b} value={b} style={{background:"#1a3a5c"}}>{b}</option>)}
+              </select>
+              <span className="header-divider" style={{color:"rgba(255,255,255,0.6)",fontSize:12}}>|</span>
+              <span style={{color:"rgba(255,255,255,0.7)",fontSize:12}}>👤 {user.label}</span>
+              <button onClick={()=>setUser(null)} style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",color:"#fff",padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12}}>Bax</button>
+            </div>
+          </div>
+
+          <div className="main-layout" style={{display:"flex",flex:1,overflow:"hidden"}}>
+
+            {/* SIDEBAR */}
+            <div className="sidebar" style={{width:210,background:"#1e2a3a",padding:"16px 10px",overflowY:"auto",flexShrink:0}}>
+              {isMaamul && (
+                <>
+                  <div className="sidebar-section-label" style={{color:"rgba(255,255,255,0.4)",fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:8,padding:"0 6px"}}>Faracyada</div>
+                  {faracList.map(k=>(
+                    <button key={k} className="sidebar-farac-btn" onClick={()=>{setActiveFarac(k);setActiveTab("xisaab");}}
+                      style={{width:"100%",padding:"9px 10px",background:activeFarac===k?FARAC_COLORS[k]:"transparent",border:"none",borderRadius:8,color:"#fff",textAlign:"left",cursor:"pointer",marginBottom:4,fontSize:13,fontWeight:activeFarac===k?600:400,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                      <span style={{display:"flex",alignItems:"center",gap:7}}>
+                        <span style={{width:7,height:7,borderRadius:"50%",background:FARAC_COLORS[k],flexShrink:0}}></span>
+                        {FARAC_LABELS[k]}
+                      </span>
+                      {data[k]?.submitted && <span style={{fontSize:10}}>✅</span>}
+                    </button>
+                  ))}
+                  <div className="sidebar-divider" style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:10,paddingTop:10}}>
+                    <button onClick={()=>{setActiveFarac(null);setActiveTab("guud");}}
+                      style={{width:"100%",padding:"9px 10px",background:activeFarac===null?"#ffd700":"transparent",border:"none",borderRadius:8,color:activeFarac===null?"#1a1a1a":"#fff",textAlign:"left",cursor:"pointer",fontSize:13,fontWeight:600}}>
+                      📊 Guud Ahaan
+                    </button>
+                  </div>
+                  <button className="sidebar-farac-btn" onClick={()=>{setActiveFarac(null);setActiveTab("guud");}}
+                    style={{display:"none",padding:"9px 10px",background:activeFarac===null?"#ffd700":"transparent",border:"none",borderRadius:8,color:activeFarac===null?"#1a1a1a":"#fff",cursor:"pointer",fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>
+                    📊 Guud
+                  </button>
+                </>
+              )}
+              {!isMaamul && (
+                <div style={{background:FARAC_COLORS[user.role],borderRadius:8,padding:"10px",marginBottom:10,flexShrink:0}}>
+                  <div style={{color:"#fff",fontWeight:700,fontSize:13}}>{FARAC_LABELS[user.role]}</div>
+                  {data[user.role]?.submitted && <div style={{color:"rgba(255,255,255,0.7)",fontSize:11,marginTop:3}}>✅ Gudbi la sameeyey</div>}
+                </div>
+              )}
+              {activeFarac && (
+                <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:6,paddingTop:6}}>
+                  <div className="sidebar-section-label" style={{color:"rgba(255,255,255,0.4)",fontSize:10,marginBottom:7,padding:"0 6px"}}>TABS</div>
+                  {tabList.map(t=>(
+                    <button key={t.id} className="sidebar-tab-btn" onClick={()=>setActiveTab(t.id)}
+                      style={{width:"100%",padding:"8px 10px",background:activeTab===t.id?"rgba(255,255,255,0.1)":"transparent",border:"none",borderRadius:6,color:activeTab===t.id?"#fff":"rgba(255,255,255,0.5)",textAlign:"left",cursor:"pointer",fontSize:13,marginBottom:2,whiteSpace:"nowrap"}}>
+                      {t.icon} {t.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* MAIN CONTENT */}
+            <div className="main-content" style={{flex:1,overflowY:"auto",padding:20}}>
+              {fbLoading ? (
+                <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:"60%",flexDirection:"column",gap:14}}>
+                  <div style={{width:40,height:40,border:"4px solid #e0e0e0",borderTop:"4px solid #0d6e4f",borderRadius:"50%",animation:"spin 0.8s linear infinite"}} />
+                  <span style={{color:"#888",fontSize:14}}>Firebase xogta waa la keenayaa...</span>
+                </div>
+              ) : (
+                <>
+                  {/* GUUD */}
+                  {activeFarac===null && isMaamul && (
+                    <div>
+                      <h2 style={{color:"#1a3a5c",margin:"0 0 16px",fontSize:16}}>📊 Warbixinta Guud — {bisha}</h2>
+                      <div className="stat-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
+                        <StatCard label="Wadarta Ardayda" value={grandTotal.totalArdayda} icon="👨‍🎓" color="#1a3a5c" />
+                        <StatCard label="Lacag Saafi (Guud)" value={`$${grandTotal.saafi.toLocaleString()}`} icon="💵" color="#0d6e4f" />
+                        <StatCard label="Kharash (Guud)" value={`$${grandTotal.kharashWadar.toLocaleString()}`} icon="📤" color="#8b1a2a" />
+                      </div>
+                      <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",marginBottom:20}}>
+                        <h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>📈 Barbardhig Faracyada</h4>
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={allStats.map(s=>({name:s.label,Ardayda:s.totalArdayda,Lacag:s.saafi,Kharash:s.kharashWadar}))}>
+                            <XAxis dataKey="name" tick={{fontSize:11}} /><YAxis tick={{fontSize:11}} /><Tooltip /><Legend iconSize={10} wrapperStyle={{fontSize:11}} />
+                            <Bar dataKey="Ardayda" fill="#1a3a5c" radius={[3,3,0,0]} />
+                            <Bar dataKey="Lacag" fill="#0d6e4f" radius={[3,3,0,0]} />
+                            <Bar dataKey="Kharash" fill="#c62828" radius={[3,3,0,0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                      <div className="summary-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14}}>
+                        {allStats.map(s=>(
+                          <div key={s.key} style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderTop:`4px solid ${s.color}`}}>
+                            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                              <h3 style={{color:s.color,margin:0,fontSize:15}}>{s.label}</h3>
+                              <span style={{display:"flex",gap:5}}>
+                                <span style={{background:s.color,color:"#fff",borderRadius:5,padding:"2px 8px",fontSize:11}}>{s.totalArdayda} Arday</span>
+                                {s.submitted && <span style={{background:"#0d6e4f",color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10}}>✅</span>}
+                              </span>
+                            </div>
+                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                              <MiniStat label="Lacag Xarooday" value={`$${s.xarooday.toLocaleString()}`} />
+                              <MiniStat label="Saafi" value={`$${s.saafi.toLocaleString()}`} />
+                              <MiniStat label="Aan Bixin" value={s.totalAanBixin} />
+                              <MiniStat label="Kharash" value={`$${s.kharashWadar.toLocaleString()}`} />
+                            </div>
+                            <div style={{marginTop:10,padding:"7px 12px",background:s.saafi-s.kharashWadar>=0?"#e8f5e9":"#ffebee",borderRadius:7,display:"flex",justifyContent:"space-between"}}>
+                              <span style={{fontSize:12,color:"#555"}}>Faa'iido / Khasaare</span>
+                              <span style={{fontWeight:700,color:s.saafi-s.kharashWadar>=0?"#0d6e4f":"#c62828",fontSize:13}}>${(s.saafi-s.kharashWadar).toLocaleString()}</span>
+                            </div>
+                            {s.submitted && <button onClick={()=>unlockFarac(s.key)} style={{marginTop:8,width:"100%",padding:"6px",background:"#fff3e0",border:"1px solid #ff8c00",borderRadius:6,color:"#e65100",fontSize:12,cursor:"pointer",fontWeight:600}}>🔓 Fur / Unlock</button>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* FARAC DETAIL */}
+                  {activeFarac && currentFaracData && (
+                    <div>
+                      <div className="farac-detail-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
+                        <div className="farac-title" style={{display:"flex",alignItems:"center",gap:10}}>
+                          <div style={{width:10,height:28,background:FARAC_COLORS[activeFarac],borderRadius:3}}></div>
+                          <div>
+                            <h2 style={{margin:0,color:"#1a3a5c",fontSize:17}}>{FARAC_LABELS[activeFarac]}</h2>
+                            <span style={{color:"#888",fontSize:11}}>📅 {bisha} {new Date().getFullYear()}</span>
+                          </div>
+                        </div>
+                        <div className="action-btns" style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                          {currentFaracData.submitted && <span style={{background:"#e8f5e9",color:"#0d6e4f",padding:"5px 10px",borderRadius:6,fontSize:12,fontWeight:600,border:"1px solid #a5d6a7"}}>✅ La Gudbiyey</span>}
+                          {!currentFaracData.submitted && (
+                            <>
+                              <button onClick={()=>saveDraft(activeFarac)} style={{padding:"7px 16px",background:"#fff",border:"2px solid #1565c0",borderRadius:7,color:"#1565c0",cursor:"pointer",fontSize:13,fontWeight:600}}>💾 Save</button>
+                              {!isMaamul && <button onClick={()=>setConfirmModal({farac:activeFarac,action:"submit"})} style={{padding:"7px 16px",background:"#1565c0",border:"none",borderRadius:7,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>📤 Gudbi</button>}
+                            </>
+                          )}
+                          {currentFaracData.submitted && isMaamul && <button onClick={()=>unlockFarac(activeFarac)} style={{padding:"7px 14px",background:"#fff3e0",border:"1px solid #ff8c00",borderRadius:7,color:"#e65100",cursor:"pointer",fontSize:13,fontWeight:600}}>🔓 Unlock</button>}
+                        </div>
+                      </div>
+
+                      {isLocked && <div style={{background:"#fff3e0",border:"1px solid #ff8c00",borderRadius:8,padding:"9px 14px",marginBottom:14,color:"#e65100",fontSize:13}}>🔒 Xogtan waa la gudbiyey maamulka. Waxaad arki kartaa laakiin ma bedeli kartid.</div>}
+                      {currentFaracData.savedAt && !currentFaracData.submitted && <div style={{background:"#e3f2fd",borderRadius:6,padding:"5px 12px",marginBottom:12,color:"#1565c0",fontSize:12}}>💾 Kaydsan: {new Date(currentFaracData.savedAt).toLocaleString()}</div>}
+
+                      <div className="stat-grid-5" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:16}}>
+                        <StatCard label="Wadarta Ardayda" value={calc.totalArdayda} icon="👥" color={FARAC_COLORS[activeFarac]} small />
+                        <StatCard label="Bixisay" value={calc.totalBixisay} icon="✅" color="#0d6e4f" small />
+                        <StatCard label="Lacag Xarooday" value={`$${calc.xarooday.toLocaleString()}`} icon="💰" color="#1565c0" small />
+                        <StatCard label="Lacagta Saafi" value={`$${calc.saafi.toLocaleString()}`} icon="💵" color="#0d6e4f" small />
+                        <StatCard label="Aan Bixin" value={calc.totalAanBixin} icon="⚠️" color="#e65100" small />
+                      </div>
+
+                      {/* TAB: XISAAB */}
+                      {activeTab==="xisaab" && (
+                        <div>
+                          <div style={{background:"#fff",borderRadius:12,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",overflow:"hidden",marginBottom:18}}>
+                            <div style={{padding:"12px 18px",background:FARAC_COLORS[activeFarac],color:"#fff",fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:14}}>
+                              <span>📋 Xisaab Xirka — {bisha}</span>
+                              {isLocked && <span style={{fontSize:12,opacity:0.8}}>🔒 Qori la'aan</span>}
+                            </div>
+                            <div style={{overflowX:"auto"}}>
+                              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
+                                <thead>
+                                  <tr style={{background:"#f8f9fa"}}>
+                                    <th style={TH}>Fasalka</th>
+                                    {Object.entries(fieldLabel).map(([k,l])=><th key={k} style={TH}>{l}</th>)}
+                                    <th style={{...TH,background:"#e8f5e9",color:"#0d6e4f",fontWeight:700}}>Wadarta Ardayda</th>
+                                    <th style={{...TH,background:"#e3f2fd",color:"#1565c0",fontWeight:700}}>Wadarta Lacag</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {currentFaracData.fasalada.map((f,i)=>{
+                                    const wadarLacag = +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment;
+                                    const wadarArday = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents;
+                                    return (
+                                      <tr key={i} style={{borderBottom:"1px solid #f0f0f0"}}>
+                                        <td style={{...TD,fontWeight:600,color:FARAC_COLORS[activeFarac],whiteSpace:"nowrap",fontSize:12}}>{f.magaca}</td>
+                                        {Object.keys(fieldLabel).map(field=>(
+                                          <td key={field} style={TD}>
+                                            <input type="number" value={f[field]} disabled={isLocked}
+                                              onChange={e=>updateFasal(activeFarac,i,field,e.target.value)}
+                                              style={{width:68,padding:"4px 5px",border:isLocked?"1px solid #eee":"1px solid #e0e0e0",borderRadius:4,fontSize:11,textAlign:"center",background:isLocked?"#f9f9f9":"#fff",color:isLocked?"#aaa":"#333"}} />
+                                          </td>
+                                        ))}
+                                        <td style={{...TD,fontWeight:700,color:"#0d6e4f",background:"#f1faf5",fontSize:13}}>{wadarArday}</td>
+                                        <td style={{...TD,fontWeight:700,color:"#1565c0",background:"#f0f7ff",fontSize:13}}>${wadarLacag.toLocaleString()}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                                <tfoot>
+                                  <tr style={{background:"#eee",fontWeight:700}}>
+                                    <td style={{...TD,color:"#1a3a5c",fontSize:12}}>WADAR</td>
+                                    <td style={{...TD,color:"#0d6e4f"}}>{calc.totalBixisay}</td>
+                                    <td style={TD}>—</td>
+                                    <td style={{...TD,color:"#0d6e4f"}}>${calc.totalHormartay.toLocaleString()}</td>
+                                    <td style={{...TD,color:"#0d6e4f"}}>${calc.totalPreview.toLocaleString()}</td>
+                                    <td style={{...TD,color:"#c62828"}}>{calc.totalAanBixin}</td>
+                                    <td style={{...TD,color:"#c62828"}}>${calc.totalLacagAanBixin.toLocaleString()}</td>
+                                    <td style={TD}>{calc.totalScholarship}</td>
+                                    <td style={TD}>{calc.totalFree}</td>
+                                    <td style={{...TD,background:"#d4edda",color:"#0d6e4f",fontSize:14,fontWeight:800}}>{calc.totalArdayda}</td>
+                                    <td style={{...TD,background:"#cce5ff",color:"#1565c0",fontSize:14,fontWeight:800}}>${calc.xarooday.toLocaleString()}</td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          </div>
+                          <div className="summary-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                            <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                              <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>🧮 Xisaabta Saafiga</h4>
+                              <Row label="Wadarta Xarooday" value={`$${calc.xarooday.toLocaleString()}`} />
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
+                                <span style={{color:"#555",fontSize:13}}>Qiima Dhimis (Discount)</span>
+                                <input type="number" disabled={isLocked} value={currentFaracData.discount}
+                                  onChange={e=>updateMeta(activeFarac,"discount",e.target.value)}
+                                  style={{width:90,padding:"4px 8px",border:"1px solid #e0e0e0",borderRadius:4,fontSize:13,textAlign:"right",background:isLocked?"#f9f9f9":"#fff"}} />
+                              </div>
+                              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
+                                <span style={{color:"#555",fontSize:13}}>Lacagta Ku Dhiman</span>
+                                <input type="number" disabled={isLocked} value={currentFaracData.lacagKhususi}
+                                  onChange={e=>updateMeta(activeFarac,"lacagKhususi",e.target.value)}
+                                  style={{width:90,padding:"4px 8px",border:"1px solid #e0e0e0",borderRadius:4,fontSize:13,textAlign:"right",background:isLocked?"#f9f9f9":"#fff"}} />
+                              </div>
+                              <div style={{display:"flex",justifyContent:"space-between",padding:"12px 0 0",fontWeight:700,fontSize:15}}>
+                                <span style={{color:"#1a3a5c"}}>Wadarta Saafi</span>
+                                <span style={{color:"#0d6e4f"}}>${calc.saafi.toLocaleString()}</span>
+                              </div>
+                            </div>
+                            <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                              <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>📊 Kooban</h4>
+                              <Row label="Wadarta Ardayda" value={calc.totalArdayda} color="#0d6e4f" />
+                              <Row label="Scholarship" value={calc.totalScholarship} />
+                              <Row label="Free Students" value={calc.totalFree} />
+                              <Row label="Lacag Aan Bixin" value={`$${calc.totalLacagAanBixin.toLocaleString()}`} color="#c62828" />
+                              <Row label="Kharashka" value={`$${calc.kharashWadar.toLocaleString()}`} color="#e65100" />
+                              <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0 0",fontWeight:700,fontSize:14,borderTop:"2px solid #e0e0e0",marginTop:8}}>
+                                <span style={{color:"#1a3a5c"}}>Faa'iido / Khasaare</span>
+                                <span style={{color:calc.saafi-calc.kharashWadar>=0?"#0d6e4f":"#c62828"}}>${(calc.saafi-calc.kharashWadar).toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB: KHARASH */}
+                      {activeTab==="kharash" && (
+                        <div style={{background:"#fff",borderRadius:12,padding:22,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                          <h4 style={{margin:"0 0 18px",color:"#1a3a5c"}}>📋 Kharashka Dugsiga — {bisha}</h4>
+                          {Object.keys(kharashLabels).map(k=>(
+                            <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:"1px solid #f0f0f0"}}>
+                              <span style={{color:"#444",fontSize:14}}>{kharashLabels[k]}</span>
+                              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                                <span style={{color:"#888",fontSize:13}}>$</span>
+                                <input type="number" disabled={isLocked} value={currentFaracData.kharash[k]}
+                                  onChange={e=>updateKharash(activeFarac,k,e.target.value)}
+                                  style={{width:120,padding:"7px 12px",border:"1px solid #e0e0e0",borderRadius:6,fontSize:14,textAlign:"right",background:isLocked?"#f9f9f9":"#fff"}} />
+                              </div>
+                            </div>
+                          ))}
+                          <div style={{display:"flex",justifyContent:"space-between",padding:"14px 0 0",fontWeight:700,fontSize:15}}>
+                            <span style={{color:"#1a3a5c"}}>Wadarta Kharashka</span>
+                            <span style={{color:"#c62828"}}>${calc.kharashWadar.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB: CHARTS */}
+                      {activeTab==="charts" && (
+                        <div className="chart-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                          <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                            <h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>👨‍🎓 Ardayda Fasal Kasta</h4>
+                            <ArdaydaChart fasalada={currentFaracData.fasalada} />
+                          </div>
+                          <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                            <h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>💰 Lacagta Fasal Kasta</h4>
+                            <LacagChart fasalada={currentFaracData.fasalada} />
+                          </div>
+                          <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                            <h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>🥧 Qeybsiga Ardayda</h4>
+                            <PieFarac calc={calc} />
+                          </div>
+                          <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                            <h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>📊 Lacag vs Kharash</h4>
+                            <ResponsiveContainer width="100%" height={200}>
+                              <BarChart data={[{name:"Lacag Saafi",v:calc.saafi},{name:"Kharash",v:calc.kharashWadar},{name:"Faa'iido",v:calc.saafi-calc.kharashWadar}]}>
+                                <XAxis dataKey="name" tick={{fontSize:10}} />
+                                <YAxis tick={{fontSize:10}} tickFormatter={v=>`$${v}`} />
+                                <Tooltip formatter={v=>`$${v.toLocaleString()}`} />
+                                <Bar dataKey="v" radius={[4,4,0,0]}>
+                                  {[0,1,2].map(i=><Cell key={i} fill={i===2?(calc.saafi-calc.kharashWadar>=0?"#0d6e4f":"#c62828"):i===1?"#c62828":"#1565c0"} />)}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* TAB: SETTINGS */}
+                      {activeTab==="settings" && isMaamul && (
+                        <div className="settings-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                          <div style={{background:"#fff",borderRadius:12,padding:22,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                            <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>➕ Ku Dar Fasal Cusub</h4>
+                            <div style={{marginBottom:12}}>
+                              <label style={{color:"#555",fontSize:13,display:"block",marginBottom:5}}>Faracka</label>
+                              <select value={newFasalFarac} onChange={e=>setNewFasalFarac(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid #e0e0e0",borderRadius:7,fontSize:13,outline:"none"}}>
+                                {Object.keys(FARAC_COLORS).map(k=><option key={k} value={k}>{FARAC_LABELS[k]}</option>)}
+                              </select>
+                            </div>
+                            <div style={{marginBottom:14}}>
+                              <label style={{color:"#555",fontSize:13,display:"block",marginBottom:5}}>Magaca Fasalka</label>
+                              <input value={newFasalName} onChange={e=>setNewFasalName(e.target.value)}
+                                placeholder="Tusaale: 6aad" onKeyDown={e=>e.key==="Enter"&&addFasal()}
+                                style={{width:"100%",padding:"8px 12px",border:"1px solid #e0e0e0",borderRadius:7,fontSize:13,outline:"none",boxSizing:"border-box"}} />
+                            </div>
+                            <button onClick={addFasal} style={{width:"100%",padding:"10px",background:"#0d6e4f",border:"none",borderRadius:8,color:"#fff",fontWeight:600,fontSize:14,cursor:"pointer"}}>➕ Ku Dar</button>
+                          </div>
+                          <div style={{background:"#fff",borderRadius:12,padding:22,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
+                            <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>📝 Fasalada {FARAC_LABELS[activeFarac]}</h4>
+                            <div style={{maxHeight:200,overflowY:"auto",marginBottom:14}}>
+                              {(data[activeFarac]?.fasalada||[]).map((f,i)=>(
+                                <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",borderRadius:7,marginBottom:5,background:"#f8f9fa",border:"1px solid #eee"}}>
+                                  <span style={{fontSize:13,color:"#333"}}>{f.magaca}</span>
+                                  <button onClick={()=>removeFasal(activeFarac,i)} style={{background:"#ffebee",border:"1px solid #ffcdd2",color:"#c62828",borderRadius:5,padding:"3px 9px",fontSize:12,cursor:"pointer"}}>🗑️</button>
+                                </div>
+                              ))}
+                            </div>
+                            <button onClick={()=>setConfirmModal({farac:activeFarac,action:"reset"})}
+                              style={{width:"100%",padding:"9px",background:"#ffebee",border:"1px solid #ffcdd2",borderRadius:8,color:"#c62828",fontWeight:600,fontSize:13,cursor:"pointer"}}>
+                              ♻️ Dib u Deji (Reset) Faracka
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
 </body>
 </html>
