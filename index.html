@@ -1,36 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Al-Xikma App</title>
+  <title>Supabase App</title>
 </head>
 <body>
 
-<h2>Supabase Test</h2>
+<h1>User Form</h1>
 
-<button onclick="saveData()">Save Online</button>
+<input id="name" placeholder="Name">
+<input id="email" placeholder="Email">
+<button onclick="saveData()">Save</button>
 
-<script type="module">
-  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-  const supabase = createClient(
-    'https://wpeffyylavcxifcgwxyr.supabase.co',
-    'sb_publishable_e5JVnUsWJTHcvep4lbM_LA_Lg8pWND2'
-  )
+<script>
+const supabaseUrl = "https://wpeffyylavcxifcgwxyr.supabase.co";
 
-  async function saveData() {
-    const { error } = await supabase
-      .from('xisaab_xirka')
-      .insert([{ bisha: "Test", data: { hello: "world" } }])
+const supabaseKey = "sb_publishable_e5JVnUsWJTHcvep4lbM_LA_Lg8pWND2";
 
-    if (error) {
-      alert("Error")
-      console.log(error)
-    } else {
-      alert("Saved ✅")
-    }
+const client = supabase.createClient(supabaseUrl, supabaseKey);
+
+async function saveData() {
+  const name = document.getElementById("name").value;
+  const email = document.getElementById("email").value;
+
+  const { data, error } = await client
+    .from("users")
+    .insert([{ al xikma school, farxaan109@gmail.com }]);
+
+  if (error) {
+    alert("Error: " + error.message);
+    console.log(error);
+  } else {
+    alert("Saved successfully!");
   }
-
-  window.saveData = saveData
+}
 </script>
 
 </body>
