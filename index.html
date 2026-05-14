@@ -5,6 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AL-XIKMA — Nidaamka Xisaab Xirka</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Firebase SDK (module) -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, onValue, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig = {
+  apiKey: "AIzaSyB_ZgWHivBz_Z-_KbNiGrtTGU3R1Dtq7gw",
+  authDomain: "alxikma-xisaabaad.firebaseapp.com",
+  databaseURL: "https://alxikma-xisaabaad-default-rtdb.firebaseio.com",
+  projectId: "alxikma-xisaabaad",
+  storageBucket: "alxikma-xisaabaad.firebasestorage.app",
+  messagingSenderId: "842183507563",
+  appId: "1:842183507563:web:f197771bb6924a7ae07b2e"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+window._fbDb = db;
+window._fbRef = ref;
+window._fbSet = set;
+window._fbGet = get;
+window._fbOnValue = onValue;
+window.dispatchEvent(new Event("fb-ready"));
+</script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f2f5;min-height:100vh;}
@@ -274,23 +296,37 @@
 
 <script>
 // ══════════════════════════════════════════
-// FIREBASE CONFIG & REST HELPERS
+// FIREBASE SDK HELPERS (set via module above)
 // ══════════════════════════════════════════
-const DB_URL = "https://alxikma-xisaabaad-default-rtdb.firebaseio.com";
-async function fbGet(path){
-  const r = await fetch(`${DB_URL}${path}.json`);
-  if(!r.ok) throw new Error("Firebase GET failed");
-  return r.json();
-}
+function getFbPath(bisha){ return `xisaab/${bisha.replace(/\s/g,"_")}`; }
+const BISHA_FB_PATH = "meta/bisha";
+
+let _activeListener = null; // track current onValue unsubscribe fn
+
 async function fbSet(path, value){
-  const r = await fetch(`${DB_URL}${path}.json`,{
-    method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(value)
-  });
-  if(!r.ok) throw new Error("Firebase PUT failed");
-  return r.json();
+  await window._fbSet(window._fbRef(window._fbDb, path), value);
 }
-function getFbPath(bisha){ return `/xisaab/${bisha.replace(/\s/g,"_")}`; }
-const BISHA_FB_PATH = "/meta/bisha";
+async function fbGetOnce(path){
+  const snap = await window._fbGet(window._fbRef(window._fbDb, path));
+  return snap.exists() ? snap.val() : null;
+}
+// Start real-time listener for current bisha — auto-updates screen when anyone changes data
+function startListener(bisha){
+  if(_activeListener){ _activeListener(); _activeListener=null; } // unsubscribe old
+  const dbRef = window._fbRef(window._fbDb, getFbPath(bisha));
+  _activeListener = window._fbOnValue(dbRef, (snapshot)=>{
+    const incoming = snapshot.val();
+    if(incoming && typeof incoming==="object"){
+      // Merge: keep keys not in incoming (other months untouched)
+      Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!incoming[k]) incoming[k]=buildInitFarac()[k]; });
+      appData = incoming;
+    } else {
+      appData = buildInitFarac();
+    }
+    // Only re-render if user is logged in
+    if(currentUser) renderAll();
+  });
+}
 
 // ══════════════════════════════════════════
 // DATA CONSTANTS
@@ -331,7 +367,6 @@ let currentBisha = BILAHA[new Date().getMonth()];
 let appData = buildInitFarac();
 let activeFarac = null;
 let activeTab = "xisaab";
-let saveTimeout = null;
 let modalAction = null;
 let chartInstances = {};
 
@@ -368,26 +403,30 @@ function setFbLoading(on){ document.getElementById("fb-loading").style.display=o
 async function loadBisha(targetBisha){
   setFbLoading(true);
   try{
-    const snap = await fbGet(getFbPath(targetBisha));
-    appData = (snap && typeof snap==="object") ? snap : buildInitFarac();
-    // ensure all farac keys exist
-    Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!appData[k]) appData[k]=buildInitFarac()[k]; });
+    const snap = await fbGetOnce(getFbPath(targetBisha));
+    if(snap && typeof snap==="object"){
+      appData = snap;
+      Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!appData[k]) appData[k]=buildInitFarac()[k]; });
+    } else { appData=buildInitFarac(); }
   }catch(e){ appData=buildInitFarac(); }
   finally{ setFbLoading(false); }
+  startListener(targetBisha); // start real-time listener
 }
 
+let saveTimeout = null;
 function scheduleSave(){
   if(saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(async()=>{
     try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
-  }, 1200);
+  }, 800);
 }
 
-async function handleBishaChange(newBisha){
+async function handleBishaChange(bisha){
+  // Save current before switching
   try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
-  currentBisha = newBisha;
-  try{ await fbSet(BISHA_FB_PATH, newBisha); }catch{}
-  await loadBisha(newBisha);
+  currentBisha = bisha;
+  try{ await fbSet(BISHA_FB_PATH, bisha); }catch{}
+  await loadBisha(bisha);
   renderAll();
 }
 
@@ -907,25 +946,36 @@ function destroyCharts(){
 }
 
 // ══════════════════════════════════════════
-// INIT
+// INIT — waits for Firebase SDK module to load
 // ══════════════════════════════════════════
-(async()=>{
+async function appInit(){
+  // Populate bisha dropdown
+  const sel=document.getElementById("bisha-select");
+  if(sel.options.length===0){
+    BILAHA.forEach(b=>{ const o=document.createElement("option"); o.value=b; o.textContent=b; sel.appendChild(o); });
+  }
   setFbLoading(true);
   try{
-    const savedBisha = await fbGet(BISHA_FB_PATH);
+    const savedBisha = await fbGetOnce(BISHA_FB_PATH);
     currentBisha = (savedBisha && BILAHA.includes(savedBisha)) ? savedBisha : BILAHA[new Date().getMonth()];
-    const snap = await fbGet(getFbPath(currentBisha));
+    sel.value = currentBisha;
+    const snap = await fbGetOnce(getFbPath(currentBisha));
     if(snap && typeof snap==="object"){
       appData = snap;
       Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!appData[k]) appData[k]=buildInitFarac()[k]; });
     }
   }catch{ appData=buildInitFarac(); }
   finally{ setFbLoading(false); }
-  // populate bisha dropdown on load even before login
-  const sel=document.getElementById("bisha-select");
-  BILAHA.forEach(b=>{ const o=document.createElement("option"); o.value=b; o.textContent=b; sel.appendChild(o); });
-  sel.value=currentBisha;
-})();
+  // Start real-time listener for current bisha
+  startListener(currentBisha);
+}
+
+// Wait for Firebase SDK module to be ready
+if(window._fbReady){
+  appInit();
+} else {
+  window.addEventListener("fb-ready", appInit, {once:true});
+}
 </script>
 </body>
 </html>
