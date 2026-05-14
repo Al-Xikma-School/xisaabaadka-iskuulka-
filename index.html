@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Supabase App</title>
+  <title>User App</title>
 </head>
 <body>
 
-<h1>User Form</h1>
+<h2>User Form</h2>
 
 <input id="name" placeholder="Name">
 <input id="email" placeholder="Email">
@@ -15,7 +15,6 @@
 
 <script>
 const supabaseUrl = "https://wpeffyylavcxifcgwxyr.supabase.co";
-
 const supabaseKey = "sb_publishable_e5JVnUsWJTHcvep4lbM_LA_Lg8pWND2";
 
 const client = supabase.createClient(supabaseUrl, supabaseKey);
@@ -25,14 +24,13 @@ async function saveData() {
   const email = document.getElementById("email").value;
 
   const { data, error } = await client
-    .from("users")
-    .insert([{ al xikma school, farxaan109@gmail.com }]);
+    .from("users") // ❗ hubi magaca table-ka
+    .insert([{ al xikma xisaab, farxaan109@gmail.com }]);
 
   if (error) {
     alert("Error: " + error.message);
-    console.log(error);
   } else {
-    alert("Saved successfully!");
+    alert("Waa la keydiyay!");
   }
 }
 </script>
