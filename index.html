@@ -1,661 +1,931 @@
-import { useState, useEffect, useRef } from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+<!DOCTYPE html>
+<html lang="so">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AL-XIKMA — Nidaamka Xisaab Xirka</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f2f5;min-height:100vh;}
 
-// ── Firebase Config ──────────────────────────────────────────────
-const firebaseConfig = {
-  apiKey: "AIzaSyB_ZgWHivBz_Z-_KbNiGrtTGU3R1Dtq7gw",
-  authDomain: "alxikma-xisaabaad.firebaseapp.com",
-  databaseURL: "https://alxikma-xisaabaad-default-rtdb.firebaseio.com",
-  projectId: "alxikma-xisaabaad",
-  storageBucket: "alxikma-xisaabaad.firebasestorage.app",
-  messagingSenderId: "842183507563",
-  appId: "1:842183507563:web:f197771bb6924a7ae07b2e",
-  measurementId: "G-G4KTN9388C"
-};
+  /* ── LOADING BAR ── */
+  #fb-loading{display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:#1565c0;color:#fff;text-align:center;padding:6px;font-size:13px;font-weight:600;}
 
-// Firebase REST helpers (no SDK needed – works in any static host)
-const DB_URL = firebaseConfig.databaseURL;
-const fbGet  = async (path) => {
-  const r = await fetch(`${DB_URL}${path}.json`);
-  if (!r.ok) throw new Error("Firebase GET failed");
-  return r.json();
-};
-const fbSet  = async (path, value) => {
-  const r = await fetch(`${DB_URL}${path}.json`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(value),
-  });
-  if (!r.ok) throw new Error("Firebase PUT failed");
-  return r.json();
-};
-// ─────────────────────────────────────────────────────────────────
+  /* ── TOAST ── */
+  #toast{display:none;position:fixed;top:16px;right:16px;z-index:9999;color:#fff;padding:12px 20px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:14px;font-weight:600;max-width:calc(100vw - 32px);animation:fadeIn .3s;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 
-const USERS = {
-  maamul: { password: "maamul@2024", role: "maamul", label: "Maamulka" },
-  sare:   { password: "sare@2024",   role: "sare",   label: "Dugsiga Sare" },
-  dhexe:  { password: "dhexe@2024",  role: "dhexe",  label: "Dugsiga Dhexe" },
-  hoose1: { password: "hoose1@2024", role: "hoose1", label: "Hoose 1" },
-  hoose2: { password: "hoose2@2024", role: "hoose2", label: "Hoose 2" },
-};
+  /* ── MODAL ── */
+  #modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;align-items:center;justify-content:center;padding:16px;}
+  #modal-overlay.show{display:flex;}
+  #modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,.3);}
+  #modal-box h3{margin:0 0 12px;color:#1a3a5c;}
+  #modal-box p{color:#555;font-size:14px;margin-bottom:24px;}
+  .modal-btns{display:flex;gap:12px;justify-content:flex-end;}
+  .btn-cancel{padding:10px 20px;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;cursor:pointer;font-size:14px;}
+  .btn-confirm{padding:10px 20px;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:14px;font-weight:600;}
 
-const FARAC_COLORS = { sare:"#0d6e4f", dhexe:"#7b3f00", hoose1:"#4a1a6b", hoose2:"#8b1a2a" };
-const FARAC_LABELS = { sare:"Dugsiga Sare", dhexe:"Dugsiga Dhexe", hoose1:"Hoose 1", hoose2:"Hoose 2" };
-const BILAHA = ["Janaayo","Febraayo","Maarso","Abriil","May","Juun","Luuliyo","Ogosto","Sebtembar","Oktoobar","Noofembar","Disembar"];
+  /* ── LOGIN ── */
+  #login-page{display:flex;min-height:100vh;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0d2137 100%);align-items:center;justify-content:center;padding:16px;}
+  .login-box{background:rgba(255,255,255,.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:36px 28px;width:100%;max-width:400px;box-shadow:0 32px 64px rgba(0,0,0,.4);}
+  .login-logo{text-align:center;margin-bottom:28px;}
+  .login-icon{width:56px;height:56px;background:linear-gradient(135deg,#ffd700,#ff8c00);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:24px;}
+  .login-box h1{color:#ffd700;font-size:20px;font-weight:700;text-align:center;}
+  .login-box p{color:rgba(255,255,255,.5);font-size:12px;text-align:center;margin-top:6px;}
+  .login-label{color:rgba(255,255,255,.7);font-size:13px;display:block;margin-bottom:6px;margin-top:14px;}
+  .login-input{width:100%;padding:12px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;color:#fff;font-size:15px;outline:none;}
+  .login-input::placeholder{color:rgba(255,255,255,.35);}
+  #login-err{color:#ff6b6b;font-size:13px;margin:8px 0 0;display:none;}
+  .btn-login{width:100%;padding:14px;background:linear-gradient(135deg,#ffd700,#ff8c00);border:none;border-radius:10px;color:#1a1a1a;font-weight:700;font-size:16px;cursor:pointer;margin-top:12px;margin-bottom:20px;}
+  .show-pwd-btn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);font-size:12px;border-radius:6px;padding:6px 12px;cursor:pointer;width:100%;}
+  #pwd-list{display:none;margin-top:12px;background:rgba(0,0,0,.3);border-radius:8px;padding:12px;}
+  .pwd-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;}
+  .pwd-row span:first-child{color:#ffd700;}
+  .pwd-row span:last-child{color:rgba(255,255,255,.5);}
 
-const DEFAULT_FASALADA = {
-  sare:   ["Level One","Level Two"],
-  dhexe:  ["1aad","2aad","3aad"],
-  hoose1: ["Fasalka 1","Fasalka 2","Fasalka 3"],
-  hoose2: ["Fasalka 4","Fasalka 5","Basaska"],
-};
+  /* ── MAIN APP ── */
+  #app-page{display:none;flex-direction:column;min-height:100vh;max-height:100vh;overflow:hidden;}
+  #app-page.show{display:flex;}
 
-const emptyFasal = (name) => ({ magaca:name, tiradaBixisay:0, qiimaha:13, lacagtaSooHormartay:0, previewPayment:0, tiradaAanBixin:0, lacagtaAanBixin:0, scholarship:0, freeStudents:0 });
+  /* HEADER */
+  #header{background:linear-gradient(135deg,#0a1628,#1a3a5c);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:58px;box-shadow:0 2px 12px rgba(0,0,0,.3);flex-shrink:0;}
+  .header-left{display:flex;align-items:center;gap:10px;}
+  .header-title{color:#ffd700;font-weight:700;font-size:15px;}
+  .header-sub{color:rgba(255,255,255,.4);font-size:12px;margin-left:4px;}
+  .header-right{display:flex;align-items:center;gap:8px;}
+  .bisha-label{color:rgba(255,255,255,.6);font-size:12px;}
+  #bisha-select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#ffd700;border-radius:6px;padding:4px 8px;font-size:12px;outline:none;cursor:pointer;max-width:100px;}
+  #bisha-select option{background:#1a3a5c;}
+  .header-user{color:rgba(255,255,255,.7);font-size:12px;}
+  .btn-bax{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;}
 
-const buildInitFarac = () => {
-  const d = {};
-  Object.keys(DEFAULT_FASALADA).forEach((farac) => {
-    d[farac] = { fasalada: DEFAULT_FASALADA[farac].map(emptyFasal), kharash:{ maamulka:0, macalimiinta:0, shaqaalaha:0, canshuurta:0, dareewalada:0, kharashDugsiga:0 }, discount:0, lacagKhususi:0, submitted:false, savedAt:null };
-  });
-  return d;
-};
+  /* LAYOUT */
+  #main-layout{display:flex;flex:1;overflow:hidden;}
+  #sidebar{width:210px;background:#1e2a3a;padding:16px 10px;overflow-y:auto;flex-shrink:0;}
+  .sb-section-lbl{color:rgba(255,255,255,.4);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding:0 6px;}
+  .sb-divider{border-top:1px solid rgba(255,255,255,.1);margin:10px 0;padding-top:10px;}
+  .sb-farac-btn{width:100%;padding:9px 10px;background:transparent;border:none;border-radius:8px;color:#fff;text-align:left;cursor:pointer;margin-bottom:4px;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
+  .sb-farac-btn.active-sare{background:#0d6e4f;}
+  .sb-farac-btn.active-dhexe{background:#7b3f00;}
+  .sb-farac-btn.active-hoose1{background:#4a1a6b;}
+  .sb-farac-btn.active-hoose2{background:#8b1a2a;}
+  .sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+  .sb-tab-btn{width:100%;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:rgba(255,255,255,.5);text-align:left;cursor:pointer;font-size:13px;margin-bottom:2px;white-space:nowrap;}
+  .sb-tab-btn.active{background:rgba(255,255,255,.1);color:#fff;}
+  .sb-guud-btn{width:100%;padding:9px 10px;background:transparent;border:none;border-radius:8px;color:#fff;text-align:left;cursor:pointer;font-size:13px;font-weight:600;}
+  .sb-guud-btn.active{background:#ffd700;color:#1a1a1a;}
+  .sb-farac-badge{background:#0d6e4f;color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;}
 
-// Firebase path helpers
-const getFbPath  = (bisha) => `/xisaab/${bisha.replace(/\s/g,"_")}`;
-const getBishaFbPath = () => `/meta/bisha`;
+  /* CONTENT */
+  #main-content{flex:1;overflow-y:auto;padding:20px;}
 
-const initDataForBisha = () => buildInitFarac(); // placeholder; real load is async
+  /* CARDS */
+  .stat-grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
+  .stat-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
+  .stat-card{background:#fff;border-radius:10px;padding:11px 14px;box-shadow:0 2px 8px rgba(0,0,0,.08);border-left:4px solid #ccc;}
+  .stat-card-lg{padding:20px;}
+  .stat-card-lbl{color:#888;font-size:10px;margin-bottom:3px;}
+  .stat-card-val{font-weight:700;font-size:22px;}
+  .stat-card-val.small{font-size:15px;}
+  .stat-card-icon{font-size:24px;}
+  .stat-card-icon.small{font-size:17px;}
+  .stat-card-inner{display:flex;justify-content:space-between;align-items:flex-start;}
 
-const calcFarac = (fd) => {
-  let totalBixisay=0,totalLacag=0,totalHormartay=0,totalPreview=0,totalAanBixin=0,totalLacagAanBixin=0,totalScholarship=0,totalFree=0;
-  fd.fasalada.forEach((f) => {
-    totalBixisay    += +f.tiradaBixisay;
-    totalLacag      += +f.tiradaBixisay * +f.qiimaha;
-    totalHormartay  += +f.lacagtaSooHormartay;
-    totalPreview    += +f.previewPayment;
-    totalAanBixin   += +f.tiradaAanBixin;
-    totalLacagAanBixin += +f.lacagtaAanBixin;
-    totalScholarship+= +f.scholarship;
-    totalFree       += +f.freeStudents;
-  });
-  const kharashWadar = Object.values(fd.kharash).reduce((a,b)=>a+(+b),0);
-  const xarooday = totalLacag + totalHormartay + totalPreview;
-  const saafi = xarooday - (+fd.discount) - (+fd.lacagKhususi);
-  const totalArdayda = totalBixisay + totalAanBixin + totalScholarship + totalFree;
-  return { totalBixisay, totalLacag, totalHormartay, totalPreview, totalAanBixin, totalLacagAanBixin, totalScholarship, totalFree, kharashWadar, xarooday, saafi, totalArdayda };
-};
+  /* MINISTAT */
+  .mini-stat{background:#f8f9fa;border-radius:6px;padding:7px 10px;}
+  .mini-stat-lbl{color:#888;font-size:11px;}
+  .mini-stat-val{font-weight:600;color:#333;font-size:13px;}
 
-const PIE_COLORS = ["#0d6e4f","#1565c0","#7b3f00","#8b1a2a"];
+  /* ROW */
+  .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;}
+  .info-row span:first-child{color:#555;font-size:13px;}
+  .info-row span:last-child{font-weight:600;font-size:13px;color:#333;}
 
-function ArdaydaChart({ fasalada }) {
-  const data = fasalada.map(f => ({ name:f.magaca, "Bixisay":+f.tiradaBixisay, "Aan Bixin":+f.tiradaAanBixin, "Scholarship":+f.scholarship, "Free":+f.freeStudents }));
-  return (
-    <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={data} margin={{top:4,right:8,left:-10,bottom:0}}>
-        <XAxis dataKey="name" tick={{fontSize:10}} />
-        <YAxis tick={{fontSize:10}} />
-        <Tooltip />
-        <Legend iconSize={9} wrapperStyle={{fontSize:11}} />
-        <Bar dataKey="Bixisay" fill="#0d6e4f" radius={[3,3,0,0]} />
-        <Bar dataKey="Aan Bixin" fill="#c62828" radius={[3,3,0,0]} />
-        <Bar dataKey="Scholarship" fill="#1565c0" radius={[3,3,0,0]} />
-        <Bar dataKey="Free" fill="#e65100" radius={[3,3,0,0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
+  /* PANELS */
+  .panel{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:14px;}
+  .panel h4{margin:0 0 14px;color:#1a3a5c;}
+  .panel-header{background:#1e2a3a;color:#fff;padding:12px 18px;font-weight:600;display:flex;justify-content:space-between;align-items:center;font-size:14px;}
 
-function LacagChart({ fasalada }) {
-  const data = fasalada.map(f => ({ name:f.magaca, Lacag: +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment }));
-  return (
-    <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={data} margin={{top:4,right:8,left:0,bottom:0}}>
-        <XAxis dataKey="name" tick={{fontSize:10}} />
-        <YAxis tick={{fontSize:10}} tickFormatter={v=>`$${v}`} />
-        <Tooltip formatter={v=>`$${v.toLocaleString()}`} />
-        <Bar dataKey="Lacag" fill="#1a3a5c" radius={[4,4,0,0]} />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-}
+  /* TABLE */
+  .tbl-wrap{overflow-x:auto;}
+  table{width:100%;border-collapse:collapse;font-size:12px;}
+  th{padding:9px 8px;text-align:center;font-weight:600;color:#555;font-size:12px;border-bottom:2px solid #e0e0e0;white-space:nowrap;background:#f8f9fa;}
+  td{padding:7px 7px;text-align:center;color:#333;border-bottom:1px solid #f0f0f0;}
+  tfoot tr{background:#eee;font-weight:700;}
+  .inp-cell{width:68px;padding:4px 5px;border:1px solid #e0e0e0;border-radius:4px;font-size:11px;text-align:center;background:#fff;}
+  .inp-cell:disabled{background:#f9f9f9;color:#aaa;border-color:#eee;}
+  .th-green{background:#e8f5e9!important;color:#0d6e4f!important;font-weight:700!important;}
+  .th-blue{background:#e3f2fd!important;color:#1565c0!important;font-weight:700!important;}
+  .td-green{color:#0d6e4f!important;}
+  .td-blue{color:#1565c0!important;}
+  .td-red{color:#c62828!important;}
+  .td-green-bg{background:#f1faf5;font-weight:700;color:#0d6e4f;font-size:13px;}
+  .td-blue-bg{background:#f0f7ff;font-weight:700;color:#1565c0;font-size:13px;}
+  .tfoot-total-arday{background:#d4edda!important;color:#0d6e4f!important;font-size:14px!important;font-weight:800!important;}
+  .tfoot-total-lacag{background:#cce5ff!important;color:#1565c0!important;font-size:14px!important;font-weight:800!important;}
 
-function PieFarac({ calc }) {
-  const data = [{ name:"Bixisay", value:calc.totalBixisay },{ name:"Aan Bixin", value:calc.totalAanBixin },{ name:"Scholarship", value:calc.totalScholarship },{ name:"Free", value:calc.totalFree }].filter(d=>d.value>0);
-  if (!data.length) return <div style={{textAlign:"center",color:"#aaa",padding:30,fontSize:13}}>Xog ma jirto</div>;
-  return (
-    <ResponsiveContainer width="100%" height={200}>
-      <PieChart>
-        <Pie data={data} cx="50%" cy="50%" outerRadius={72} dataKey="value" label={({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`} labelLine={false} style={{fontSize:10}}>
-          {data.map((_,i)=><Cell key={i} fill={PIE_COLORS[i%PIE_COLORS.length]} />)}
-        </Pie>
-        <Tooltip />
-      </PieChart>
-    </ResponsiveContainer>
-  );
-}
+  /* SUMMARY GRID */
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 
-const TH = { padding:"9px 8px", textAlign:"center", fontWeight:600, color:"#555", fontSize:12, borderBottom:"2px solid #e0e0e0", whiteSpace:"nowrap" };
-const TD = { padding:"7px 7px", textAlign:"center", color:"#333" };
+  /* HEADER DETAIL */
+  .farac-detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .farac-title{display:flex;align-items:center;gap:10px;}
+  .farac-bar{width:10px;height:28px;border-radius:3px;}
+  .action-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .btn-save{padding:7px 16px;background:#fff;border:2px solid #1565c0;border-radius:7px;color:#1565c0;cursor:pointer;font-size:13px;font-weight:600;}
+  .btn-gudbi{padding:7px 16px;background:#1565c0;border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;}
+  .btn-unlock{padding:7px 14px;background:#fff3e0;border:1px solid #ff8c00;border-radius:7px;color:#e65100;cursor:pointer;font-size:13px;font-weight:600;}
+  .badge-submitted{background:#e8f5e9;color:#0d6e4f;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid #a5d6a7;}
+  .alert-locked{background:#fff3e0;border:1px solid #ff8c00;border-radius:8px;padding:9px 14px;margin-bottom:14px;color:#e65100;font-size:13px;}
+  .alert-saved{background:#e3f2fd;border-radius:6px;padding:5px 12px;margin-bottom:12px;color:#1565c0;font-size:12px;}
 
-function StatCard({ label, value, icon, color, small }) {
-  return (
-    <div style={{background:"#fff",borderRadius:10,padding:small?11:20,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderLeft:`4px solid ${color}`}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-        <div><div style={{color:"#888",fontSize:10,marginBottom:3}}>{label}</div><div style={{color,fontWeight:700,fontSize:small?15:22}}>{value}</div></div>
-        <span style={{fontSize:small?17:24}}>{icon}</span>
-      </div>
-    </div>
-  );
-}
-function MiniStat({ label, value }) {
-  return <div style={{background:"#f8f9fa",borderRadius:6,padding:"7px 10px"}}><div style={{color:"#888",fontSize:11}}>{label}</div><div style={{fontWeight:600,color:"#333",fontSize:13}}>{value}</div></div>;
-}
-function Row({ label, value, color }) {
-  return <div style={{display:"flex",justifyContent:"space-between",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}><span style={{color:"#555",fontSize:13}}>{label}</span><span style={{fontWeight:600,color:color||"#333",fontSize:13}}>{value}</span></div>;
-}
+  /* KHARASH */
+  .kharash-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f0f0f0;}
+  .kharash-lbl{color:#444;font-size:14px;}
+  .kharash-inp{width:120px;padding:7px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:14px;text-align:right;background:#fff;}
+  .kharash-inp:disabled{background:#f9f9f9;}
 
-export default function App() {
-  const [user, setUser]           = useState(null);
-  const [loginUser, setLoginUser] = useState("");
-  const [loginPass, setLoginPass] = useState("");
-  const [loginErr, setLoginErr]   = useState("");
-  const [showPwd, setShowPwd]     = useState(false);
+  /* DISCOUNT ROW */
+  .discount-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;}
+  .discount-inp{width:90px;padding:4px 8px;border:1px solid #e0e0e0;border-radius:4px;font-size:13px;text-align:right;}
+  .discount-inp:disabled{background:#f9f9f9;}
 
-  // Firebase: bisha & data state
-  const [bisha, setBisha] = useState(BILAHA[new Date().getMonth()]);
-  const [data, setData]   = useState(buildInitFarac());
-  const [fbLoading, setFbLoading] = useState(false); // loading indicator
-  const saveTimeoutRef = useRef(null);
+  /* GUUD FARAC CARDS */
+  .farac-overview-card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.08);border-top:4px solid #ccc;}
+  .farac-ov-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .farac-ov-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .farac-ov-footer{margin-top:10px;padding:7px 12px;border-radius:7px;display:flex;justify-content:space-between;}
+  .farac-ov-footer.profit{background:#e8f5e9;}
+  .farac-ov-footer.loss{background:#ffebee;}
 
-  const [activeFarac, setActiveFarac] = useState(null);
-  const [activeTab, setActiveTab] = useState("xisaab");
-  const [toast, setToast]         = useState(null);
-  const [confirmModal, setConfirmModal] = useState(null);
-  const [newFasalName, setNewFasalName] = useState("");
-  const [newFasalFarac, setNewFasalFarac] = useState("sare");
+  /* SETTINGS */
+  .form-lbl{color:#555;font-size:13px;display:block;margin-bottom:5px;}
+  .form-select{width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:7px;font-size:13px;outline:none;margin-bottom:12px;}
+  .form-input{width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:7px;font-size:13px;outline:none;margin-bottom:14px;}
+  .btn-add{width:100%;padding:10px;background:#0d6e4f;border:none;border-radius:8px;color:#fff;font-weight:600;font-size:14px;cursor:pointer;}
+  .btn-reset{width:100%;padding:9px;background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;color:#c62828;font-weight:600;font-size:13px;cursor:pointer;}
+  .fasal-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px;margin-bottom:5px;background:#f8f9fa;border:1px solid #eee;}
+  .btn-del-fasal{background:#ffebee;border:1px solid #ffcdd2;color:#c62828;border-radius:5px;padding:3px 9px;font-size:12px;cursor:pointer;}
+  .fasal-list{max-height:200px;overflow-y:auto;margin-bottom:14px;}
 
-  // Firebase: load xogta bisha
-  const loadBisha = async (targetBisha) => {
-    setFbLoading(true);
-    try {
-      const snapshot = await fbGet(getFbPath(targetBisha));
-      setData(snapshot && typeof snapshot === "object" ? snapshot : buildInitFarac());
-    } catch {
-      setData(buildInitFarac());
-    } finally {
-      setFbLoading(false);
-    }
-  };
+  /* NON-MAAMUL BADGE */
+  .non-maamul-badge{border-radius:8px;padding:10px;margin-bottom:10px;flex-shrink:0;}
+  .non-maamul-badge .label{color:#fff;font-weight:700;font-size:13px;}
+  .non-maamul-badge .sub{color:rgba(255,255,255,.7);font-size:11px;margin-top:3px;}
 
-  // Firebase: load on mount
-  useEffect(() => {
-    (async () => {
-      setFbLoading(true);
-      try {
-        const savedBisha = await fbGet(getBishaFbPath());
-        const targetBisha = (savedBisha && BILAHA.includes(savedBisha)) ? savedBisha : BILAHA[new Date().getMonth()];
-        setBisha(targetBisha);
-        const snapshot = await fbGet(getFbPath(targetBisha));
-        setData(snapshot && typeof snapshot === "object" ? snapshot : buildInitFarac());
-      } catch {
-        setData(buildInitFarac());
-      } finally {
-        setFbLoading(false);
-      }
-    })();
-  }, []);
+  /* UNLOCK BTN in overview */
+  .btn-unlock-sm{margin-top:8px;width:100%;padding:6px;background:#fff3e0;border:1px solid #ff8c00;border-radius:6px;color:#e65100;font-size:12px;cursor:pointer;font-weight:600;}
 
-  // Firebase: debounced auto-save xogta bisha kasta
-  useEffect(() => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    saveTimeoutRef.current = setTimeout(async () => {
-      try { await fbSet(getFbPath(bisha), data); } catch {}
-    }, 1200); // 1.2s debounce si writes la yareeyo
-    return () => clearTimeout(saveTimeoutRef.current);
-  }, [data, bisha]);
-
-  // FIX 1: Marka bisha la beddelo, kaydso hore kadibna load
-  const handleBishaChange = async (newBisha) => {
-    // Kaydso xogta bisha hore isla markiiba
-    try { await fbSet(getFbPath(bisha), data); } catch {}
-    // Bedel bisha
-    setBisha(newBisha);
-    try { await fbSet(getBishaFbPath(), newBisha); } catch {}
-    // Load xogta bisha cusub
-    await loadBisha(newBisha);
-  };
-
-  const showToast = (msg, type="success") => { setToast({msg,type}); setTimeout(()=>setToast(null),3000); };
-
-  const handleLogin = () => {
-    const u = USERS[loginUser.toLowerCase()];
-    if (u && u.password === loginPass) {
-      setUser({ username:loginUser.toLowerCase(), ...u });
-      setLoginErr("");
-      setActiveFarac(u.role !== "maamul" ? u.role : "sare");
-      setActiveTab("xisaab");
-    } else setLoginErr("Magaca ama sirta waa khalad.");
-  };
-
-  const canEdit = (faracKey) => !data[faracKey]?.submitted || user?.role === "maamul";
-
-  const updateFasal = (faracKey, idx, field, val) => {
-    if (!canEdit(faracKey)) return;
-    setData(prev => { const f=[...prev[faracKey].fasalada]; f[idx]={...f[idx],[field]:val}; return {...prev,[faracKey]:{...prev[faracKey],fasalada:f}}; });
-  };
-  const updateKharash = (faracKey, field, val) => {
-    if (!canEdit(faracKey)) return;
-    setData(prev => ({...prev,[faracKey]:{...prev[faracKey],kharash:{...prev[faracKey].kharash,[field]:val}}}));
-  };
-  const updateMeta = (faracKey, field, val) => {
-    if (!canEdit(faracKey)) return;
-    setData(prev => ({...prev,[faracKey]:{...prev[faracKey],[field]:val}}));
-  };
-
-  // FIX 2: saveDraft - kaliya kaydso, MAAMULKA UGUMA GUDBIN
-  const saveDraft = (faracKey) => {
-    setData(prev => ({...prev,[faracKey]:{...prev[faracKey],savedAt:new Date().toISOString()}}));
-    showToast("✅ Xogtu waa la kaydiyey");
-    // submitted waa false weli - maamulka laguma gudbinin
-  };
-
-  // FIX 2: submitFarac - gaar u ah gudbitaanka maamulka
-  const submitFarac = (faracKey) => {
-    setData(prev => ({...prev,[faracKey]:{...prev[faracKey],submitted:true,savedAt:new Date().toISOString()}}));
-    setConfirmModal(null);
-    showToast("📤 Xogtu waa la gudbiyey maamulka!","info");
-  };
-
-  const unlockFarac = (faracKey) => { setData(prev=>({...prev,[faracKey]:{...prev[faracKey],submitted:false}})); showToast("🔓 Faracka waa la furiye","info"); };
-  const addFasal = () => {
-    if (!newFasalName.trim()) return;
-    setData(prev=>({...prev,[newFasalFarac]:{...prev[newFasalFarac],fasalada:[...prev[newFasalFarac].fasalada,emptyFasal(newFasalName.trim())]}}));
-    showToast(`✅ "${newFasalName}" waa lagu daray ${FARAC_LABELS[newFasalFarac]}`);
-    setNewFasalName("");
-  };
-  const removeFasal = (faracKey, idx) => { setData(prev=>({...prev,[faracKey]:{...prev[faracKey],fasalada:prev[faracKey].fasalada.filter((_,i)=>i!==idx)}})); showToast("🗑️ Fasalku waa la tirtirray","warning"); };
-  const resetFarac = (faracKey) => { setData(prev=>({...prev,[faracKey]:{fasalada:DEFAULT_FASALADA[faracKey].map(emptyFasal),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,submitted:false,savedAt:null}})); setConfirmModal(null); showToast("♻️ Faracka waa la nadiifiyey","warning"); };
-
-  // LOGIN
-  if (!user) {
-    return (
-      // FIX 3: Mobile-friendly login - overflowY scroll, padding yaraaday, maxWidth
-      <div style={{minHeight:"100vh",background:"linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0d2137 100%)",display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'Segoe UI',sans-serif",padding:"16px",boxSizing:"border-box",overflowY:"auto"}}>
-        <div style={{background:"rgba(255,255,255,0.05)",backdropFilter:"blur(20px)",border:"1px solid rgba(255,255,255,0.15)",borderRadius:20,padding:"36px 28px",width:"100%",maxWidth:400,boxShadow:"0 32px 64px rgba(0,0,0,0.4)",boxSizing:"border-box"}}>
-          <div style={{textAlign:"center",marginBottom:28}}>
-            <div style={{width:56,height:56,background:"linear-gradient(135deg,#ffd700,#ff8c00)",borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 12px",fontSize:24}}>🏫</div>
-            <h1 style={{color:"#ffd700",fontSize:20,fontWeight:700,margin:0}}>AL-XIKMA SCHOOL</h1>
-            <p style={{color:"rgba(255,255,255,0.5)",fontSize:12,marginTop:6}}>Nidaamka Xisaab Xirka</p>
-          </div>
-          <div style={{marginBottom:14}}>
-            <label style={{color:"rgba(255,255,255,0.7)",fontSize:13,display:"block",marginBottom:6}}>Magaca Isticmaalaha</label>
-            <input value={loginUser} onChange={e=>setLoginUser(e.target.value)} placeholder="tusaale: sare" onKeyDown={e=>e.key==="Enter"&&handleLogin()} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:10,color:"#fff",fontSize:15,outline:"none",boxSizing:"border-box"}} />
-          </div>
-          <div style={{marginBottom:8}}>
-            <label style={{color:"rgba(255,255,255,0.7)",fontSize:13,display:"block",marginBottom:6}}>Sirta</label>
-            <input type="password" value={loginPass} onChange={e=>setLoginPass(e.target.value)} placeholder="Geli sirta" onKeyDown={e=>e.key==="Enter"&&handleLogin()} style={{width:"100%",padding:"12px 16px",background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:10,color:"#fff",fontSize:15,outline:"none",boxSizing:"border-box"}} />
-          </div>
-          {loginErr && <p style={{color:"#ff6b6b",fontSize:13,marginBottom:12}}>{loginErr}</p>}
-          <button onClick={handleLogin} style={{width:"100%",padding:"14px",background:"linear-gradient(135deg,#ffd700,#ff8c00)",border:"none",borderRadius:10,color:"#1a1a1a",fontWeight:700,fontSize:16,cursor:"pointer",marginTop:8,marginBottom:20}}>Gal →</button>
-          <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",paddingTop:16}}>
-            <button onClick={()=>setShowPwd(!showPwd)} style={{background:"none",border:"1px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.5)",fontSize:12,borderRadius:6,padding:"6px 12px",cursor:"pointer",width:"100%"}}>
-              {showPwd?"Qari":"Muuji"} Login-yada
-            </button>
-            {showPwd && <div style={{marginTop:12,background:"rgba(0,0,0,0.3)",borderRadius:8,padding:12}}>{Object.entries(USERS).map(([k,v])=><div key={k} style={{display:"flex",justifyContent:"space-between",marginBottom:4,fontSize:12}}><span style={{color:"#ffd700"}}>{k}</span><span style={{color:"rgba(255,255,255,0.5)"}}>{v.password}</span></div>)}</div>}
-          </div>
-        </div>
-      </div>
-    );
+  /* RESPONSIVE */
+  @media(max-width:768px){
+    #main-layout{flex-direction:column;}
+    #sidebar{width:100%;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:8px;display:flex;gap:6px;flex-shrink:0;}
+    .sb-section-lbl,.sb-divider,.sidebar-divider-block{display:none!important;}
+    .sb-farac-btn,.sb-tab-btn,.sb-guud-btn{white-space:nowrap;margin-bottom:0;padding:7px 10px;font-size:12px;width:auto;flex-shrink:0;}
+    .stat-grid-5{grid-template-columns:repeat(2,1fr)!important;}
+    .stat-grid-3{grid-template-columns:repeat(2,1fr)!important;}
+    .chart-grid,.summary-grid,.settings-grid{grid-template-columns:1fr!important;}
+    .header-sub,.bisha-label{display:none;}
+    .farac-title h2{font-size:14px!important;}
+    .action-btns{gap:5px!important;}
+    .action-btns button{padding:6px 10px!important;font-size:11px!important;}
+  }
+  @media(max-width:480px){
+    #header{padding:0 10px;height:50px;}
+    #main-content{padding:10px;}
+    .stat-grid-5{grid-template-columns:1fr 1fr!important;}
+    .farac-detail-header{flex-wrap:wrap;gap:8px;}
   }
 
-  const isMaamul = user.role === "maamul";
-  const faracList = isMaamul ? Object.keys(FARAC_COLORS) : [user.role];
-  const currentFaracData = activeFarac ? data[activeFarac] : null;
-  const calc = currentFaracData ? calcFarac(currentFaracData) : null;
-  const isLocked = currentFaracData?.submitted && !isMaamul;
-  const allStats = Object.keys(FARAC_COLORS).map(k=>({key:k,label:FARAC_LABELS[k],color:FARAC_COLORS[k],submitted:data[k]?.submitted,...calcFarac(data[k])}));
-  const grandTotal = allStats.reduce((acc,s)=>({saafi:acc.saafi+s.saafi,kharashWadar:acc.kharashWadar+s.kharashWadar,totalArdayda:acc.totalArdayda+s.totalArdayda}),{saafi:0,kharashWadar:0,totalArdayda:0});
-  const fieldLabel = { tiradaBixisay:"Tirada Bixisay", qiimaha:"Qiimaha ($)", lacagtaSooHormartay:"Soo Hormartay ($)", previewPayment:"Preview Pay ($)", tiradaAanBixin:"Aan Bixin", lacagtaAanBixin:"Lacag Aan Bixin ($)", scholarship:"Scholarship", freeStudents:"Free Students" };
-  const kharashLabels = { maamulka:"Maamulka", macalimiinta:"Macalimiinta", shaqaalaha:"Shaqaalaha", canshuurta:"Canshuurta", dareewalada:"Dareewalada", kharashDugsiga:"Kharash Dugsiga" };
-  const tabList = [{ id:"xisaab", icon:"💰", label:"Xisaab Xirka" },{ id:"kharash", icon:"📋", label:"Kharashka" },{ id:"charts", icon:"📊", label:"Charts" },...(isMaamul?[{id:"settings",icon:"⚙️",label:"Settings"}]:[])];
+  /* CHARTS */
+  .chart-canvas-wrap{position:relative;height:200px;}
+</style>
+</head>
+<body>
 
-  return (
-    // FIX 3: Mobile responsive - display flex column on mobile, overflow hidden
-    <div style={{minHeight:"100vh",maxHeight:"100vh",background:"#f0f2f5",fontFamily:"'Segoe UI',sans-serif",position:"relative",display:"flex",flexDirection:"column",overflow:"hidden"}}>
-      <style>{`
-        @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-        @media (max-width: 768px) {
-          .main-layout { flex-direction: column !important; }
-          .sidebar { width: 100% !important; height: auto !important; flex-direction: row !important; overflow-x: auto !important; overflow-y: hidden !important; padding: 8px !important; display: flex !important; gap: 6px !important; flex-shrink: 0 !important; }
-          .sidebar-farac-btn { white-space: nowrap !important; margin-bottom: 0 !important; padding: 7px 10px !important; font-size: 12px !important; }
-          .sidebar-tab-btn { white-space: nowrap !important; padding: 6px 10px !important; font-size: 11px !important; }
-          .sidebar-section-label { display: none !important; }
-          .sidebar-divider { display: none !important; }
-          .stat-grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
-          .stat-grid-3 { grid-template-columns: repeat(2, 1fr) !important; }
-          .chart-grid { grid-template-columns: 1fr !important; }
-          .summary-grid { grid-template-columns: 1fr !important; }
-          .settings-grid { grid-template-columns: 1fr !important; }
-          .header-bisha-label { display: none !important; }
-          .header-divider { display: none !important; }
-          .farac-title h2 { font-size: 14px !important; }
-          .action-btns { gap: 5px !important; }
-          .action-btns button { padding: 6px 10px !important; font-size: 11px !important; }
-        }
-        @media (max-width: 480px) {
-          .header { padding: 0 10px !important; height: 50px !important; }
-          .header-logo-text { display: none !important; }
-          .main-content { padding: 10px !important; }
-          .stat-grid-5 { grid-template-columns: 1fr 1fr !important; }
-          .farac-detail-header { flex-wrap: wrap !important; gap: 8px !important; }
-        }
-      `}</style>
+<!-- FIREBASE LOADING BAR -->
+<div id="fb-loading">⏳ Xog la soo rarayo...</div>
 
-      {toast && <div style={{position:"fixed",top:16,right:16,zIndex:9999,background:toast.type==="info"?"#1565c0":toast.type==="warning"?"#e65100":"#0d6e4f",color:"#fff",padding:"12px 20px",borderRadius:10,boxShadow:"0 4px 16px rgba(0,0,0,0.2)",fontSize:14,fontWeight:600,animation:"fadeIn 0.3s",maxWidth:"calc(100vw - 32px)"}}>{toast.msg}</div>}
+<!-- TOAST -->
+<div id="toast"></div>
 
-      {fbLoading && <div style={{position:"fixed",top:0,left:0,right:0,zIndex:10000,background:"#1565c0",color:"#fff",textAlign:"center",padding:"6px",fontSize:13,fontWeight:600}}>⏳ Xog la soo rarayo...</div>}
+<!-- CONFIRM MODAL -->
+<div id="modal-overlay">
+  <div id="modal-box">
+    <h3 id="modal-title"></h3>
+    <p id="modal-body"></p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Jooji</button>
+      <button class="btn-confirm" id="modal-confirm-btn"></button>
+    </div>
+  </div>
+</div>
 
-      {confirmModal && (
-        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9998,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:"#fff",borderRadius:16,padding:28,width:"100%",maxWidth:380,boxShadow:"0 16px 48px rgba(0,0,0,0.3)",boxSizing:"border-box"}}>
-            <h3 style={{margin:"0 0 12px",color:"#1a3a5c"}}>{confirmModal.action==="submit"?"📤 Xogta Gudbi":"♻️ Xog Nadiifi"}</h3>
-            <p style={{color:"#555",fontSize:14,marginBottom:24}}>{confirmModal.action==="submit"?`Ma hubtaa inaad u gudbinayso maamulka xogta ${FARAC_LABELS[confirmModal.farac]}? Kadib ma beddeli kartid.`:`Ma hubtaa inaad nadiifin lahayd dhammaan xogta ${FARAC_LABELS[confirmModal.farac]}?`}</p>
-            <div style={{display:"flex",gap:12,justifyContent:"flex-end"}}>
-              <button onClick={()=>setConfirmModal(null)} style={{padding:"10px 20px",border:"1px solid #ddd",borderRadius:8,background:"#f5f5f5",cursor:"pointer",fontSize:14}}>Jooji</button>
-              <button onClick={()=>confirmModal.action==="submit"?submitFarac(confirmModal.farac):resetFarac(confirmModal.farac)} style={{padding:"10px 20px",border:"none",borderRadius:8,background:confirmModal.action==="submit"?"#1565c0":"#c62828",color:"#fff",cursor:"pointer",fontSize:14,fontWeight:600}}>{confirmModal.action==="submit"?"Haa, Gudbi":"Haa, Nadiifi"}</button>
-            </div>
-          </div>
-        </div>
-      )}
+<!-- ══════════════ LOGIN PAGE ══════════════ -->
+<div id="login-page">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-icon">🏫</div>
+      <h1>AL-XIKMA SCHOOL</h1>
+      <p>Nidaamka Xisaab Xirka</p>
+    </div>
+    <label class="login-label">Magaca Isticmaalaha</label>
+    <input id="inp-user" class="login-input" placeholder="tusaale: sare" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <label class="login-label">Sirta</label>
+    <input id="inp-pass" class="login-input" type="password" placeholder="Geli sirta" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <p id="login-err">Magaca ama sirta waa khalad.</p>
+    <button class="btn-login" onclick="doLogin()">Gal →</button>
+    <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:16px;">
+      <button class="show-pwd-btn" onclick="togglePwdList()">Muuji Login-yada</button>
+      <div id="pwd-list"></div>
+    </div>
+  </div>
+</div>
 
-      {/* HEADER - FIX 3: mobile friendly */}
-      <div className="header" style={{background:"linear-gradient(135deg,#0a1628,#1a3a5c)",padding:"0 20px",display:"flex",alignItems:"center",justifyContent:"space-between",height:58,boxShadow:"0 2px 12px rgba(0,0,0,0.3)",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <span style={{fontSize:20}}>🏫</span>
-          <span style={{color:"#ffd700",fontWeight:700,fontSize:15}}>AL-XIKMA</span>
-          <span className="header-logo-text" style={{color:"rgba(255,255,255,0.4)",fontSize:12,marginLeft:4}}>Nidaamka Xisaab Xirka</span>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span className="header-bisha-label" style={{color:"rgba(255,255,255,0.6)",fontSize:12}}>📅 Bisha:</span>
-          {/* FIX 1: handleBishaChange isticmaal badel setBisha */}
-          <select value={bisha} onChange={e=>handleBishaChange(e.target.value)} style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.25)",color:"#ffd700",borderRadius:6,padding:"4px 8px",fontSize:12,outline:"none",cursor:"pointer",maxWidth:100}}>
-            {BILAHA.map(b=><option key={b} value={b} style={{background:"#1a3a5c"}}>{b}</option>)}
-          </select>
-          <span className="header-divider" style={{color:"rgba(255,255,255,0.6)",fontSize:12}}>|</span>
-          <span style={{color:"rgba(255,255,255,0.7)",fontSize:12}}>👤 {user.label}</span>
-          <button onClick={()=>setUser(null)} style={{background:"rgba(255,255,255,0.1)",border:"1px solid rgba(255,255,255,0.2)",color:"#fff",padding:"5px 10px",borderRadius:6,cursor:"pointer",fontSize:12}}>Bax</button>
-        </div>
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app-page">
+  <!-- HEADER -->
+  <div id="header">
+    <div class="header-left">
+      <span style="font-size:20px">🏫</span>
+      <span class="header-title">AL-XIKMA</span>
+      <span class="header-sub">Nidaamka Xisaab Xirka</span>
+    </div>
+    <div class="header-right">
+      <span class="bisha-label">📅 Bisha:</span>
+      <select id="bisha-select" onchange="handleBishaChange(this.value)"></select>
+      <span style="color:rgba(255,255,255,.6);font-size:12px">|</span>
+      <span class="header-user" id="header-user-label">👤</span>
+      <button class="btn-bax" onclick="doLogout()">Bax</button>
+    </div>
+  </div>
+
+  <!-- MAIN LAYOUT -->
+  <div id="main-layout">
+    <!-- SIDEBAR -->
+    <div id="sidebar"></div>
+    <!-- CONTENT -->
+    <div id="main-content"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// FIREBASE CONFIG & REST HELPERS
+// ══════════════════════════════════════════
+const DB_URL = "https://alxikma-xisaabaad-default-rtdb.firebaseio.com";
+async function fbGet(path){
+  const r = await fetch(`${DB_URL}${path}.json`);
+  if(!r.ok) throw new Error("Firebase GET failed");
+  return r.json();
+}
+async function fbSet(path, value){
+  const r = await fetch(`${DB_URL}${path}.json`,{
+    method:"PUT", headers:{"Content-Type":"application/json"}, body:JSON.stringify(value)
+  });
+  if(!r.ok) throw new Error("Firebase PUT failed");
+  return r.json();
+}
+function getFbPath(bisha){ return `/xisaab/${bisha.replace(/\s/g,"_")}`; }
+const BISHA_FB_PATH = "/meta/bisha";
+
+// ══════════════════════════════════════════
+// DATA CONSTANTS
+// ══════════════════════════════════════════
+const USERS = {
+  maamul:{password:"maamul@2024",role:"maamul",label:"Maamulka"},
+  sare:  {password:"sare@2024",  role:"sare",  label:"Dugsiga Sare"},
+  dhexe: {password:"dhexe@2024", role:"dhexe", label:"Dugsiga Dhexe"},
+  hoose1:{password:"hoose1@2024",role:"hoose1",label:"Hoose 1"},
+  hoose2:{password:"hoose2@2024",role:"hoose2",label:"Hoose 2"},
+};
+const FARAC_COLORS = {sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a"};
+const FARAC_LABELS = {sare:"Dugsiga Sare",dhexe:"Dugsiga Dhexe",hoose1:"Hoose 1",hoose2:"Hoose 2"};
+const BILAHA = ["Janaayo","Febraayo","Maarso","Abriil","May","Juun","Luuliyo","Ogosto","Sebtembar","Oktoobar","Noofembar","Disembar"];
+const DEFAULT_FASALADA = {
+  sare:  ["Level One","Level Two"],
+  dhexe: ["1aad","2aad","3aad"],
+  hoose1:["Fasalka 1","Fasalka 2","Fasalka 3"],
+  hoose2:["Fasalka 4","Fasalka 5","Basaska"],
+};
+const FIELD_LABELS = {
+  tiradaBixisay:"Tirada Bixisay", qiimaha:"Qiimaha ($)",
+  lacagtaSooHormartay:"Soo Hormartay ($)", previewPayment:"Preview Pay ($)",
+  tiradaAanBixin:"Aan Bixin", lacagtaAanBixin:"Lacag Aan Bixin ($)",
+  scholarship:"Scholarship", freeStudents:"Free Students"
+};
+const KHARASH_LABELS = {
+  maamulka:"Maamulka", macalimiinta:"Macalimiinta", shaqaalaha:"Shaqaalaha",
+  canshuurta:"Canshuurta", dareewalada:"Dareewalada", kharashDugsiga:"Kharash Dugsiga"
+};
+const PIE_COLORS = ["#0d6e4f","#1565c0","#7b3f00","#8b1a2a"];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentUser = null;
+let currentBisha = BILAHA[new Date().getMonth()];
+let appData = buildInitFarac();
+let activeFarac = null;
+let activeTab = "xisaab";
+let saveTimeout = null;
+let modalAction = null;
+let chartInstances = {};
+
+function emptyFasal(name){
+  return {magaca:name,tiradaBixisay:0,qiimaha:13,lacagtaSooHormartay:0,previewPayment:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0};
+}
+function buildInitFarac(){
+  const d={};
+  Object.keys(DEFAULT_FASALADA).forEach(k=>{
+    d[k]={fasalada:DEFAULT_FASALADA[k].map(emptyFasal),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,submitted:false,savedAt:null};
+  });
+  return d;
+}
+function calcFarac(fd){
+  let tB=0,tL=0,tH=0,tP=0,tAB=0,tLAB=0,tS=0,tF=0;
+  fd.fasalada.forEach(f=>{
+    tB +=+f.tiradaBixisay; tL +=+f.tiradaBixisay * +f.qiimaha;
+    tH +=+f.lacagtaSooHormartay; tP +=+f.previewPayment;
+    tAB+=+f.tiradaAanBixin; tLAB+=+f.lacagtaAanBixin;
+    tS +=+f.scholarship; tF +=+f.freeStudents;
+  });
+  const kWadar=Object.values(fd.kharash).reduce((a,b)=>a+(+b),0);
+  const xarooday=tL+tH+tP;
+  const saafi=xarooday-(+fd.discount)-(+fd.lacagKhususi);
+  const totalArdayda=tB+tAB+tS+tF;
+  return {totalBixisay:tB,totalLacag:tL,totalHormartay:tH,totalPreview:tP,totalAanBixin:tAB,totalLacagAanBixin:tLAB,totalScholarship:tS,totalFree:tF,kharashWadar:kWadar,xarooday,saafi,totalArdayda};
+}
+
+// ══════════════════════════════════════════
+// FIREBASE LOAD/SAVE
+// ══════════════════════════════════════════
+function setFbLoading(on){ document.getElementById("fb-loading").style.display=on?"block":"none"; }
+
+async function loadBisha(targetBisha){
+  setFbLoading(true);
+  try{
+    const snap = await fbGet(getFbPath(targetBisha));
+    appData = (snap && typeof snap==="object") ? snap : buildInitFarac();
+    // ensure all farac keys exist
+    Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!appData[k]) appData[k]=buildInitFarac()[k]; });
+  }catch(e){ appData=buildInitFarac(); }
+  finally{ setFbLoading(false); }
+}
+
+function scheduleSave(){
+  if(saveTimeout) clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(async()=>{
+    try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
+  }, 1200);
+}
+
+async function handleBishaChange(newBisha){
+  try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
+  currentBisha = newBisha;
+  try{ await fbSet(BISHA_FB_PATH, newBisha); }catch{}
+  await loadBisha(newBisha);
+  renderAll();
+}
+
+// ══════════════════════════════════════════
+// LOGIN / LOGOUT
+// ══════════════════════════════════════════
+function doLogin(){
+  const u = document.getElementById("inp-user").value.trim().toLowerCase();
+  const p = document.getElementById("inp-pass").value;
+  const usr = USERS[u];
+  if(usr && usr.password===p){
+    currentUser = {...usr, username:u};
+    document.getElementById("login-err").style.display="none";
+    activeFarac = usr.role!=="maamul" ? usr.role : "sare";
+    activeTab = "xisaab";
+    document.getElementById("login-page").style.display="none";
+    document.getElementById("app-page").classList.add("show");
+    document.getElementById("header-user-label").textContent = "👤 "+usr.label;
+    renderAll();
+  } else {
+    document.getElementById("login-err").style.display="block";
+  }
+}
+function doLogout(){
+  currentUser=null; activeFarac=null; activeTab="xisaab";
+  document.getElementById("app-page").classList.remove("show");
+  document.getElementById("login-page").style.display="flex";
+  document.getElementById("inp-user").value="";
+  document.getElementById("inp-pass").value="";
+}
+function togglePwdList(){
+  const el=document.getElementById("pwd-list");
+  const btn=document.querySelector(".show-pwd-btn");
+  if(el.style.display==="block"){ el.style.display="none"; btn.textContent="Muuji Login-yada"; return; }
+  el.style.display="block"; btn.textContent="Qari Login-yada";
+  el.innerHTML = Object.entries(USERS).map(([k,v])=>
+    `<div class="pwd-row"><span>${k}</span><span>${v.password}</span></div>`
+  ).join("");
+}
+
+// ══════════════════════════════════════════
+// RENDER ALL
+// ══════════════════════════════════════════
+function renderAll(){
+  populateBishaSelect();
+  renderSidebar();
+  renderContent();
+}
+
+function populateBishaSelect(){
+  const sel=document.getElementById("bisha-select");
+  if(sel.options.length===0){
+    BILAHA.forEach(b=>{ const o=document.createElement("option"); o.value=b; o.textContent=b; sel.appendChild(o); });
+  }
+  sel.value = currentBisha;
+}
+
+// ══════════════════════════════════════════
+// SIDEBAR
+// ══════════════════════════════════════════
+function renderSidebar(){
+  const isMaamul = currentUser.role==="maamul";
+  const sb = document.getElementById("sidebar");
+  let html="";
+  if(isMaamul){
+    html += `<div class="sb-section-lbl">Faracyada</div>`;
+    Object.keys(FARAC_COLORS).forEach(k=>{
+      const activeClass = activeFarac===k ? `active-${k}` : "";
+      html += `<button class="sb-farac-btn ${activeClass}" onclick="selectFarac('${k}')">
+        <span style="display:flex;align-items:center;gap:7px"><span class="sb-dot" style="background:${FARAC_COLORS[k]}"></span>${FARAC_LABELS[k]}</span>
+        ${appData[k]?.submitted?"<span style='font-size:10px'>✅</span>":""}
+      </button>`;
+    });
+    html += `<div class="sb-divider sidebar-divider-block">
+      <button class="sb-guud-btn ${activeFarac===null?"active":""}" onclick="selectGuud()">📊 Guud Ahaan</button>
+    </div>`;
+    // mobile guud button
+    html += `<button class="sb-farac-btn ${activeFarac===null?"active-guud":""}" style="white-space:nowrap;flex-shrink:0" onclick="selectGuud()">📊 Guud</button>`;
+  } else {
+    html += `<div class="non-maamul-badge" style="background:${FARAC_COLORS[currentUser.role]}">
+      <div class="label">${FARAC_LABELS[currentUser.role]}</div>
+      ${appData[currentUser.role]?.submitted?`<div class="sub">✅ Gudbi la sameeyey</div>`:""}
+    </div>`;
+  }
+  if(activeFarac){
+    html += `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:6px">
+      <div class="sb-section-lbl">TABS</div>`;
+    const tabs=[{id:"xisaab",icon:"💰",label:"Xisaab Xirka"},{id:"kharash",icon:"📋",label:"Kharashka"},{id:"charts",icon:"📊",label:"Charts"}];
+    if(isMaamul) tabs.push({id:"settings",icon:"⚙️",label:"Settings"});
+    tabs.forEach(t=>{ html+=`<button class="sb-tab-btn ${activeTab===t.id?"active":""}" onclick="selectTab('${t.id}')">${t.icon} ${t.label}</button>`; });
+    html+="</div>";
+  }
+  sb.innerHTML=html;
+}
+
+function selectFarac(k){ activeFarac=k; activeTab="xisaab"; renderAll(); }
+function selectGuud(){ activeFarac=null; activeTab="guud"; renderAll(); }
+function selectTab(t){ activeTab=t; renderContent(); renderSidebar(); }
+
+// ══════════════════════════════════════════
+// CONTENT
+// ══════════════════════════════════════════
+function renderContent(){
+  destroyCharts();
+  const isMaamul = currentUser.role==="maamul";
+  const mc = document.getElementById("main-content");
+  if(activeFarac===null && isMaamul){ mc.innerHTML=renderGuud(); initGuudCharts(); return; }
+  if(activeFarac){ mc.innerHTML=renderFaracDetail(); if(activeTab==="charts") initFaracCharts(); return; }
+  mc.innerHTML="";
+}
+
+// ── GUUD ──────────────────────────────────
+function renderGuud(){
+  const allStats = Object.keys(FARAC_COLORS).map(k=>({key:k,label:FARAC_LABELS[k],color:FARAC_COLORS[k],submitted:appData[k]?.submitted,...calcFarac(appData[k])}));
+  const grand = allStats.reduce((a,s)=>({saafi:a.saafi+s.saafi,kharashWadar:a.kharashWadar+s.kharashWadar,totalArdayda:a.totalArdayda+s.totalArdayda}),{saafi:0,kharashWadar:0,totalArdayda:0});
+
+  let html=`<h2 style="color:#1a3a5c;margin:0 0 16px;font-size:16px">📊 Warbixinta Guud — ${currentBisha}</h2>
+  <div class="stat-grid-3">
+    ${statCard("Wadarta Ardayda",grand.totalArdayda,"👨‍🎓","#1a3a5c",false)}
+    ${statCard("Lacag Saafi (Guud)","$"+grand.saafi.toLocaleString(),"💵","#0d6e4f",false)}
+    ${statCard("Kharash (Guud)","$"+grand.kharashWadar.toLocaleString(),"📤","#8b1a2a",false)}
+  </div>
+  <div class="panel"><h4>📈 Barbardhig Faracyada</h4><div class="chart-canvas-wrap"><canvas id="chart-guud-bar"></canvas></div></div>
+  <div class="summary-grid">`;
+  allStats.forEach(s=>{
+    const profit = s.saafi - s.kharashWadar;
+    html+=`<div class="farac-overview-card" style="border-top-color:${s.color}">
+      <div class="farac-ov-top">
+        <h3 style="color:${s.color};margin:0;font-size:15px">${s.label}</h3>
+        <span style="display:flex;gap:5px">
+          <span style="background:${s.color};color:#fff;border-radius:5px;padding:2px 8px;font-size:11px">${s.totalArdayda} Arday</span>
+          ${s.submitted?"<span style='background:#0d6e4f;color:#fff;border-radius:5px;padding:2px 7px;font-size:10px'>✅</span>":""}
+        </span>
       </div>
+      <div class="farac-ov-mini">
+        <div class="mini-stat"><div class="mini-stat-lbl">Lacag Xarooday</div><div class="mini-stat-val">$${s.xarooday.toLocaleString()}</div></div>
+        <div class="mini-stat"><div class="mini-stat-lbl">Saafi</div><div class="mini-stat-val">$${s.saafi.toLocaleString()}</div></div>
+        <div class="mini-stat"><div class="mini-stat-lbl">Aan Bixin</div><div class="mini-stat-val">${s.totalAanBixin}</div></div>
+        <div class="mini-stat"><div class="mini-stat-lbl">Kharash</div><div class="mini-stat-val">$${s.kharashWadar.toLocaleString()}</div></div>
+      </div>
+      <div class="farac-ov-footer ${profit>=0?"profit":"loss"}">
+        <span style="font-size:12px;color:#555">Faa'iido / Khasaare</span>
+        <span style="font-weight:700;color:${profit>=0?"#0d6e4f":"#c62828"};font-size:13px">$${profit.toLocaleString()}</span>
+      </div>
+      ${s.submitted?`<button class="btn-unlock-sm" onclick="unlockFarac('${s.key}')">🔓 Fur / Unlock</button>`:""}
+    </div>`;
+  });
+  html+="</div>";
+  return html;
+}
 
-      {/* FIX 3: Main layout flex, sidebar + content */}
-      <div className="main-layout" style={{display:"flex",flex:1,overflow:"hidden"}}>
+function initGuudCharts(){
+  const allStats = Object.keys(FARAC_COLORS).map(k=>({label:FARAC_LABELS[k],...calcFarac(appData[k])}));
+  const ctx = document.getElementById("chart-guud-bar");
+  if(!ctx) return;
+  chartInstances["guud-bar"] = new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:allStats.map(s=>s.label),
+      datasets:[
+        {label:"Ardayda",data:allStats.map(s=>s.totalArdayda),backgroundColor:"#1a3a5c",borderRadius:3},
+        {label:"Lacag",data:allStats.map(s=>s.saafi),backgroundColor:"#0d6e4f",borderRadius:3},
+        {label:"Kharash",data:allStats.map(s=>s.kharashWadar),backgroundColor:"#c62828",borderRadius:3},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}}}
+  });
+}
 
-        {/* SIDEBAR - FIX 3: On mobile becomes horizontal scroll bar on top */}
-        <div className="sidebar" style={{width:210,background:"#1e2a3a",padding:"16px 10px",overflowY:"auto",flexShrink:0}}>
-          {isMaamul && (
-            <>
-              <div className="sidebar-section-label" style={{color:"rgba(255,255,255,0.4)",fontSize:10,textTransform:"uppercase",letterSpacing:1,marginBottom:8,padding:"0 6px"}}>Faracyada</div>
-              {faracList.map(k=>(
-                <button key={k} className="sidebar-farac-btn" onClick={()=>{setActiveFarac(k);setActiveTab("xisaab");}} style={{width:"100%",padding:"9px 10px",background:activeFarac===k?FARAC_COLORS[k]:"transparent",border:"none",borderRadius:8,color:"#fff",textAlign:"left",cursor:"pointer",marginBottom:4,fontSize:13,fontWeight:activeFarac===k?600:400,display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                  <span style={{display:"flex",alignItems:"center",gap:7}}><span style={{width:7,height:7,borderRadius:"50%",background:FARAC_COLORS[k],flexShrink:0}}></span>{FARAC_LABELS[k]}</span>
-                  {data[k]?.submitted && <span style={{fontSize:10}}>✅</span>}
-                </button>
-              ))}
-              <div className="sidebar-divider" style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:10,paddingTop:10}}>
-                <button onClick={()=>{setActiveFarac(null);setActiveTab("guud");}} style={{width:"100%",padding:"9px 10px",background:activeFarac===null?"#ffd700":"transparent",border:"none",borderRadius:8,color:activeFarac===null?"#1a1a1a":"#fff",textAlign:"left",cursor:"pointer",fontSize:13,fontWeight:600}}>📊 Guud Ahaan</button>
-              </div>
-              {/* Mobile: Guud button inline */}
-              <button className="sidebar-farac-btn" onClick={()=>{setActiveFarac(null);setActiveTab("guud");}} style={{display:"none",padding:"9px 10px",background:activeFarac===null?"#ffd700":"transparent",border:"none",borderRadius:8,color:activeFarac===null?"#1a1a1a":"#fff",cursor:"pointer",fontSize:12,fontWeight:600,whiteSpace:"nowrap"}}>📊 Guud</button>
-            </>
-          )}
-          {!isMaamul && (
-            <div style={{background:FARAC_COLORS[user.role],borderRadius:8,padding:"10px",marginBottom:10,flexShrink:0}}>
-              <div style={{color:"#fff",fontWeight:700,fontSize:13}}>{FARAC_LABELS[user.role]}</div>
-              {data[user.role]?.submitted && <div style={{color:"rgba(255,255,255,0.7)",fontSize:11,marginTop:3}}>✅ Gudbi la sameeyey</div>}
-            </div>
-          )}
-          {activeFarac && (
-            <div style={{borderTop:"1px solid rgba(255,255,255,0.1)",marginTop:6,paddingTop:6}}>
-              <div className="sidebar-section-label" style={{color:"rgba(255,255,255,0.4)",fontSize:10,marginBottom:7,padding:"0 6px"}}>TABS</div>
-              {tabList.map(t=>(
-                <button key={t.id} className="sidebar-tab-btn" onClick={()=>setActiveTab(t.id)} style={{width:"100%",padding:"8px 10px",background:activeTab===t.id?"rgba(255,255,255,0.1)":"transparent",border:"none",borderRadius:6,color:activeTab===t.id?"#fff":"rgba(255,255,255,0.5)",textAlign:"left",cursor:"pointer",fontSize:13,marginBottom:2,whiteSpace:"nowrap"}}>
-                  {t.icon} {t.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+// ── FARAC DETAIL ──────────────────────────
+function renderFaracDetail(){
+  const isMaamul = currentUser.role==="maamul";
+  const fd = appData[activeFarac];
+  const calc = calcFarac(fd);
+  const isLocked = fd.submitted && !isMaamul;
+  const color = FARAC_COLORS[activeFarac];
 
-        {/* MAIN CONTENT - FIX 3: overflowY scroll here */}
-        <div className="main-content" style={{flex:1,overflowY:"auto",padding:20}}>
-
-          {/* GUUD */}
-          {activeFarac===null && isMaamul && (
-            <div>
-              <h2 style={{color:"#1a3a5c",margin:"0 0 16px",fontSize:16}}>📊 Warbixinta Guud — {bisha}</h2>
-              <div className="stat-grid-3" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:14,marginBottom:20}}>
-                <StatCard label="Wadarta Ardayda" value={grandTotal.totalArdayda} icon="👨‍🎓" color="#1a3a5c" />
-                <StatCard label="Lacag Saafi (Guud)" value={`$${grandTotal.saafi.toLocaleString()}`} icon="💵" color="#0d6e4f" />
-                <StatCard label="Kharash (Guud)" value={`$${grandTotal.kharashWadar.toLocaleString()}`} icon="📤" color="#8b1a2a" />
-              </div>
-              <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",marginBottom:20}}>
-                <h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>📈 Barbardhig Faracyada</h4>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={allStats.map(s=>({name:s.label,Ardayda:s.totalArdayda,Lacag:s.saafi,Kharash:s.kharashWadar}))}>
-                    <XAxis dataKey="name" tick={{fontSize:11}} /><YAxis tick={{fontSize:11}} /><Tooltip /><Legend iconSize={10} wrapperStyle={{fontSize:11}} />
-                    <Bar dataKey="Ardayda" fill="#1a3a5c" radius={[3,3,0,0]} /><Bar dataKey="Lacag" fill="#0d6e4f" radius={[3,3,0,0]} /><Bar dataKey="Kharash" fill="#c62828" radius={[3,3,0,0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="summary-grid" style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:14}}>
-                {allStats.map(s=>(
-                  <div key={s.key} style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",borderTop:`4px solid ${s.color}`}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                      <h3 style={{color:s.color,margin:0,fontSize:15}}>{s.label}</h3>
-                      <span style={{display:"flex",gap:5}}><span style={{background:s.color,color:"#fff",borderRadius:5,padding:"2px 8px",fontSize:11}}>{s.totalArdayda} Arday</span>{s.submitted&&<span style={{background:"#0d6e4f",color:"#fff",borderRadius:5,padding:"2px 7px",fontSize:10}}>✅</span>}</span>
-                    </div>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                      <MiniStat label="Lacag Xarooday" value={`$${s.xarooday.toLocaleString()}`} />
-                      <MiniStat label="Saafi" value={`$${s.saafi.toLocaleString()}`} />
-                      <MiniStat label="Aan Bixin" value={s.totalAanBixin} />
-                      <MiniStat label="Kharash" value={`$${s.kharashWadar.toLocaleString()}`} />
-                    </div>
-                    <div style={{marginTop:10,padding:"7px 12px",background:s.saafi-s.kharashWadar>=0?"#e8f5e9":"#ffebee",borderRadius:7,display:"flex",justifyContent:"space-between"}}>
-                      <span style={{fontSize:12,color:"#555"}}>Faa'iido / Khasaare</span>
-                      <span style={{fontWeight:700,color:s.saafi-s.kharashWadar>=0?"#0d6e4f":"#c62828",fontSize:13}}>${(s.saafi-s.kharashWadar).toLocaleString()}</span>
-                    </div>
-                    {s.submitted && <button onClick={()=>unlockFarac(s.key)} style={{marginTop:8,width:"100%",padding:"6px",background:"#fff3e0",border:"1px solid #ff8c00",borderRadius:6,color:"#e65100",fontSize:12,cursor:"pointer",fontWeight:600}}>🔓 Fur / Unlock</button>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* FARAC DETAIL */}
-          {activeFarac && currentFaracData && (
-            <div>
-              <div className="farac-detail-header" style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-                <div className="farac-title" style={{display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{width:10,height:28,background:FARAC_COLORS[activeFarac],borderRadius:3}}></div>
-                  <div><h2 style={{margin:0,color:"#1a3a5c",fontSize:17}}>{FARAC_LABELS[activeFarac]}</h2><span style={{color:"#888",fontSize:11}}>📅 {bisha} {new Date().getFullYear()}</span></div>
-                </div>
-                <div className="action-btns" style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                  {currentFaracData.submitted && <span style={{background:"#e8f5e9",color:"#0d6e4f",padding:"5px 10px",borderRadius:6,fontSize:12,fontWeight:600,border:"1px solid #a5d6a7"}}>✅ La Gudbiyey</span>}
-                  {!currentFaracData.submitted && (
-                    <>
-                      {/* FIX 2: Save - kaliya kaydso, maamulka uguma gudbiso */}
-                      <button onClick={()=>saveDraft(activeFarac)} style={{padding:"7px 16px",background:"#fff",border:"2px solid #1565c0",borderRadius:7,color:"#1565c0",cursor:"pointer",fontSize:13,fontWeight:600}}>💾 Save</button>
-                      {/* FIX 2: Gudbi - gaar u ah, kaliya maamulka u dira */}
-                      {!isMaamul && <button onClick={()=>setConfirmModal({farac:activeFarac,action:"submit"})} style={{padding:"7px 16px",background:"#1565c0",border:"none",borderRadius:7,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600}}>📤 Gudbi</button>}
-                    </>
-                  )}
-                  {currentFaracData.submitted && isMaamul && <button onClick={()=>unlockFarac(activeFarac)} style={{padding:"7px 14px",background:"#fff3e0",border:"1px solid #ff8c00",borderRadius:7,color:"#e65100",cursor:"pointer",fontSize:13,fontWeight:600}}>🔓 Unlock</button>}
-                </div>
-              </div>
-
-              {isLocked && <div style={{background:"#fff3e0",border:"1px solid #ff8c00",borderRadius:8,padding:"9px 14px",marginBottom:14,color:"#e65100",fontSize:13}}>🔒 Xogtan waa la gudbiyey maamulka. Waxaad arki kartaa laakiin ma bedeli kartid.</div>}
-              {currentFaracData.savedAt && !currentFaracData.submitted && <div style={{background:"#e3f2fd",borderRadius:6,padding:"5px 12px",marginBottom:12,color:"#1565c0",fontSize:12}}>💾 Kaydsan: {new Date(currentFaracData.savedAt).toLocaleString()}</div>}
-
-              {/* SUMMARY */}
-              <div className="stat-grid-5" style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:16}}>
-                <StatCard label="Wadarta Ardayda" value={calc.totalArdayda} icon="👥" color={FARAC_COLORS[activeFarac]} small />
-                <StatCard label="Bixisay" value={calc.totalBixisay} icon="✅" color="#0d6e4f" small />
-                <StatCard label="Lacag Xarooday" value={`$${calc.xarooday.toLocaleString()}`} icon="💰" color="#1565c0" small />
-                <StatCard label="Lacagta Saafi" value={`$${calc.saafi.toLocaleString()}`} icon="💵" color="#0d6e4f" small />
-                <StatCard label="Aan Bixin" value={calc.totalAanBixin} icon="⚠️" color="#e65100" small />
-              </div>
-
-              {/* TAB: XISAAB */}
-              {activeTab==="xisaab" && (
-                <div>
-                  <div style={{background:"#fff",borderRadius:12,boxShadow:"0 2px 8px rgba(0,0,0,0.08)",overflow:"hidden",marginBottom:18}}>
-                    <div style={{padding:"12px 18px",background:FARAC_COLORS[activeFarac],color:"#fff",fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center",fontSize:14}}>
-                      <span>📋 Xisaab Xirka — {bisha}</span>
-                      {isLocked && <span style={{fontSize:12,opacity:0.8}}>🔒 Qori la'aan</span>}
-                    </div>
-                    <div style={{overflowX:"auto"}}>
-                      <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                        <thead>
-                          <tr style={{background:"#f8f9fa"}}>
-                            <th style={TH}>Fasalka</th>
-                            {Object.entries(fieldLabel).map(([k,l])=><th key={k} style={TH}>{l}</th>)}
-                            <th style={{...TH,background:"#e8f5e9",color:"#0d6e4f",fontWeight:700}}>Wadarta Ardayda</th>
-                            <th style={{...TH,background:"#e3f2fd",color:"#1565c0",fontWeight:700}}>Wadarta Lacag</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {currentFaracData.fasalada.map((f,i)=>{
-                            const wadarLacag = +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment;
-                            const wadarArday = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents;
-                            return (
-                              <tr key={i} style={{borderBottom:"1px solid #f0f0f0"}}>
-                                <td style={{...TD,fontWeight:600,color:FARAC_COLORS[activeFarac],whiteSpace:"nowrap",fontSize:12}}>{f.magaca}</td>
-                                {Object.keys(fieldLabel).map(field=>(
-                                  <td key={field} style={TD}>
-                                    <input type="number" value={f[field]} disabled={isLocked} onChange={e=>updateFasal(activeFarac,i,field,e.target.value)}
-                                      style={{width:68,padding:"4px 5px",border:isLocked?"1px solid #eee":"1px solid #e0e0e0",borderRadius:4,fontSize:11,textAlign:"center",background:isLocked?"#f9f9f9":"#fff",color:isLocked?"#aaa":"#333"}} />
-                                  </td>
-                                ))}
-                                <td style={{...TD,fontWeight:700,color:"#0d6e4f",background:"#f1faf5",fontSize:13}}>{wadarArday}</td>
-                                <td style={{...TD,fontWeight:700,color:"#1565c0",background:"#f0f7ff",fontSize:13}}>${wadarLacag.toLocaleString()}</td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        <tfoot>
-                          <tr style={{background:"#eee",fontWeight:700}}>
-                            <td style={{...TD,color:"#1a3a5c",fontSize:12}}>WADAR</td>
-                            <td style={{...TD,color:"#0d6e4f"}}>{calc.totalBixisay}</td>
-                            <td style={TD}>—</td>
-                            <td style={{...TD,color:"#0d6e4f"}}>${calc.totalHormartay.toLocaleString()}</td>
-                            <td style={{...TD,color:"#0d6e4f"}}>${calc.totalPreview.toLocaleString()}</td>
-                            <td style={{...TD,color:"#c62828"}}>{calc.totalAanBixin}</td>
-                            <td style={{...TD,color:"#c62828"}}>${calc.totalLacagAanBixin.toLocaleString()}</td>
-                            <td style={TD}>{calc.totalScholarship}</td>
-                            <td style={TD}>{calc.totalFree}</td>
-                            <td style={{...TD,background:"#d4edda",color:"#0d6e4f",fontSize:14,fontWeight:800}}>{calc.totalArdayda}</td>
-                            <td style={{...TD,background:"#cce5ff",color:"#1565c0",fontSize:14,fontWeight:800}}>${calc.xarooday.toLocaleString()}</td>
-                          </tr>
-                        </tfoot>
-                      </table>
-                    </div>
-                  </div>
-                  <div className="summary-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                    <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
-                      <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>🧮 Xisaabta Saafiga</h4>
-                      <Row label="Wadarta Xarooday" value={`$${calc.xarooday.toLocaleString()}`} />
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
-                        <span style={{color:"#555",fontSize:13}}>Qiima Dhimis (Discount)</span>
-                        <input type="number" disabled={isLocked} value={currentFaracData.discount} onChange={e=>updateMeta(activeFarac,"discount",e.target.value)} style={{width:90,padding:"4px 8px",border:"1px solid #e0e0e0",borderRadius:4,fontSize:13,textAlign:"right",background:isLocked?"#f9f9f9":"#fff"}} />
-                      </div>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:"1px solid #f0f0f0"}}>
-                        <span style={{color:"#555",fontSize:13}}>Lacagta Ku Dhiman</span>
-                        <input type="number" disabled={isLocked} value={currentFaracData.lacagKhususi} onChange={e=>updateMeta(activeFarac,"lacagKhususi",e.target.value)} style={{width:90,padding:"4px 8px",border:"1px solid #e0e0e0",borderRadius:4,fontSize:13,textAlign:"right",background:isLocked?"#f9f9f9":"#fff"}} />
-                      </div>
-                      <div style={{display:"flex",justifyContent:"space-between",padding:"12px 0 0",fontWeight:700,fontSize:15}}><span style={{color:"#1a3a5c"}}>Wadarta Saafi</span><span style={{color:"#0d6e4f"}}>${calc.saafi.toLocaleString()}</span></div>
-                    </div>
-                    <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
-                      <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>📊 Kooban</h4>
-                      <Row label="Wadarta Ardayda" value={calc.totalArdayda} color="#0d6e4f" />
-                      <Row label="Scholarship" value={calc.totalScholarship} />
-                      <Row label="Free Students" value={calc.totalFree} />
-                      <Row label="Lacag Aan Bixin" value={`$${calc.totalLacagAanBixin.toLocaleString()}`} color="#c62828" />
-                      <Row label="Kharashka" value={`$${calc.kharashWadar.toLocaleString()}`} color="#e65100" />
-                      <div style={{display:"flex",justifyContent:"space-between",padding:"10px 0 0",fontWeight:700,fontSize:14,borderTop:"2px solid #e0e0e0",marginTop:8}}><span style={{color:"#1a3a5c"}}>Faa'iido / Khasaare</span><span style={{color:calc.saafi-calc.kharashWadar>=0?"#0d6e4f":"#c62828"}}>${(calc.saafi-calc.kharashWadar).toLocaleString()}</span></div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: KHARASH */}
-              {activeTab==="kharash" && (
-                <div style={{background:"#fff",borderRadius:12,padding:22,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
-                  <h4 style={{margin:"0 0 18px",color:"#1a3a5c"}}>📋 Kharashka Dugsiga — {bisha}</h4>
-                  {Object.keys(kharashLabels).map(k=>(
-                    <div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"11px 0",borderBottom:"1px solid #f0f0f0"}}>
-                      <span style={{color:"#444",fontSize:14}}>{kharashLabels[k]}</span>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}><span style={{color:"#888",fontSize:13}}>$</span><input type="number" disabled={isLocked} value={currentFaracData.kharash[k]} onChange={e=>updateKharash(activeFarac,k,e.target.value)} style={{width:120,padding:"7px 12px",border:"1px solid #e0e0e0",borderRadius:6,fontSize:14,textAlign:"right",background:isLocked?"#f9f9f9":"#fff"}} /></div>
-                    </div>
-                  ))}
-                  <div style={{display:"flex",justifyContent:"space-between",padding:"14px 0 0",fontWeight:700,fontSize:15}}><span style={{color:"#1a3a5c"}}>Wadarta Kharashka</span><span style={{color:"#c62828"}}>${calc.kharashWadar.toLocaleString()}</span></div>
-                </div>
-              )}
-
-              {/* TAB: CHARTS */}
-              {activeTab==="charts" && (
-                <div className="chart-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                  <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>👨‍🎓 Ardayda Fasal Kasta</h4><ArdaydaChart fasalada={currentFaracData.fasalada} /></div>
-                  <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>💰 Lacagta Fasal Kasta</h4><LacagChart fasalada={currentFaracData.fasalada} /></div>
-                  <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}><h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>🥧 Qeybsiga Ardayda</h4><PieFarac calc={calc} /></div>
-                  <div style={{background:"#fff",borderRadius:12,padding:18,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
-                    <h4 style={{margin:"0 0 10px",color:"#1a3a5c",fontSize:14}}>📊 Lacag vs Kharash</h4>
-                    <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={[{name:"Lacag Saafi",v:calc.saafi},{name:"Kharash",v:calc.kharashWadar},{name:"Faa'iido",v:calc.saafi-calc.kharashWadar}]}>
-                        <XAxis dataKey="name" tick={{fontSize:10}} /><YAxis tick={{fontSize:10}} tickFormatter={v=>`$${v}`} /><Tooltip formatter={v=>`$${v.toLocaleString()}`} />
-                        <Bar dataKey="v" radius={[4,4,0,0]}>
-                          {[0,1,2].map(i=><Cell key={i} fill={i===2?(calc.saafi-calc.kharashWadar>=0?"#0d6e4f":"#c62828"):i===1?"#c62828":"#1565c0"} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB: SETTINGS */}
-              {activeTab==="settings" && isMaamul && (
-                <div className="settings-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-                  <div style={{background:"#fff",borderRadius:12,padding:22,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
-                    <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>➕ Ku Dar Fasal Cusub</h4>
-                    <div style={{marginBottom:12}}>
-                      <label style={{color:"#555",fontSize:13,display:"block",marginBottom:5}}>Faracka</label>
-                      <select value={newFasalFarac} onChange={e=>setNewFasalFarac(e.target.value)} style={{width:"100%",padding:"8px 12px",border:"1px solid #e0e0e0",borderRadius:7,fontSize:13,outline:"none"}}>
-                        {Object.keys(FARAC_COLORS).map(k=><option key={k} value={k}>{FARAC_LABELS[k]}</option>)}
-                      </select>
-                    </div>
-                    <div style={{marginBottom:14}}>
-                      <label style={{color:"#555",fontSize:13,display:"block",marginBottom:5}}>Magaca Fasalka</label>
-                      <input value={newFasalName} onChange={e=>setNewFasalName(e.target.value)} placeholder="Tusaale: 6aad" onKeyDown={e=>e.key==="Enter"&&addFasal()} style={{width:"100%",padding:"8px 12px",border:"1px solid #e0e0e0",borderRadius:7,fontSize:13,outline:"none",boxSizing:"border-box"}} />
-                    </div>
-                    <button onClick={addFasal} style={{width:"100%",padding:"10px",background:"#0d6e4f",border:"none",borderRadius:8,color:"#fff",fontWeight:600,fontSize:14,cursor:"pointer"}}>➕ Ku Dar</button>
-                  </div>
-                  <div style={{background:"#fff",borderRadius:12,padding:22,boxShadow:"0 2px 8px rgba(0,0,0,0.08)"}}>
-                    <h4 style={{margin:"0 0 14px",color:"#1a3a5c"}}>📝 Fasalada {FARAC_LABELS[activeFarac]}</h4>
-                    <div style={{maxHeight:200,overflowY:"auto",marginBottom:14}}>
-                      {(data[activeFarac]?.fasalada||[]).map((f,i)=>(
-                        <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px",borderRadius:7,marginBottom:5,background:"#f8f9fa",border:"1px solid #eee"}}>
-                          <span style={{fontSize:13,color:"#333"}}>{f.magaca}</span>
-                          <button onClick={()=>removeFasal(activeFarac,i)} style={{background:"#ffebee",border:"1px solid #ffcdd2",color:"#c62828",borderRadius:5,padding:"3px 9px",fontSize:12,cursor:"pointer"}}>🗑️</button>
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={()=>setConfirmModal({farac:activeFarac,action:"reset"})} style={{width:"100%",padding:"9px",background:"#ffebee",border:"1px solid #ffcdd2",borderRadius:8,color:"#c62828",fontWeight:600,fontSize:13,cursor:"pointer"}}>♻️ Dib u Deji (Reset) Faracka</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+  let html=`
+  <div class="farac-detail-header">
+    <div class="farac-title">
+      <div class="farac-bar" style="background:${color}"></div>
+      <div>
+        <h2 style="margin:0;color:#1a3a5c;font-size:17px">${FARAC_LABELS[activeFarac]}</h2>
+        <span style="color:#888;font-size:11px">📅 ${currentBisha} ${new Date().getFullYear()}</span>
       </div>
     </div>
-  );
+    <div class="action-btns">
+      ${fd.submitted?"<span class='badge-submitted'>✅ La Gudbiyey</span>":""}
+      ${!fd.submitted?`
+        <button class="btn-save" onclick="saveDraft('${activeFarac}')">💾 Save</button>
+        ${!isMaamul?`<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`:""}
+      `:""}
+      ${fd.submitted && isMaamul?`<button class="btn-unlock" onclick="unlockFarac('${activeFarac}')">🔓 Unlock</button>`:""}
+    </div>
+  </div>
+  ${isLocked?`<div class="alert-locked">🔒 Xogtan waa la gudbiyey maamulka. Waxaad arki kartaa laakiin ma bedeli kartid.</div>`:""}
+  ${fd.savedAt && !fd.submitted?`<div class="alert-saved">💾 Kaydsan: ${new Date(fd.savedAt).toLocaleString()}</div>`:""}
+
+  <div class="stat-grid-5">
+    ${statCard("Wadarta Ardayda",calc.totalArdayda,"👥",color,true)}
+    ${statCard("Bixisay",calc.totalBixisay,"✅","#0d6e4f",true)}
+    ${statCard("Lacag Xarooday","$"+calc.xarooday.toLocaleString(),"💰","#1565c0",true)}
+    ${statCard("Lacagta Saafi","$"+calc.saafi.toLocaleString(),"💵","#0d6e4f",true)}
+    ${statCard("Aan Bixin",calc.totalAanBixin,"⚠️","#e65100",true)}
+  </div>`;
+
+  if(activeTab==="xisaab") html+=renderXisaabTab(fd, calc, isLocked, color);
+  if(activeTab==="kharash") html+=renderKharashTab(fd, calc, isLocked);
+  if(activeTab==="charts") html+=renderChartsTab();
+  if(activeTab==="settings" && isMaamul) html+=renderSettingsTab();
+
+  return html;
 }
+
+// ── XISAAB TAB ────────────────────────────
+function renderXisaabTab(fd, calc, isLocked, color){
+  const fields = Object.keys(FIELD_LABELS);
+  let html=`<div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;margin-bottom:18px">
+    <div class="panel-header" style="background:${color}">
+      <span>📋 Xisaab Xirka — ${currentBisha}</span>
+      ${isLocked?"<span style='font-size:12px;opacity:.8'>🔒 Qori la'aan</span>":""}
+    </div>
+    <div class="tbl-wrap"><table><thead><tr>
+      <th>Fasalka</th>
+      ${fields.map(k=>`<th>${FIELD_LABELS[k]}</th>`).join("")}
+      <th class="th-green">Wadarta Ardayda</th>
+      <th class="th-blue">Wadarta Lacag</th>
+    </tr></thead><tbody>`;
+
+  fd.fasalada.forEach((f,i)=>{
+    const wL = +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment;
+    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents;
+    html+=`<tr><td style="font-weight:600;color:${color};white-space:nowrap;font-size:12px">${f.magaca}</td>`;
+    fields.forEach(field=>{
+      html+=`<td><input class="inp-cell" type="number" value="${f[field]}" ${isLocked?"disabled":""} onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
+    });
+    html+=`<td class="td-green-bg">${wA}</td><td class="td-blue-bg">$${wL.toLocaleString()}</td></tr>`;
+  });
+
+  html+=`</tbody><tfoot><tr>
+    <td style="color:#1a3a5c;font-size:12px">WADAR</td>
+    <td class="td-green">${calc.totalBixisay}</td>
+    <td>—</td>
+    <td class="td-green">$${calc.totalHormartay.toLocaleString()}</td>
+    <td class="td-green">$${calc.totalPreview.toLocaleString()}</td>
+    <td class="td-red">${calc.totalAanBixin}</td>
+    <td class="td-red">$${calc.totalLacagAanBixin.toLocaleString()}</td>
+    <td>${calc.totalScholarship}</td>
+    <td>${calc.totalFree}</td>
+    <td class="tfoot-total-arday">${calc.totalArdayda}</td>
+    <td class="tfoot-total-lacag">$${calc.xarooday.toLocaleString()}</td>
+  </tr></tfoot></table></div></div>
+
+  <div class="summary-grid">
+    <div class="panel">
+      <h4>🧮 Xisaabta Saafiga</h4>
+      <div class="info-row"><span>Wadarta Xarooday</span><span>$${calc.xarooday.toLocaleString()}</span></div>
+      <div class="discount-row">
+        <span style="color:#555;font-size:13px">Qiima Dhimis (Discount)</span>
+        <input class="discount-inp" type="number" value="${fd.discount}" ${isLocked?"disabled":""} onchange="updateMeta('${activeFarac}','discount',this.value)"/>
+      </div>
+      <div class="discount-row">
+        <span style="color:#555;font-size:13px">Lacagta Ku Dhiman</span>
+        <input class="discount-inp" type="number" value="${fd.lacagKhususi}" ${isLocked?"disabled":""} onchange="updateMeta('${activeFarac}','lacagKhususi',this.value)"/>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:12px 0 0;font-weight:700;font-size:15px">
+        <span style="color:#1a3a5c">Wadarta Saafi</span>
+        <span style="color:#0d6e4f">$${calc.saafi.toLocaleString()}</span>
+      </div>
+    </div>
+    <div class="panel">
+      <h4>📊 Kooban</h4>
+      <div class="info-row"><span>Wadarta Ardayda</span><span style="color:#0d6e4f">${calc.totalArdayda}</span></div>
+      <div class="info-row"><span>Scholarship</span><span>${calc.totalScholarship}</span></div>
+      <div class="info-row"><span>Free Students</span><span>${calc.totalFree}</span></div>
+      <div class="info-row"><span>Lacag Aan Bixin</span><span style="color:#c62828">$${calc.totalLacagAanBixin.toLocaleString()}</span></div>
+      <div class="info-row"><span>Kharashka</span><span style="color:#e65100">$${calc.kharashWadar.toLocaleString()}</span></div>
+      <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:700;font-size:14px;border-top:2px solid #e0e0e0;margin-top:8px">
+        <span style="color:#1a3a5c">Faa'iido / Khasaare</span>
+        <span style="color:${calc.saafi-calc.kharashWadar>=0?"#0d6e4f":"#c62828"}">$${(calc.saafi-calc.kharashWadar).toLocaleString()}</span>
+      </div>
+    </div>
+  </div>`;
+  return html;
+}
+
+// ── KHARASH TAB ────────────────────────────
+function renderKharashTab(fd, calc, isLocked){
+  let html=`<div class="panel">
+    <h4>📋 Kharashka Dugsiga — ${currentBisha}</h4>`;
+  Object.keys(KHARASH_LABELS).forEach(k=>{
+    html+=`<div class="kharash-row">
+      <span class="kharash-lbl">${KHARASH_LABELS[k]}</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="color:#888;font-size:13px">$</span>
+        <input class="kharash-inp" type="number" value="${fd.kharash[k]}" ${isLocked?"disabled":""} onchange="updateKharash('${activeFarac}','${k}',this.value)"/>
+      </div>
+    </div>`;
+  });
+  html+=`<div style="display:flex;justify-content:space-between;padding:14px 0 0;font-weight:700;font-size:15px">
+    <span style="color:#1a3a5c">Wadarta Kharashka</span>
+    <span style="color:#c62828">$${calc.kharashWadar.toLocaleString()}</span>
+  </div></div>`;
+  return html;
+}
+
+// ── CHARTS TAB ────────────────────────────
+function renderChartsTab(){
+  return `<div class="chart-grid">
+    <div class="panel"><h4 style="font-size:14px">👨‍🎓 Ardayda Fasal Kasta</h4><div class="chart-canvas-wrap"><canvas id="chart-arday"></canvas></div></div>
+    <div class="panel"><h4 style="font-size:14px">💰 Lacagta Fasal Kasta</h4><div class="chart-canvas-wrap"><canvas id="chart-lacag"></canvas></div></div>
+    <div class="panel"><h4 style="font-size:14px">🥧 Qeybsiga Ardayda</h4><div class="chart-canvas-wrap"><canvas id="chart-pie"></canvas></div></div>
+    <div class="panel"><h4 style="font-size:14px">📊 Lacag vs Kharash</h4><div class="chart-canvas-wrap"><canvas id="chart-lacagkharash"></canvas></div></div>
+  </div>`;
+}
+
+function initFaracCharts(){
+  const fd = appData[activeFarac];
+  const calc = calcFarac(fd);
+  const labels = fd.fasalada.map(f=>f.magaca);
+
+  // Ardayda bar
+  const c1 = document.getElementById("chart-arday");
+  if(c1) chartInstances["arday"] = new Chart(c1,{type:"bar",data:{labels,datasets:[
+    {label:"Bixisay",data:fd.fasalada.map(f=>+f.tiradaBixisay),backgroundColor:"#0d6e4f",borderRadius:3},
+    {label:"Aan Bixin",data:fd.fasalada.map(f=>+f.tiradaAanBixin),backgroundColor:"#c62828",borderRadius:3},
+    {label:"Scholarship",data:fd.fasalada.map(f=>+f.scholarship),backgroundColor:"#1565c0",borderRadius:3},
+    {label:"Free",data:fd.fasalada.map(f=>+f.freeStudents),backgroundColor:"#e65100",borderRadius:3},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:9}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+
+  // Lacag bar
+  const c2 = document.getElementById("chart-lacag");
+  if(c2) chartInstances["lacag"] = new Chart(c2,{type:"bar",data:{labels,datasets:[
+    {label:"Lacag",data:fd.fasalada.map(f=>+f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment),backgroundColor:"#1a3a5c",borderRadius:4},
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9},callback:v=>`$${v}`}}}}});
+
+  // Pie
+  const c3 = document.getElementById("chart-pie");
+  const pieData = [{label:"Bixisay",v:calc.totalBixisay},{label:"Aan Bixin",v:calc.totalAanBixin},{label:"Scholarship",v:calc.totalScholarship},{label:"Free",v:calc.totalFree}].filter(d=>d.v>0);
+  if(c3 && pieData.length) chartInstances["pie"] = new Chart(c3,{type:"pie",data:{labels:pieData.map(d=>d.label),datasets:[{data:pieData.map(d=>d.v),backgroundColor:PIE_COLORS}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10}}}}}});
+
+  // Lacag vs Kharash
+  const c4 = document.getElementById("chart-lacagkharash");
+  const profit = calc.saafi - calc.kharashWadar;
+  if(c4) chartInstances["lk"] = new Chart(c4,{type:"bar",data:{
+    labels:["Lacag Saafi","Kharash","Faa'iido"],
+    datasets:[{data:[calc.saafi,calc.kharashWadar,profit],backgroundColor:["#1565c0","#c62828",profit>=0?"#0d6e4f":"#c62828"],borderRadius:4}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9},callback:v=>`$${v}`}}}}});
+}
+
+// ── SETTINGS TAB ──────────────────────────
+function renderSettingsTab(){
+  const faracOpts = Object.keys(FARAC_COLORS).map(k=>`<option value="${k}">${FARAC_LABELS[k]}</option>`).join("");
+  const fasalList = (appData[activeFarac]?.fasalada||[]).map((f,i)=>
+    `<div class="fasal-item"><span style="font-size:13px;color:#333">${f.magaca}</span>
+     <button class="btn-del-fasal" onclick="removeFasal('${activeFarac}',${i})">🗑️</button></div>`
+  ).join("");
+
+  return `<div class="settings-grid">
+    <div class="panel">
+      <h4>➕ Ku Dar Fasal Cusub</h4>
+      <label class="form-lbl">Faracka</label>
+      <select id="new-fasal-farac" class="form-select">${faracOpts}</select>
+      <label class="form-lbl">Magaca Fasalka</label>
+      <input id="new-fasal-name" class="form-input" placeholder="Tusaale: 6aad" onkeydown="if(event.key==='Enter')addFasal()"/>
+      <button class="btn-add" onclick="addFasal()">➕ Ku Dar</button>
+    </div>
+    <div class="panel">
+      <h4>📝 Fasalada ${FARAC_LABELS[activeFarac]}</h4>
+      <div class="fasal-list">${fasalList||"<p style='color:#aaa;font-size:13px'>Fasal ma jiro</p>"}</div>
+      <button class="btn-reset" onclick="openResetModal('${activeFarac}')">♻️ Dib u Deji (Reset) Faracka</button>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+// STAT CARD HELPER
+// ══════════════════════════════════════════
+function statCard(label, value, icon, color, small){
+  return `<div class="stat-card ${small?"":"stat-card-lg"}" style="border-left-color:${color}">
+    <div class="stat-card-inner">
+      <div>
+        <div class="stat-card-lbl">${label}</div>
+        <div class="stat-card-val ${small?"small":""}" style="color:${color}">${value}</div>
+      </div>
+      <span class="stat-card-icon ${small?"small":""}">${icon}</span>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════
+// DATA MUTATIONS
+// ══════════════════════════════════════════
+function canEdit(key){ return !appData[key]?.submitted || currentUser.role==="maamul"; }
+
+function updateFasal(key, idx, field, val){
+  if(!canEdit(key)) return;
+  appData[key].fasalada[idx][field] = val;
+  scheduleSave();
+  refreshCalcDisplay();
+}
+function updateKharash(key, field, val){
+  if(!canEdit(key)) return;
+  appData[key].kharash[field] = val;
+  scheduleSave();
+  refreshCalcDisplay();
+}
+function updateMeta(key, field, val){
+  if(!canEdit(key)) return;
+  appData[key][field] = val;
+  scheduleSave();
+  refreshCalcDisplay();
+}
+
+function refreshCalcDisplay(){
+  // re-render stat cards and summary without full re-render
+  // lightweight: just re-render content
+  const scrollTop = document.getElementById("main-content").scrollTop;
+  renderContent();
+  document.getElementById("main-content").scrollTop = scrollTop;
+}
+
+function saveDraft(key){
+  appData[key].savedAt = new Date().toISOString();
+  scheduleSave();
+  showToast("✅ Xogtu waa la kaydiyey");
+  renderAll();
+}
+function submitFarac(key){
+  appData[key].submitted = true;
+  appData[key].savedAt = new Date().toISOString();
+  closeModal();
+  scheduleSave();
+  showToast("📤 Xogtu waa la gudbiyey maamulka!","info");
+  renderAll();
+}
+function unlockFarac(key){
+  appData[key].submitted = false;
+  scheduleSave();
+  showToast("🔓 Faracka waa la furiye","info");
+  renderAll();
+}
+function addFasal(){
+  const nameEl = document.getElementById("new-fasal-name");
+  const faracEl = document.getElementById("new-fasal-farac");
+  if(!nameEl || !nameEl.value.trim()) return;
+  const farac = faracEl ? faracEl.value : activeFarac;
+  const name = nameEl.value.trim();
+  appData[farac].fasalada.push(emptyFasal(name));
+  scheduleSave();
+  showToast(`✅ "${name}" waa lagu daray ${FARAC_LABELS[farac]}`);
+  renderAll();
+}
+function removeFasal(key, idx){
+  appData[key].fasalada.splice(idx,1);
+  scheduleSave();
+  showToast("🗑️ Fasalku waa la tirtirray","warning");
+  renderAll();
+}
+function resetFarac(key){
+  appData[key] = {
+    fasalada: DEFAULT_FASALADA[key].map(emptyFasal),
+    kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},
+    discount:0, lacagKhususi:0, submitted:false, savedAt:null
+  };
+  closeModal();
+  scheduleSave();
+  showToast("♻️ Faracka waa la nadiifiyey","warning");
+  renderAll();
+}
+
+// ══════════════════════════════════════════
+// MODAL
+// ══════════════════════════════════════════
+function openSubmitModal(key){
+  modalAction = {type:"submit", key};
+  document.getElementById("modal-title").textContent = "📤 Xogta Gudbi";
+  document.getElementById("modal-body").textContent = `Ma hubtaa inaad u gudbinayso maamulka xogta ${FARAC_LABELS[key]}? Kadib ma beddeli kartid.`;
+  const btn = document.getElementById("modal-confirm-btn");
+  btn.textContent = "Haa, Gudbi"; btn.style.background="#1565c0";
+  document.getElementById("modal-overlay").classList.add("show");
+}
+function openResetModal(key){
+  modalAction = {type:"reset", key};
+  document.getElementById("modal-title").textContent = "♻️ Xog Nadiifi";
+  document.getElementById("modal-body").textContent = `Ma hubtaa inaad nadiifin lahayd dhammaan xogta ${FARAC_LABELS[key]}?`;
+  const btn = document.getElementById("modal-confirm-btn");
+  btn.textContent = "Haa, Nadiifi"; btn.style.background="#c62828";
+  document.getElementById("modal-overlay").classList.add("show");
+}
+function closeModal(){ document.getElementById("modal-overlay").classList.remove("show"); modalAction=null; }
+document.getElementById("modal-confirm-btn").addEventListener("click",()=>{
+  if(!modalAction) return;
+  if(modalAction.type==="submit") submitFarac(modalAction.key);
+  else if(modalAction.type==="reset") resetFarac(modalAction.key);
+});
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let toastTimeout;
+function showToast(msg, type="success"){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.background = type==="info"?"#1565c0":type==="warning"?"#e65100":"#0d6e4f";
+  t.style.display = "block";
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(()=>{ t.style.display="none"; }, 3000);
+}
+
+// ══════════════════════════════════════════
+// CHART CLEANUP
+// ══════════════════════════════════════════
+function destroyCharts(){
+  Object.values(chartInstances).forEach(c=>{ try{ c.destroy(); }catch{} });
+  chartInstances = {};
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+(async()=>{
+  setFbLoading(true);
+  try{
+    const savedBisha = await fbGet(BISHA_FB_PATH);
+    currentBisha = (savedBisha && BILAHA.includes(savedBisha)) ? savedBisha : BILAHA[new Date().getMonth()];
+    const snap = await fbGet(getFbPath(currentBisha));
+    if(snap && typeof snap==="object"){
+      appData = snap;
+      Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!appData[k]) appData[k]=buildInitFarac()[k]; });
+    }
+  }catch{ appData=buildInitFarac(); }
+  finally{ setFbLoading(false); }
+  // populate bisha dropdown on load even before login
+  const sel=document.getElementById("bisha-select");
+  BILAHA.forEach(b=>{ const o=document.createElement("option"); o.value=b; o.textContent=b; sel.appendChild(o); });
+  sel.value=currentBisha;
+})();
+</script>
+</body>
+</html>
