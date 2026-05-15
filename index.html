@@ -214,7 +214,48 @@ window.dispatchEvent(new Event("fb-ready"));
   .ie-card-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:5px;font-weight:600;}
   /* Chart canvas */
   .chart-canvas-wrap{position:relative;height:240px;}
-  @media(max-width:768px){
+  /* ── REPORT TAB STYLES ── */
+  .report-wrap{background:#fff;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.10);padding:0;overflow:hidden;border:1px solid #e2e8f0;}
+  .report-toolbar{background:linear-gradient(135deg,#0a1628,#1a3a5c);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+  .report-toolbar-title{color:#ffd700;font-weight:800;font-size:15px;font-family:'Space Grotesk',sans-serif;}
+  .report-date-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .report-date-lbl{color:rgba(255,255,255,.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+  .report-date-inp{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;outline:none;cursor:pointer;width:130px;}
+  .report-date-inp:focus{border-color:rgba(255,215,0,.5);}
+  .report-btn-print{padding:9px 18px;background:linear-gradient(135deg,#ffd700,#ff8c00);border:none;border-radius:9px;color:#1a1a1a;font-weight:800;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 3px 12px rgba(255,215,0,.3);transition:.2s;display:flex;align-items:center;gap:6px;}
+  .report-btn-print:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(255,215,0,.4);}
+  .report-btn-pdf{padding:9px 18px;background:linear-gradient(135deg,#c62828,#ef4444);border:none;border-radius:9px;color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 3px 12px rgba(198,40,40,.3);transition:.2s;display:flex;align-items:center;gap:6px;}
+  .report-btn-pdf:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(198,40,40,.4);}
+  .report-body{padding:24px;}
+  .report-school-header{text-align:center;padding:20px 0 16px;border-bottom:3px solid #0a1628;margin-bottom:20px;}
+  .report-school-header h1{color:#0a1628;font-size:22px;font-weight:900;font-family:'Space Grotesk',sans-serif;margin-bottom:4px;}
+  .report-school-header p{color:#64748b;font-size:13px;font-weight:500;}
+  .report-period{display:inline-block;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:8px;padding:5px 14px;font-size:12px;font-weight:700;margin-top:6px;}
+  .report-section-title{color:#0a1628;font-size:14px;font-weight:800;margin:18px 0 10px;padding-left:10px;border-left:4px solid #1565c0;font-family:'Space Grotesk',sans-serif;}
+  .report-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+  .report-sum-card{background:#f8fafc;border-radius:10px;padding:12px 14px;border:1.5px solid #e2e8f0;text-align:center;}
+  .report-sum-lbl{color:#64748b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+  .report-sum-val{font-size:18px;font-weight:800;font-family:'Space Grotesk',sans-serif;}
+  .report-tbl-wrap{overflow-x:auto;border-radius:10px;border:1.5px solid #e2e8f0;margin-bottom:18px;}
+  .report-tbl{width:100%;border-collapse:collapse;font-size:12px;}
+  .report-tbl th{background:#0a1628;color:#ffd700;padding:9px 8px;text-align:center;font-weight:700;font-size:11px;white-space:nowrap;}
+  .report-tbl td{padding:8px 7px;text-align:center;border-bottom:1px solid #f1f5f9;color:#334155;}
+  .report-tbl tfoot tr{background:#f1f5f9;font-weight:800;}
+  .report-kharash-tbl{width:100%;border-collapse:collapse;font-size:13px;}
+  .report-kharash-tbl td{padding:9px 12px;border-bottom:1px solid #f1f5f9;color:#334155;}
+  .report-kharash-tbl tr:last-child td{font-weight:800;background:#fef2f2;color:#c62828;}
+  .report-footer{text-align:center;padding:14px;color:#94a3b8;font-size:11px;font-weight:500;border-top:1px solid #f1f5f9;margin-top:10px;}
+  .report-profit-bar{border-radius:12px;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+
+  /* ── PRINT STYLES ── */
+  @media print{
+    #app-page > *:not(#main-layout){ display:none!important; }
+    #main-layout > #sidebar{ display:none!important; }
+    #main-content > *:not(#report-container){ display:none!important; }
+    .report-toolbar{ display:none!important; }
+    #report-container{ box-shadow:none!important; border:none!important; }
+    @page{size:A4;margin:12mm;}
+  }
     #main-layout{flex-direction:column;}
     #sidebar{width:100%;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:8px;display:flex;gap:6px;flex-shrink:0;}
     .sb-section-lbl,.sb-divider,.sidebar-divider-block{display:none!important;}
@@ -595,6 +636,7 @@ function scheduleSave(){
 async function handleBishaChange(bisha){
   try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
   currentBisha = bisha;
+  reportStartDate = ""; reportEndDate = "";
   try{ await fbSet(BISHA_FB_PATH, bisha); }catch{}
   await loadBisha(bisha);
   renderAll();
@@ -812,6 +854,7 @@ function renderSidebar(){
       {id:"kharash",label:L("tab_kharash")},
       {id:"charts",label:L("tab_charts")}
     ];
+    tabs.push({id:"report",label:"📄 Report"});
     tabs.push({id:"settings",label:L("tab_settings")});
     tabs.forEach(t=>{ html+=`<button class="sb-tab-btn ${activeTab===t.id?"active":""}" onclick="selectTab('${t.id}')">${t.label}</button>`; });
     html+="</div>";
@@ -979,6 +1022,7 @@ function renderFaracDetail(){
   if(activeTab==="xisaab") html+=renderXisaabTab(fd, calc, isLocked, color);
   if(activeTab==="kharash") html+=renderKharashTab(fd, calc, isLocked);
   if(activeTab==="charts") html+=renderChartsTab();
+  if(activeTab==="report") html+=renderReportTab(fd, calc, color);
   if(activeTab==="settings") html+=renderSettingsTab(isMaamul);
 
   return html;
@@ -1060,6 +1104,262 @@ function renderXisaabTab(fd, calc, isLocked, color){
     </div>
   </div>`;
   return html;
+}
+
+// ── REPORT TAB ────────────────────────────
+let reportStartDate = "";
+let reportEndDate = "";
+
+function initReportDates(){
+  if(!reportStartDate || !reportEndDate){
+    // Default: start = 1st of currentBisha month, end = last day
+    const parts = currentBisha.split(" ");
+    const monthIdx = BILAHA.indexOf(parts[0]);
+    const year = parseInt(parts[1]) || new Date().getFullYear();
+    const d1 = new Date(year, monthIdx, 1);
+    const d2 = new Date(year, monthIdx+1, 0);
+    const fmt = d => d.toISOString().split("T")[0];
+    reportStartDate = fmt(d1);
+    reportEndDate = fmt(d2);
+  }
+}
+
+function renderReportTab(fd, calc, color){
+  initReportDates();
+  const isMaamul = currentUser.role==="maamul";
+  const fields = Object.keys(FIELD_LABELS);
+
+  // Build report HTML (same as print area)
+  const reportInner = buildReportHTML(fd, calc, color);
+
+  return `<div class="report-wrap" id="report-container">
+    <div class="report-toolbar">
+      <div class="report-toolbar-title">📄 Report — ${FARAC_LABELS[activeFarac]}</div>
+      <div class="report-date-row">
+        <span class="report-date-lbl">Bilowga</span>
+        <input type="date" class="report-date-inp" id="rep-start" value="${reportStartDate}" onchange="reportStartDate=this.value;renderContent()"/>
+        <span class="report-date-lbl">Dhamaadka</span>
+        <input type="date" class="report-date-inp" id="rep-end" value="${reportEndDate}" onchange="reportEndDate=this.value;renderContent()"/>
+        <button class="report-btn-print" onclick="printReport()">🖨️ Print</button>
+        <button class="report-btn-pdf" onclick="savePDF()">📥 PDF</button>
+      </div>
+    </div>
+    <div class="report-body" id="print-area">${reportInner}</div>
+  </div>`;
+}
+
+function buildReportHTML(fd, calc, color){
+  const faracLabel = FARAC_LABELS[activeFarac];
+  const fields = Object.keys(FIELD_LABELS);
+  const profit = calc.saafi - calc.kharashWadar;
+  const printedBy = currentUser?.label || currentUser?.username || "";
+  const now = new Date().toLocaleDateString("so-SO",{year:"numeric",month:"long",day:"numeric"});
+
+  // Period display
+  let periodText = currentBisha;
+  if(reportStartDate && reportEndDate){
+    periodText = `${reportStartDate} — ${reportEndDate}`;
+  }
+
+  // Xisaab table rows
+  let xisaabRows = "";
+  fd.fasalada.forEach(f=>{
+    const wL = +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment;
+    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0);
+    xisaabRows += `<tr>
+      <td style="font-weight:700;color:${color};text-align:left;white-space:nowrap">${f.magaca}</td>
+      <td>${f.tiradaBixisay}</td>
+      <td>$${(+f.qiimaha).toLocaleString()}</td>
+      <td>$${(+f.lacagtaSooHormartay).toLocaleString()}</td>
+      <td>$${(+f.previewPayment).toLocaleString()}</td>
+      <td style="color:#dc2626">${f.tiradaAanBixin}</td>
+      <td style="color:#dc2626">$${(+f.lacagtaAanBixin).toLocaleString()}</td>
+      <td>${f.scholarship}</td>
+      <td>${f.freeStudents}</td>
+      <td style="color:#1565c0">${f.ardaydaCusub||0}</td>
+      <td style="color:#888">${f.ardaydaBaxday||0}</td>
+      <td style="font-weight:800;color:#059669">${wA}</td>
+      <td style="font-weight:800;color:#1d4ed8">$${wL.toLocaleString()}</td>
+    </tr>`;
+  });
+
+  // Kharash rows
+  let kharashRows = "";
+  let kTotal = 0;
+  Object.keys(KHARASH_LABELS).forEach(k=>{
+    const v = +(fd.kharash[k]||0);
+    kTotal += v;
+    kharashRows += `<tr><td style="text-align:left">${KHARASH_LABELS[k]}</td><td style="text-align:right;font-weight:700">$${v.toLocaleString()}</td></tr>`;
+  });
+
+  return `
+  <div class="report-school-header">
+    <h1>🏫 AL-XIKMA SCHOOL</h1>
+    <p>Warbixinta Xisaabta Faracka — ${faracLabel}</p>
+    <div class="report-period">📅 ${periodText}</div>
+  </div>
+
+  <!-- Summary Cards -->
+  <div class="report-summary-grid">
+    <div class="report-sum-card">
+      <div class="report-sum-lbl">👨‍🎓 Wadarta Ardayda</div>
+      <div class="report-sum-val" style="color:#0d6e4f">${calc.totalArdayda}</div>
+    </div>
+    <div class="report-sum-card">
+      <div class="report-sum-lbl">💵 Lacag Saafi</div>
+      <div class="report-sum-val" style="color:#1d4ed8">$${calc.saafi.toLocaleString()}</div>
+    </div>
+    <div class="report-sum-card">
+      <div class="report-sum-lbl">📤 Kharash</div>
+      <div class="report-sum-val" style="color:#dc2626">$${calc.kharashWadar.toLocaleString()}</div>
+    </div>
+    <div class="report-sum-card">
+      <div class="report-sum-lbl">✅ Bixisay</div>
+      <div class="report-sum-val" style="color:#059669">${calc.totalBixisay}</div>
+    </div>
+    <div class="report-sum-card">
+      <div class="report-sum-lbl">⚠️ Aan Bixin</div>
+      <div class="report-sum-val" style="color:#dc2626">${calc.totalAanBixin}</div>
+    </div>
+    <div class="report-sum-card">
+      <div class="report-sum-lbl">🎓 Scholarship</div>
+      <div class="report-sum-val" style="color:#7c3aed">${calc.totalScholarship}</div>
+    </div>
+  </div>
+
+  <!-- Profit bar -->
+  <div class="report-profit-bar" style="background:${profit>=0?'linear-gradient(135deg,#ecfdf5,#d1fae5)':'linear-gradient(135deg,#fef2f2,#fee2e2)'};border:2px solid ${profit>=0?'#a7f3d0':'#fca5a5'}">
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${profit>=0?'#065f46':'#991b1b'}">📈 Wadarta Faa'iido / Khasaare</div>
+      <div style="font-size:26px;font-weight:800;color:${profit>=0?'#059669':'#dc2626'};font-family:'Space Grotesk',sans-serif;margin-top:3px">${profit>=0?"▲":"▼"} $${Math.abs(profit).toLocaleString()}</div>
+    </div>
+    <div style="text-align:right;font-size:12px;color:#64748b">
+      <div>💵 Dakhli: <strong style="color:#059669">$${calc.saafi.toLocaleString()}</strong></div>
+      <div style="margin-top:4px">📤 Kharash: <strong style="color:#dc2626">$${calc.kharashWadar.toLocaleString()}</strong></div>
+      ${fd.discount>0?`<div style="margin-top:4px">🔻 Discount: <strong style="color:#7c3aed">$${(+fd.discount).toLocaleString()}</strong></div>`:""}
+    </div>
+  </div>
+
+  <!-- Xisaab Table -->
+  <div class="report-section-title">📋 Shaxda Xisaab — Fasal Kasta</div>
+  <div class="report-tbl-wrap">
+    <table class="report-tbl">
+      <thead><tr>
+        <th style="text-align:left">Fasalka</th>
+        <th>Bixisay</th><th>Qiimaha</th><th>Hormartay</th><th>Preview</th>
+        <th>Aan Bixin</th><th>Lacag tiri</th>
+        <th>Scholar</th><th>Free</th><th>Cusub</th><th>Baxday</th>
+        <th style="background:#065f46">Wadarta A</th>
+        <th style="background:#1d4ed8">Wadarta L</th>
+      </tr></thead>
+      <tbody>${xisaabRows}</tbody>
+      <tfoot><tr>
+        <td style="text-align:left;color:#0a1628;font-weight:800">WADAR</td>
+        <td style="color:#059669;font-weight:800">${calc.totalBixisay}</td>
+        <td>—</td>
+        <td style="color:#059669">$${calc.totalHormartay.toLocaleString()}</td>
+        <td style="color:#059669">$${calc.totalPreview.toLocaleString()}</td>
+        <td style="color:#dc2626">${calc.totalAanBixin}</td>
+        <td style="color:#dc2626">$${calc.totalLacagAanBixin.toLocaleString()}</td>
+        <td>${calc.totalScholarship}</td>
+        <td>${calc.totalFree}</td>
+        <td style="color:#1565c0">${calc.totalCusub}</td>
+        <td style="color:#888">${calc.totalBaxday}</td>
+        <td style="background:#d1fae5;color:#065f46;font-weight:800">${calc.totalArdayda}</td>
+        <td style="background:#dbeafe;color:#1d4ed8;font-weight:800">$${calc.xarooday.toLocaleString()}</td>
+      </tr></tfoot>
+    </table>
+  </div>
+
+  <!-- Kharash Table -->
+  <div class="report-section-title">📤 Shaxda Kharashka</div>
+  <div style="max-width:420px">
+    <table class="report-kharash-tbl" style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden;width:100%">
+      ${kharashRows}
+      <tr><td style="text-align:left;font-weight:800;color:#c62828;background:#fef2f2">Wadarta Kharashka</td><td style="text-align:right;font-weight:800;color:#c62828;background:#fef2f2">$${calc.kharashWadar.toLocaleString()}</td></tr>
+    </table>
+  </div>
+
+  <div class="report-footer">
+    🖨️ La daabacay: ${now} &nbsp;|&nbsp; 👤 ${printedBy} &nbsp;|&nbsp; 📅 ${currentBisha} &nbsp;|&nbsp; AL-XIKMA SCHOOL
+  </div>`;
+}
+
+function getPrintCSS(){
+  return "*{box-sizing:border-box;margin:0;padding:0;}"
+  +"body{font-family:'Plus Jakarta Sans',sans-serif;padding:24px 28px;color:#1e293b;background:#fff;}"
+  +"@page{size:A4;margin:12mm;}"
+  +".report-school-header{text-align:center;padding:14px 0 12px;border-bottom:3px solid #0a1628;margin-bottom:16px;}"
+  +".report-school-header h1{color:#0a1628;font-size:20px;font-weight:900;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;}"
+  +".report-school-header p{color:#64748b;font-size:12px;}"
+  +".report-period{display:inline-block;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:6px;padding:3px 11px;font-size:11px;font-weight:700;margin-top:5px;}"
+  +".report-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px;}"
+  +".report-sum-card{background:#f8fafc;border-radius:7px;padding:9px 11px;border:1.5px solid #e2e8f0;text-align:center;}"
+  +".report-sum-lbl{color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}"
+  +".report-sum-val{font-size:16px;font-weight:800;font-family:'Space Grotesk',sans-serif;}"
+  +".report-profit-bar{border-radius:9px;padding:11px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}"
+  +".report-section-title{color:#0a1628;font-size:12px;font-weight:800;margin:13px 0 7px;padding-left:8px;border-left:4px solid #1565c0;font-family:'Space Grotesk',sans-serif;}"
+  +".report-tbl-wrap{overflow:hidden;border-radius:7px;border:1.5px solid #e2e8f0;margin-bottom:13px;}"
+  +".report-tbl{width:100%;border-collapse:collapse;font-size:9.5px;}"
+  +".report-tbl th{background:#0a1628;color:#ffd700;padding:6px 5px;text-align:center;font-weight:700;font-size:8.5px;white-space:nowrap;}"
+  +".report-tbl td{padding:5px 4px;text-align:center;border-bottom:1px solid #f1f5f9;color:#334155;}"
+  +".report-tbl tfoot tr{background:#f1f5f9;font-weight:800;}"
+  +".report-kharash-tbl{width:100%;border-collapse:collapse;font-size:11px;}"
+  +".report-kharash-tbl td{padding:6px 10px;border-bottom:1px solid #f1f5f9;color:#334155;}"
+  +".report-footer{text-align:center;padding:11px;color:#94a3b8;font-size:9.5px;font-weight:500;border-top:1px solid #f1f5f9;margin-top:10px;}"
+  +".no-print{display:none!important;}";
+}
+
+function buildPrintHTML(area){
+  return "<!DOCTYPE html><html><head>"
+    +'<meta charset="UTF-8"/>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>'
+    +"<style>"+getPrintCSS()+"</style>"
+    +"</head><body>"+area.innerHTML+"</body></html>";
+}
+
+function printReport(){
+  const area = document.getElementById("print-area");
+  if(!area){ showToast("⚠️ Report area ma jiro","warning"); return; }
+
+  // Inject hidden iframe, print from it, then remove
+  const existing = document.getElementById("__print_iframe__");
+  if(existing) existing.remove();
+
+  const iframe = document.createElement("iframe");
+  iframe.id = "__print_iframe__";
+  iframe.style.cssText = "position:fixed;top:-9999px;left:-9999px;width:210mm;height:297mm;border:none;opacity:0;";
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(buildPrintHTML(area));
+  doc.close();
+
+  iframe.onload = function(){
+    try{
+      iframe.contentWindow.focus();
+      iframe.contentWindow.print();
+    }catch(e){ showToast("⚠️ Print error: "+e.message,"warning"); }
+    setTimeout(()=>{ iframe.remove(); }, 2000);
+  };
+}
+
+function savePDF(){
+  const area = document.getElementById("print-area");
+  if(!area){ showToast("⚠️ Report area ma jiro","warning"); return; }
+
+  const html = buildPrintHTML(area);
+  const blob = new Blob([html], {type:"text/html;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "Report-"+FARAC_LABELS[activeFarac].replace(/\s+/g,"-")+"-"+currentBisha.replace(/\s+/g,"-")+".html";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>{ URL.revokeObjectURL(url); }, 3000);
+  showToast("📥 File la soo dejiyey — browser-ka ku fur, ka dibna Ctrl+P → Save as PDF","info");
 }
 
 // ── KHARASH TAB ────────────────────────────
