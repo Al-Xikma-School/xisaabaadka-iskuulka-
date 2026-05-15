@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AL-XIKMA — Nidaamka Xisaab Xirka</title>
+<title>AL-XIKMA SCHOOL</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <!-- Firebase SDK (module) -->
 <script type="module">
@@ -27,203 +27,212 @@ window._fbGet = get;
 window._fbOnValue = onValue;
 window.dispatchEvent(new Event("fb-ready"));
 </script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
+  :root{
+    --navy:#0a1628;--navy2:#1a3a5c;--navy3:#1e2a3a;
+    --gold:#ffd700;--gold2:#ff8c00;
+    --green:#0d6e4f;--green2:#10b981;--green-light:#d1fae5;
+    --blue:#1565c0;--blue2:#3b82f6;--blue-light:#dbeafe;
+    --red:#c62828;--red2:#ef4444;--red-light:#fee2e2;
+    --orange:#e65100;--bg:#f0f4f8;--white:#ffffff;
+    --shadow-sm:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.06);
+    --shadow-md:0 4px 16px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.07);
+    --shadow-lg:0 10px 40px rgba(0,0,0,.15),0 4px 14px rgba(0,0,0,.1);
+    --radius-sm:8px;--radius-md:14px;--radius-lg:20px;
+  }
   *{box-sizing:border-box;margin:0;padding:0;}
-  body{font-family:'Segoe UI',Tahoma,sans-serif;background:#f0f2f5;min-height:100vh;}
-
-  /* ── LOADING BAR ── */
-  #fb-loading{display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:#1565c0;color:#fff;text-align:center;padding:6px;font-size:13px;font-weight:600;}
-
-  /* ── TOAST ── */
-  #toast{display:none;position:fixed;top:16px;right:16px;z-index:9999;color:#fff;padding:12px 20px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.2);font-size:14px;font-weight:600;max-width:calc(100vw - 32px);animation:fadeIn .3s;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-
-  /* ── MODAL ── */
-  #modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;align-items:center;justify-content:center;padding:16px;}
+  body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);min-height:100vh;color:#1e293b;}
+  #fb-loading{display:none;position:fixed;top:0;left:0;right:0;z-index:10000;background:linear-gradient(90deg,var(--navy2),var(--blue2));color:#fff;text-align:center;padding:8px;font-size:13px;font-weight:600;}
+  #toast{display:none;position:fixed;top:20px;right:20px;z-index:9999;color:#fff;padding:14px 22px;border-radius:12px;box-shadow:var(--shadow-lg);font-size:14px;font-weight:600;max-width:calc(100vw - 40px);animation:slideIn .35s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes slideIn{from{opacity:0;transform:translateY(-16px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+  #modal-overlay{display:none;position:fixed;inset:0;background:rgba(10,22,40,.6);backdrop-filter:blur(6px);z-index:9998;align-items:center;justify-content:center;padding:16px;}
   #modal-overlay.show{display:flex;}
-  #modal-box{background:#fff;border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 16px 48px rgba(0,0,0,.3);}
-  #modal-box h3{margin:0 0 12px;color:#1a3a5c;}
-  #modal-box p{color:#555;font-size:14px;margin-bottom:24px;}
+  #modal-box{background:var(--white);border-radius:var(--radius-lg);padding:32px;width:100%;max-width:400px;box-shadow:var(--shadow-lg);animation:modalIn .3s cubic-bezier(.34,1.2,.64,1);}
+  @keyframes modalIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+  #modal-box h3{margin:0 0 10px;color:var(--navy2);font-size:17px;font-weight:700;}
+  #modal-box p{color:#64748b;font-size:14px;margin-bottom:26px;line-height:1.5;}
   .modal-btns{display:flex;gap:12px;justify-content:flex-end;}
-  .btn-cancel{padding:10px 20px;border:1px solid #ddd;border-radius:8px;background:#f5f5f5;cursor:pointer;font-size:14px;}
-  .btn-confirm{padding:10px 20px;border:none;border-radius:8px;color:#fff;cursor:pointer;font-size:14px;font-weight:600;}
-
-  /* ── LOGIN ── */
-  #login-page{display:flex;min-height:100vh;background:linear-gradient(135deg,#0a1628 0%,#1a3a5c 50%,#0d2137 100%);align-items:center;justify-content:center;padding:16px;}
-  .login-box{background:rgba(255,255,255,.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:36px 28px;width:100%;max-width:400px;box-shadow:0 32px 64px rgba(0,0,0,.4);}
+  .btn-cancel{padding:10px 22px;border:1.5px solid #e2e8f0;border-radius:var(--radius-sm);background:#f8fafc;cursor:pointer;font-size:14px;font-weight:600;color:#64748b;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .btn-confirm{padding:10px 22px;border:none;border-radius:var(--radius-sm);color:#fff;cursor:pointer;font-size:14px;font-weight:700;transition:.2s;}
+  #login-page{display:flex;min-height:100vh;background:var(--navy);align-items:center;justify-content:center;padding:16px;position:relative;overflow:hidden;}
+  #login-page::before{content:'';position:absolute;width:600px;height:600px;background:radial-gradient(circle,rgba(21,101,192,.35) 0%,transparent 70%);top:-150px;right:-150px;pointer-events:none;}
+  #login-page::after{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(13,110,79,.25) 0%,transparent 70%);bottom:-100px;left:-100px;pointer-events:none;}
+  .login-box{background:rgba(255,255,255,.06);backdrop-filter:blur(24px);border:1px solid rgba(255,255,255,.12);border-radius:24px;padding:40px 32px;width:100%;max-width:420px;box-shadow:0 40px 80px rgba(0,0,0,.5);position:relative;z-index:1;}
   .login-logo{text-align:center;margin-bottom:28px;}
-  .login-icon{width:56px;height:56px;background:linear-gradient(135deg,#ffd700,#ff8c00);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:24px;}
-  .login-box h1{color:#ffd700;font-size:20px;font-weight:700;text-align:center;}
-  .login-box p{color:rgba(255,255,255,.5);font-size:12px;text-align:center;margin-top:6px;}
-  .login-label{color:rgba(255,255,255,.7);font-size:13px;display:block;margin-bottom:6px;margin-top:14px;}
-  .login-input{width:100%;padding:12px 16px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:10px;color:#fff;font-size:15px;outline:none;}
-  .login-input::placeholder{color:rgba(255,255,255,.35);}
-  #login-err{color:#ff6b6b;font-size:13px;margin:8px 0 0;display:none;}
-  .btn-login{width:100%;padding:14px;background:linear-gradient(135deg,#ffd700,#ff8c00);border:none;border-radius:10px;color:#1a1a1a;font-weight:700;font-size:16px;cursor:pointer;margin-top:12px;margin-bottom:20px;}
-  .show-pwd-btn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.5);font-size:12px;border-radius:6px;padding:6px 12px;cursor:pointer;width:100%;}
-  #pwd-list{display:none;margin-top:12px;background:rgba(0,0,0,.3);border-radius:8px;padding:12px;}
-  .pwd-row{display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px;}
-  .pwd-row span:first-child{color:#ffd700;}
-  .pwd-row span:last-child{color:rgba(255,255,255,.5);}
-
-  /* ── MAIN APP ── */
+  .login-school-logo{width:96px;height:96px;border-radius:50%;object-fit:cover;margin:0 auto 14px;display:block;border:3px solid rgba(255,215,0,.5);box-shadow:0 0 30px rgba(255,215,0,.2),0 4px 20px rgba(0,0,0,.4);}
+  .login-box h1{color:var(--gold);font-size:22px;font-weight:800;text-align:center;letter-spacing:.5px;}
+  .login-box p{color:rgba(255,255,255,.45);font-size:13px;text-align:center;margin-top:6px;}
+  .login-label{color:rgba(255,255,255,.65);font-size:11px;font-weight:700;display:block;margin-bottom:7px;margin-top:16px;letter-spacing:.5px;text-transform:uppercase;}
+  .login-input{width:100%;padding:13px 16px;background:rgba(255,255,255,.07);border:1.5px solid rgba(255,255,255,.15);border-radius:11px;color:#fff;font-size:15px;outline:none;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .login-input:focus{border-color:rgba(255,215,0,.5);background:rgba(255,255,255,.1);}
+  .login-input::placeholder{color:rgba(255,255,255,.3);}
+  #login-err{color:#fca5a5;font-size:13px;margin:8px 0 0;display:none;font-weight:600;}
+  .btn-login{width:100%;padding:15px;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;border-radius:11px;color:#1a1a1a;font-weight:800;font-size:16px;cursor:pointer;margin-top:14px;margin-bottom:22px;letter-spacing:.3px;box-shadow:0 4px 20px rgba(255,215,0,.3);transition:.25s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .btn-login:hover{transform:translateY(-1px);box-shadow:0 6px 28px rgba(255,215,0,.4);}
+  .show-pwd-btn{background:none;border:1.5px solid rgba(255,255,255,.15);color:rgba(255,255,255,.45);font-size:12px;border-radius:7px;padding:7px 14px;cursor:pointer;width:100%;font-family:'Plus Jakarta Sans',sans-serif;transition:.2s;}
+  #pwd-list{display:none;margin-top:12px;background:rgba(0,0,0,.35);border-radius:10px;padding:14px;}
+  .pwd-row{display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;}
+  .pwd-row span:first-child{color:var(--gold);font-weight:700;}
+  .pwd-row span:last-child{color:rgba(255,255,255,.45);}
   #app-page{display:none;flex-direction:column;min-height:100vh;max-height:100vh;overflow:hidden;}
   #app-page.show{display:flex;}
-
-  /* HEADER */
-  #header{background:linear-gradient(135deg,#0a1628,#1a3a5c);padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:58px;box-shadow:0 2px 12px rgba(0,0,0,.3);flex-shrink:0;}
-  .header-left{display:flex;align-items:center;gap:10px;}
-  .header-title{color:#ffd700;font-weight:700;font-size:15px;}
-  .header-sub{color:rgba(255,255,255,.4);font-size:12px;margin-left:4px;}
-  .header-right{display:flex;align-items:center;gap:8px;}
-  .bisha-label{color:rgba(255,255,255,.6);font-size:12px;}
-  #bisha-select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#ffd700;border-radius:6px;padding:4px 8px;font-size:12px;outline:none;cursor:pointer;max-width:100px;}
+  #header{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 100%);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:62px;box-shadow:0 2px 20px rgba(0,0,0,.35);flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.06);}
+  .header-left{display:flex;align-items:center;gap:12px;}
+  .header-logo{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,215,0,.55);box-shadow:0 0 12px rgba(255,215,0,.15);}
+  .header-title{color:var(--gold);font-weight:800;font-size:16px;letter-spacing:.5px;font-family:'Space Grotesk',sans-serif;}
+  .header-sub{color:rgba(255,255,255,.35);font-size:12px;margin-left:6px;font-weight:500;}
+  .header-right{display:flex;align-items:center;gap:10px;}
+  .bisha-label{color:rgba(255,255,255,.55);font-size:12px;font-weight:600;}
+  #bisha-select{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);color:var(--gold);border-radius:8px;padding:5px 10px;font-size:12px;outline:none;cursor:pointer;max-width:110px;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;}
   #bisha-select option{background:#1a3a5c;}
-  .header-user{color:rgba(255,255,255,.7);font-size:12px;}
-  .btn-bax{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;}
-
-  /* LAYOUT */
+  .header-user{color:rgba(255,255,255,.65);font-size:12px;font-weight:600;}
+  .btn-bax{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.18);color:rgba(255,255,255,.8);padding:6px 13px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
   #main-layout{display:flex;flex:1;overflow:hidden;}
-  #sidebar{width:210px;background:#1e2a3a;padding:16px 10px;overflow-y:auto;flex-shrink:0;}
-  .sb-section-lbl{color:rgba(255,255,255,.4);font-size:10px;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;padding:0 6px;}
-  .sb-divider{border-top:1px solid rgba(255,255,255,.1);margin:10px 0;padding-top:10px;}
-  .sb-farac-btn{width:100%;padding:9px 10px;background:transparent;border:none;border-radius:8px;color:#fff;text-align:left;cursor:pointer;margin-bottom:4px;font-size:13px;display:flex;align-items:center;justify-content:space-between;}
-  .sb-farac-btn.active-sare{background:#0d6e4f;}
-  .sb-farac-btn.active-dhexe{background:#7b3f00;}
-  .sb-farac-btn.active-hoose1{background:#4a1a6b;}
-  .sb-farac-btn.active-hoose2{background:#8b1a2a;}
-  .sb-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
-  .sb-tab-btn{width:100%;padding:8px 10px;background:transparent;border:none;border-radius:6px;color:rgba(255,255,255,.5);text-align:left;cursor:pointer;font-size:13px;margin-bottom:2px;white-space:nowrap;}
-  .sb-tab-btn.active{background:rgba(255,255,255,.1);color:#fff;}
-  .sb-guud-btn{width:100%;padding:9px 10px;background:transparent;border:none;border-radius:8px;color:#fff;text-align:left;cursor:pointer;font-size:13px;font-weight:600;}
-  .sb-guud-btn.active{background:#ffd700;color:#1a1a1a;}
+  #sidebar{width:220px;background:var(--navy3);padding:18px 12px;overflow-y:auto;flex-shrink:0;border-right:1px solid rgba(255,255,255,.05);}
+  .sb-section-lbl{color:rgba(255,255,255,.35);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:8px;padding:0 8px;font-weight:700;}
+  .sb-divider{border-top:1px solid rgba(255,255,255,.08);margin:10px 0;padding-top:10px;}
+  .sb-farac-btn{width:100%;padding:10px 12px;background:transparent;border:none;border-radius:10px;color:rgba(255,255,255,.75);text-align:left;cursor:pointer;margin-bottom:4px;font-size:13px;display:flex;align-items:center;justify-content:space-between;transition:.2s;font-weight:500;font-family:'Plus Jakarta Sans',sans-serif;}
+  .sb-farac-btn:hover{background:rgba(255,255,255,.07);}
+  .sb-farac-btn.active-sare{background:linear-gradient(135deg,rgba(13,110,79,.7),rgba(13,110,79,.4));color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(13,110,79,.3);}
+  .sb-farac-btn.active-dhexe{background:linear-gradient(135deg,rgba(123,63,0,.7),rgba(123,63,0,.4));color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(123,63,0,.3);}
+  .sb-farac-btn.active-hoose1{background:linear-gradient(135deg,rgba(74,26,107,.7),rgba(74,26,107,.4));color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(74,26,107,.3);}
+  .sb-farac-btn.active-hoose2{background:linear-gradient(135deg,rgba(139,26,42,.7),rgba(139,26,42,.4));color:#fff;font-weight:700;box-shadow:0 2px 10px rgba(139,26,42,.3);}
+  .sb-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .sb-tab-btn{width:100%;padding:8px 12px;background:transparent;border:none;border-radius:8px;color:rgba(255,255,255,.45);text-align:left;cursor:pointer;font-size:13px;margin-bottom:3px;white-space:nowrap;transition:.2s;font-weight:500;font-family:'Plus Jakarta Sans',sans-serif;}
+  .sb-tab-btn:hover{color:rgba(255,255,255,.75);background:rgba(255,255,255,.05);}
+  .sb-tab-btn.active{background:rgba(255,255,255,.1);color:#fff;font-weight:600;}
+  .sb-guud-btn{width:100%;padding:10px 12px;background:transparent;border:none;border-radius:10px;color:rgba(255,255,255,.75);text-align:left;cursor:pointer;font-size:13px;font-weight:600;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .sb-guud-btn.active{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#1a1a1a;box-shadow:0 4px 14px rgba(255,215,0,.3);}
   .sb-farac-badge{background:#0d6e4f;color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;}
-
-  /* CONTENT */
-  #main-content{flex:1;overflow-y:auto;padding:20px;}
-
-  /* CARDS */
-  .stat-grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px;}
-  .stat-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px;}
-  .stat-card{background:#fff;border-radius:10px;padding:11px 14px;box-shadow:0 2px 8px rgba(0,0,0,.08);border-left:4px solid #ccc;}
-  .stat-card-lg{padding:20px;}
-  .stat-card-lbl{color:#888;font-size:10px;margin-bottom:3px;}
-  .stat-card-val{font-weight:700;font-size:22px;}
-  .stat-card-val.small{font-size:15px;}
-  .stat-card-icon{font-size:24px;}
-  .stat-card-icon.small{font-size:17px;}
-  .stat-card-inner{display:flex;justify-content:space-between;align-items:flex-start;}
-
-  /* MINISTAT */
-  .mini-stat{background:#f8f9fa;border-radius:6px;padding:7px 10px;}
-  .mini-stat-lbl{color:#888;font-size:11px;}
-  .mini-stat-val{font-weight:600;color:#333;font-size:13px;}
-
-  /* ROW */
-  .info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;}
-  .info-row span:first-child{color:#555;font-size:13px;}
-  .info-row span:last-child{font-weight:600;font-size:13px;color:#333;}
-
-  /* PANELS */
-  .panel{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.08);margin-bottom:14px;}
-  .panel h4{margin:0 0 14px;color:#1a3a5c;}
-  .panel-header{background:#1e2a3a;color:#fff;padding:12px 18px;font-weight:600;display:flex;justify-content:space-between;align-items:center;font-size:14px;}
-
-  /* TABLE */
-  .tbl-wrap{overflow-x:auto;}
+  #main-content{flex:1;overflow-y:auto;padding:22px;background:var(--bg);}
+  .stat-grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+  .stat-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+  .stat-card{background:var(--white);border-radius:var(--radius-md);padding:16px 18px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden;transition:.25s;border:1px solid rgba(0,0,0,.05);}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;bottom:0;width:5px;border-radius:var(--radius-md) 0 0 var(--radius-md);}
+  .stat-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-md);}
+  .stat-card-lg{padding:22px 20px;}
+  .stat-card-lbl{color:#94a3b8;font-size:10px;margin-bottom:5px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
+  .stat-card-val{font-weight:800;font-size:24px;font-family:'Space Grotesk',sans-serif;}
+  .stat-card-val.small{font-size:16px;font-weight:700;}
+  .stat-card-icon{font-size:28px;opacity:.85;}
+  .stat-card-icon.small{font-size:20px;}
+  .stat-card-inner{display:flex;justify-content:space-between;align-items:center;}
+  .mini-stat{background:#f8fafc;border-radius:9px;padding:9px 12px;border:1px solid #f1f5f9;}
+  .mini-stat-lbl{color:#94a3b8;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+  .mini-stat-val{font-weight:700;color:#334155;font-size:14px;margin-top:3px;font-family:'Space Grotesk',sans-serif;}
+  .info-row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid #f1f5f9;}
+  .info-row span:first-child{color:#64748b;font-size:13px;font-weight:500;}
+  .info-row span:last-child{font-weight:700;font-size:13px;color:#1e293b;font-family:'Space Grotesk',sans-serif;}
+  .panel{background:var(--white);border-radius:var(--radius-md);padding:20px;box-shadow:var(--shadow-sm);margin-bottom:16px;border:1px solid rgba(0,0,0,.04);}
+  .panel h4{margin:0 0 16px;color:var(--navy2);font-size:15px;font-weight:700;}
+  .panel-header{background:linear-gradient(135deg,var(--navy3),var(--navy2));color:#fff;padding:14px 20px;font-weight:700;display:flex;justify-content:space-between;align-items:center;font-size:14px;letter-spacing:.2px;}
+  .tbl-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid #e2e8f0;}
   table{width:100%;border-collapse:collapse;font-size:12px;}
-  th{padding:9px 8px;text-align:center;font-weight:600;color:#555;font-size:12px;border-bottom:2px solid #e0e0e0;white-space:nowrap;background:#f8f9fa;}
-  td{padding:7px 7px;text-align:center;color:#333;border-bottom:1px solid #f0f0f0;}
-  tfoot tr{background:#eee;font-weight:700;}
-  .inp-cell{width:68px;padding:4px 5px;border:1px solid #e0e0e0;border-radius:4px;font-size:11px;text-align:center;background:#fff;}
-  .inp-cell:disabled{background:#f9f9f9;color:#aaa;border-color:#eee;}
-  .th-green{background:#e8f5e9!important;color:#0d6e4f!important;font-weight:700!important;}
-  .th-blue{background:#e3f2fd!important;color:#1565c0!important;font-weight:700!important;}
-  .td-green{color:#0d6e4f!important;}
-  .td-blue{color:#1565c0!important;}
-  .td-red{color:#c62828!important;}
-  .td-green-bg{background:#f1faf5;font-weight:700;color:#0d6e4f;font-size:13px;}
-  .td-blue-bg{background:#f0f7ff;font-weight:700;color:#1565c0;font-size:13px;}
-  .tfoot-total-arday{background:#d4edda!important;color:#0d6e4f!important;font-size:14px!important;font-weight:800!important;}
-  .tfoot-total-lacag{background:#cce5ff!important;color:#1565c0!important;font-size:14px!important;font-weight:800!important;}
-
-  /* SUMMARY GRID */
-  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-
-  /* HEADER DETAIL */
-  .farac-detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
-  .farac-title{display:flex;align-items:center;gap:10px;}
-  .farac-bar{width:10px;height:28px;border-radius:3px;}
-  .action-btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-  .btn-save{padding:7px 16px;background:#fff;border:2px solid #1565c0;border-radius:7px;color:#1565c0;cursor:pointer;font-size:13px;font-weight:600;}
-  .btn-gudbi{padding:7px 16px;background:#1565c0;border:none;border-radius:7px;color:#fff;cursor:pointer;font-size:13px;font-weight:600;}
-  .btn-unlock{padding:7px 14px;background:#fff3e0;border:1px solid #ff8c00;border-radius:7px;color:#e65100;cursor:pointer;font-size:13px;font-weight:600;}
-  .badge-submitted{background:#e8f5e9;color:#0d6e4f;padding:5px 10px;border-radius:6px;font-size:12px;font-weight:600;border:1px solid #a5d6a7;}
-  .alert-locked{background:#fff3e0;border:1px solid #ff8c00;border-radius:8px;padding:9px 14px;margin-bottom:14px;color:#e65100;font-size:13px;}
-  .alert-saved{background:#e3f2fd;border-radius:6px;padding:5px 12px;margin-bottom:12px;color:#1565c0;font-size:12px;}
-
-  /* KHARASH */
-  .kharash-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid #f0f0f0;}
-  .kharash-lbl{color:#444;font-size:14px;}
-  .kharash-inp{width:120px;padding:7px 12px;border:1px solid #e0e0e0;border-radius:6px;font-size:14px;text-align:right;background:#fff;}
-  .kharash-inp:disabled{background:#f9f9f9;}
-
-  /* DISCOUNT ROW */
-  .discount-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;}
-  .discount-inp{width:90px;padding:4px 8px;border:1px solid #e0e0e0;border-radius:4px;font-size:13px;text-align:right;}
-  .discount-inp:disabled{background:#f9f9f9;}
-
-  /* GUUD FARAC CARDS */
-  .farac-overview-card{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.08);border-top:4px solid #ccc;}
-  .farac-ov-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-  .farac-ov-mini{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-  .farac-ov-footer{margin-top:10px;padding:7px 12px;border-radius:7px;display:flex;justify-content:space-between;}
-  .farac-ov-footer.profit{background:#e8f5e9;}
-  .farac-ov-footer.loss{background:#ffebee;}
-
-  /* SETTINGS */
-  .form-lbl{color:#555;font-size:13px;display:block;margin-bottom:5px;}
-  .form-select{width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:7px;font-size:13px;outline:none;margin-bottom:12px;}
-  .form-input{width:100%;padding:8px 12px;border:1px solid #e0e0e0;border-radius:7px;font-size:13px;outline:none;margin-bottom:14px;}
-  .btn-add{width:100%;padding:10px;background:#0d6e4f;border:none;border-radius:8px;color:#fff;font-weight:600;font-size:14px;cursor:pointer;}
-  .btn-reset{width:100%;padding:9px;background:#ffebee;border:1px solid #ffcdd2;border-radius:8px;color:#c62828;font-weight:600;font-size:13px;cursor:pointer;}
-  .fasal-item{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:7px;margin-bottom:5px;background:#f8f9fa;border:1px solid #eee;}
-  .btn-del-fasal{background:#ffebee;border:1px solid #ffcdd2;color:#c62828;border-radius:5px;padding:3px 9px;font-size:12px;cursor:pointer;}
+  th{padding:10px 8px;text-align:center;font-weight:700;color:#475569;font-size:11px;border-bottom:2px solid #e2e8f0;white-space:nowrap;background:#f8fafc;letter-spacing:.3px;text-transform:uppercase;}
+  td{padding:8px 7px;text-align:center;color:#334155;border-bottom:1px solid #f1f5f9;}
+  tr:hover td{background:#f8fafc;}
+  tfoot tr{background:#f1f5f9;font-weight:800;}
+  .inp-cell{width:70px;padding:5px 6px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:11px;text-align:center;background:#fff;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .inp-cell:focus{border-color:#3b82f6;outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.12);}
+  .inp-cell:disabled{background:#f8fafc;color:#cbd5e1;border-color:#f1f5f9;}
+  .th-green{background:#ecfdf5!important;color:#065f46!important;font-weight:800!important;}
+  .th-blue{background:#eff6ff!important;color:#1d4ed8!important;font-weight:800!important;}
+  .td-green{color:#059669!important;font-weight:700!important;}
+  .td-blue{color:#2563eb!important;font-weight:700!important;}
+  .td-red{color:#dc2626!important;font-weight:700!important;}
+  .td-green-bg{background:#ecfdf5;font-weight:800;color:#059669;font-size:13px;font-family:'Space Grotesk',sans-serif;}
+  .td-blue-bg{background:#eff6ff;font-weight:800;color:#2563eb;font-size:13px;font-family:'Space Grotesk',sans-serif;}
+  .tfoot-total-arday{background:#d1fae5!important;color:#065f46!important;font-size:14px!important;font-weight:800!important;font-family:'Space Grotesk',sans-serif;}
+  .tfoot-total-lacag{background:#dbeafe!important;color:#1d4ed8!important;font-size:14px!important;font-weight:800!important;font-family:'Space Grotesk',sans-serif;}
+  .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .farac-detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;background:var(--white);padding:16px 20px;border-radius:var(--radius-md);box-shadow:var(--shadow-sm);border:1px solid rgba(0,0,0,.04);}
+  .farac-title{display:flex;align-items:center;gap:12px;}
+  .farac-bar{width:5px;height:36px;border-radius:4px;}
+  .action-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .btn-save{padding:8px 18px;background:#fff;border:2px solid var(--blue);border-radius:9px;color:var(--blue);cursor:pointer;font-size:13px;font-weight:700;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .btn-gudbi{padding:8px 18px;background:linear-gradient(135deg,var(--blue),var(--blue2));border:none;border-radius:9px;color:#fff;cursor:pointer;font-size:13px;font-weight:700;box-shadow:0 3px 12px rgba(21,101,192,.3);transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .btn-unlock{padding:8px 16px;background:#fff7ed;border:1.5px solid #fb923c;border-radius:9px;color:#ea580c;cursor:pointer;font-size:13px;font-weight:700;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .badge-submitted{background:#ecfdf5;color:#059669;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid #a7f3d0;}
+  .alert-locked{background:#fff7ed;border:1.5px solid #fb923c;border-radius:10px;padding:10px 16px;margin-bottom:16px;color:#ea580c;font-size:13px;font-weight:600;}
+  .alert-saved{background:#eff6ff;border-radius:8px;padding:6px 14px;margin-bottom:14px;color:#2563eb;font-size:12px;font-weight:600;}
+  .kharash-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9;}
+  .kharash-lbl{color:#475569;font-size:14px;font-weight:600;}
+  .kharash-inp{width:130px;padding:8px 13px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;text-align:right;background:#fff;transition:.2s;font-family:'Space Grotesk',sans-serif;font-weight:600;}
+  .kharash-inp:disabled{background:#f8fafc;color:#cbd5e1;}
+  .discount-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #f1f5f9;}
+  .discount-inp{width:100px;padding:6px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:right;font-family:'Space Grotesk',sans-serif;font-weight:600;transition:.2s;}
+  .discount-inp:disabled{background:#f8fafc;}
+  .farac-overview-card{background:var(--white);border-radius:var(--radius-md);padding:20px;box-shadow:var(--shadow-sm);border:1px solid rgba(0,0,0,.04);position:relative;overflow:hidden;transition:.25s;}
+  .farac-overview-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);}
+  .farac-ov-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+  .farac-ov-mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .farac-ov-footer{margin-top:12px;padding:9px 14px;border-radius:9px;display:flex;justify-content:space-between;align-items:center;}
+  .farac-ov-footer.profit{background:linear-gradient(135deg,#ecfdf5,#d1fae5);}
+  .farac-ov-footer.loss{background:linear-gradient(135deg,#fef2f2,#fee2e2);}
+  .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .form-lbl{color:#475569;font-size:12px;font-weight:700;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.4px;}
+  .form-select{width:100%;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;outline:none;margin-bottom:14px;font-family:'Plus Jakarta Sans',sans-serif;}
+  .form-input{width:100%;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;outline:none;margin-bottom:16px;font-family:'Plus Jakarta Sans',sans-serif;}
+  .btn-add{width:100%;padding:11px;background:linear-gradient(135deg,#059669,#0d6e4f);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(13,110,79,.3);transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .btn-reset{width:100%;padding:10px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .fasal-item{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-radius:9px;margin-bottom:6px;background:#f8fafc;border:1.5px solid #f1f5f9;transition:.15s;}
+  .btn-del-fasal{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;}
   .fasal-list{max-height:200px;overflow-y:auto;margin-bottom:14px;}
-
-  /* NON-MAAMUL BADGE */
-  .non-maamul-badge{border-radius:8px;padding:10px;margin-bottom:10px;flex-shrink:0;}
-  .non-maamul-badge .label{color:#fff;font-weight:700;font-size:13px;}
-  .non-maamul-badge .sub{color:rgba(255,255,255,.7);font-size:11px;margin-top:3px;}
-
-  /* UNLOCK BTN in overview */
-  .btn-unlock-sm{margin-top:8px;width:100%;padding:6px;background:#fff3e0;border:1px solid #ff8c00;border-radius:6px;color:#e65100;font-size:12px;cursor:pointer;font-weight:600;}
-
-  /* RESPONSIVE */
+  .non-maamul-badge{border-radius:12px;padding:12px 14px;margin-bottom:12px;flex-shrink:0;}
+  .non-maamul-badge .label{color:#fff;font-weight:800;font-size:14px;}
+  .non-maamul-badge .sub{color:rgba(255,255,255,.7);font-size:11px;margin-top:4px;font-weight:500;}
+  .btn-unlock-sm{margin-top:10px;width:100%;padding:7px;background:#fff7ed;border:1.5px solid #fb923c;border-radius:8px;color:#ea580c;font-size:12px;cursor:pointer;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;}
+  .settings-tab-bar{display:flex;gap:4px;margin-bottom:18px;background:#f1f5f9;padding:4px;border-radius:10px;}
+  .settings-tab-btn{padding:8px 16px;border:none;border-radius:8px;background:transparent;color:#64748b;font-size:13px;cursor:pointer;font-weight:600;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
+  .settings-tab-btn.active{background:var(--white);color:var(--navy2);box-shadow:var(--shadow-sm);}
+  .user-item{display:flex;justify-content:space-between;align-items:center;padding:11px 15px;border-radius:10px;margin-bottom:7px;background:#f8fafc;border:1.5px solid #f1f5f9;}
+  .user-item-info{display:flex;flex-direction:column;gap:3px;}
+  .user-item-name{font-weight:700;color:var(--navy2);font-size:13px;}
+  .user-item-meta{color:#94a3b8;font-size:11px;font-weight:500;}
+  .user-item-btns{display:flex;gap:6px;}
+  .btn-edit-user{background:#eff6ff;border:1px solid #bfdbfe;color:#2563eb;border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;font-weight:700;}
+  .btn-del-user{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:6px;padding:5px 11px;font-size:12px;cursor:pointer;font-weight:700;}
+  .role-badge{display:inline-block;padding:3px 9px;border-radius:5px;font-size:10px;font-weight:800;color:#fff;}
+  .qiime-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;}
+  .qiime-lbl{color:#475569;font-size:13px;font-weight:600;}
+  .qiime-inp{width:100px;padding:6px 11px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:right;font-family:'Space Grotesk',sans-serif;font-weight:600;}
+  .luuqad-option{display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:10px;border:2px solid #e2e8f0;cursor:pointer;margin-bottom:9px;transition:.2s;}
+  .luuqad-option.selected{border-color:var(--blue);background:#eff6ff;}
+  .luuqad-flag{font-size:24px;}
+  .luuqad-name{font-weight:700;color:var(--navy2);font-size:13px;}
+  .luuqad-sub{color:#94a3b8;font-size:11px;font-weight:500;}
+  /* Income/Expense highlight cards */
+  .income-expense-wrap{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+  .ie-card{border-radius:16px;padding:20px 22px;position:relative;overflow:hidden;}
+  .ie-card.income{background:linear-gradient(135deg,#0d6e4f,#059669);}
+  .ie-card.expense{background:linear-gradient(135deg,#c62828,#ef4444);}
+  .ie-card::after{content:'';position:absolute;right:-20px;top:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.07);}
+  .ie-card-lbl{color:rgba(255,255,255,.7);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;}
+  .ie-card-val{color:#fff;font-size:28px;font-weight:800;margin-top:6px;font-family:'Space Grotesk',sans-serif;}
+  .ie-card-sub{color:rgba(255,255,255,.6);font-size:11px;margin-top:5px;font-weight:600;}
+  /* Chart canvas */
+  .chart-canvas-wrap{position:relative;height:240px;}
   @media(max-width:768px){
     #main-layout{flex-direction:column;}
     #sidebar{width:100%;height:auto;flex-direction:row;overflow-x:auto;overflow-y:hidden;padding:8px;display:flex;gap:6px;flex-shrink:0;}
     .sb-section-lbl,.sb-divider,.sidebar-divider-block{display:none!important;}
-    .sb-farac-btn,.sb-tab-btn,.sb-guud-btn{white-space:nowrap;margin-bottom:0;padding:7px 10px;font-size:12px;width:auto;flex-shrink:0;}
+    .sb-farac-btn,.sb-tab-btn,.sb-guud-btn{white-space:nowrap;margin-bottom:0;padding:7px 11px;font-size:12px;width:auto;flex-shrink:0;}
     .stat-grid-5{grid-template-columns:repeat(2,1fr)!important;}
     .stat-grid-3{grid-template-columns:repeat(2,1fr)!important;}
-    .chart-grid,.summary-grid,.settings-grid{grid-template-columns:1fr!important;}
+    .chart-grid,.summary-grid,.settings-grid,.income-expense-wrap{grid-template-columns:1fr!important;}
     .header-sub,.bisha-label{display:none;}
     .farac-title h2{font-size:14px!important;}
     .action-btns{gap:5px!important;}
     .action-btns button{padding:6px 10px!important;font-size:11px!important;}
   }
   @media(max-width:480px){
-    #header{padding:0 10px;height:50px;}
-    #main-content{padding:10px;}
+    #header{padding:0 12px;height:54px;}
+    #main-content{padding:12px;}
     .stat-grid-5{grid-template-columns:1fr 1fr!important;}
-    .farac-detail-header{flex-wrap:wrap;gap:8px;}
+    .farac-detail-header{flex-wrap:wrap;gap:10px;}
   }
-
-  /* CHARTS */
-  .chart-canvas-wrap{position:relative;height:200px;}
 </style>
 </head>
 <body>
@@ -250,18 +259,22 @@ window.dispatchEvent(new Event("fb-ready"));
 <div id="login-page">
   <div class="login-box">
     <div class="login-logo">
-      <div class="login-icon">🏫</div>
+      <img class="login-school-logo" src="/mnt/user-data/uploads/logo_iskuul.jpg" alt="AL-XIKMA Logo" onerror="this.style.display='none';document.getElementById('login-icon-fallback').style.display='flex'"/>
+      <div id="login-icon-fallback" style="display:none;width:90px;height:90px;background:linear-gradient(135deg,#ffd700,#ff8c00);border-radius:50%;align-items:center;justify-content:center;margin:0 auto 12px;font-size:36px;">🏫</div>
       <h1>AL-XIKMA SCHOOL</h1>
-      <p>Nidaamka Xisaab Xirka</p>
+      <p id="login-subtitle">Nidaamka Xisaab Xirka</p>
     </div>
-    <label class="login-label">Magaca Isticmaalaha</label>
+    <label class="login-label" id="lbl-username">Magaca Isticmaalaha</label>
     <input id="inp-user" class="login-input" placeholder="tusaale: sare" onkeydown="if(event.key==='Enter')doLogin()"/>
-    <label class="login-label">Sirta</label>
-    <input id="inp-pass" class="login-input" type="password" placeholder="Geli sirta" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <label class="login-label" id="lbl-password">Sirta</label>
+    <div style="position:relative;">
+      <input id="inp-pass" class="login-input" type="password" placeholder="Geli sirta" onkeydown="if(event.key==='Enter')doLogin()" style="padding-right:48px;"/>
+      <button type="button" onclick="togglePassView()" id="btn-pass-eye" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:rgba(255,255,255,.6);font-size:18px;line-height:1;padding:0;" title="Muuji/Qari sirta">👁</button>
+    </div>
     <p id="login-err">Magaca ama sirta waa khalad.</p>
-    <button class="btn-login" onclick="doLogin()">Gal →</button>
+    <button class="btn-login" id="btn-login-text" onclick="doLogin()">Gal →</button>
     <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:16px;">
-      <button class="show-pwd-btn" onclick="togglePwdList()">Muuji Login-yada</button>
+      <button class="show-pwd-btn" onclick="togglePwdList()" id="btn-show-logins">Muuji Login-yada</button>
       <div id="pwd-list"></div>
     </div>
   </div>
@@ -272,16 +285,16 @@ window.dispatchEvent(new Event("fb-ready"));
   <!-- HEADER -->
   <div id="header">
     <div class="header-left">
-      <span style="font-size:20px">🏫</span>
+      <img class="header-logo" src="/mnt/user-data/uploads/logo_iskuul.jpg" alt="AL-XIKMA" onerror="this.outerHTML='<span style=\'font-size:20px\'>🏫</span>'"/>
       <span class="header-title">AL-XIKMA</span>
       <span class="header-sub">Nidaamka Xisaab Xirka</span>
     </div>
     <div class="header-right">
-      <span class="bisha-label">📅 Bisha:</span>
+      <span class="bisha-label">📅 <span id="lbl-bisha-header">Bisha:</span></span>
       <select id="bisha-select" onchange="handleBishaChange(this.value)"></select>
       <span style="color:rgba(255,255,255,.6);font-size:12px">|</span>
       <span class="header-user" id="header-user-label">👤</span>
-      <button class="btn-bax" onclick="doLogout()">Bax</button>
+      <button class="btn-bax" id="btn-bax-txt" onclick="doLogout()">Bax</button>
     </div>
   </div>
 
@@ -296,12 +309,14 @@ window.dispatchEvent(new Event("fb-ready"));
 
 <script>
 // ══════════════════════════════════════════
-// FIREBASE SDK HELPERS (set via module above)
+// FIREBASE SDK HELPERS
 // ══════════════════════════════════════════
 function getFbPath(bisha){ return `xisaab/${bisha.replace(/\s/g,"_")}`; }
 const BISHA_FB_PATH = "meta/bisha";
+const USERS_FB_PATH = "meta/users";
+const SETTINGS_FB_PATH = "meta/settings";
 
-let _activeListener = null; // track current onValue unsubscribe fn
+let _activeListener = null;
 
 async function fbSet(path, value){
   await window._fbSet(window._fbRef(window._fbDb, path), value);
@@ -310,34 +325,159 @@ async function fbGetOnce(path){
   const snap = await window._fbGet(window._fbRef(window._fbDb, path));
   return snap.exists() ? snap.val() : null;
 }
-// Start real-time listener for current bisha — auto-updates screen when anyone changes data
 function startListener(bisha){
-  if(_activeListener){ _activeListener(); _activeListener=null; } // unsubscribe old
+  if(_activeListener){ _activeListener(); _activeListener=null; }
   const dbRef = window._fbRef(window._fbDb, getFbPath(bisha));
   _activeListener = window._fbOnValue(dbRef, (snapshot)=>{
     const incoming = snapshot.val();
     if(incoming && typeof incoming==="object"){
-      // Merge: keep keys not in incoming (other months untouched)
       Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!incoming[k]) incoming[k]=buildInitFarac()[k]; });
       appData = incoming;
     } else {
       appData = buildInitFarac();
     }
-    // Only re-render if user is logged in
     if(currentUser) renderAll();
   });
 }
 
 // ══════════════════════════════════════════
+// LUUQADAHA (LANGUAGES)
+// ══════════════════════════════════════════
+const LUUQADAHA = {
+  so: {
+    name:"Somali",flag:"🇸🇴",
+    login_subtitle:"Nidaamka Xisaab Xirka",
+    lbl_username:"Magaca Isticmaalaha",
+    lbl_password:"Sirta",
+    btn_login:"Gal →",
+    btn_show_logins:"Muuji Login-yada",
+    btn_hide_logins:"Qari Login-yada",
+    lbl_bisha:"Bisha:",
+    btn_bax:"Bax",
+    nav_faracyada:"Faracyada",
+    nav_guud:"📊 Guud Ahaan",
+    nav_guud_short:"📊 Guud",
+    tab_xisaab:"💰 Xisaab Xirka",
+    tab_kharash:"📋 Kharashka",
+    tab_charts:"📊 Charts",
+    tab_settings:"⚙️ Settings",
+    lbl_warbixin:"📊 Warbixinta Guud —",
+    lbl_ardayda_wadar:"Wadarta Ardayda",
+    lbl_lacag_saafi:"Lacag Saafi (Guud)",
+    lbl_kharash_guud:"Kharash (Guud)",
+    lbl_kharash:"Kharashka",
+    lbl_bixisay:"Bixisay",
+    lbl_xarooday:"Lacag Xarooday",
+    lbl_saafi:"Lacagta Saafi",
+    lbl_aan_bixin:"Aan Bixin",
+    lbl_nadiifi:"♻️ Dib u Deji (Reset) Faracka",
+    msg_saved:"✅ Xogtu waa la kaydiyey",
+    msg_submitted:"📤 Xogtu waa la gudbiyey maamulka!",
+    msg_unlocked:"🔓 Faracka waa la furiye",
+    modal_submit_title:"📤 Xogta Gudbi",
+    modal_submit_body:"Ma hubtaa inaad u gudbinayso maamulka xogta",
+    modal_submit_body2:"Kadib ma beddeli kartid.",
+    modal_reset_title:"♻️ Xog Nadiifi",
+    modal_reset_body:"Ma hubtaa inaad nadiifin lahayd dhammaan xogta",
+    btn_jooji:"Jooji",
+    btn_gudbi:"Haa, Gudbi",
+    btn_nadiifi:"Haa, Nadiifi",
+    lbl_loading:"⏳ Xog la soo rarayo...",
+  },
+  ar: {
+    name:"العربية",flag:"🇸🇦",
+    login_subtitle:"نظام المحاسبة المدرسية",
+    lbl_username:"اسم المستخدم",
+    lbl_password:"كلمة المرور",
+    btn_login:"دخول →",
+    btn_show_logins:"إظهار بيانات الدخول",
+    btn_hide_logins:"إخفاء بيانات الدخول",
+    lbl_bisha:"الشهر:",
+    btn_bax:"خروج",
+    nav_faracyada:"الأقسام",
+    nav_guud:"📊 نظرة عامة",
+    nav_guud_short:"📊 عام",
+    tab_xisaab:"💰 الحسابات",
+    tab_kharash:"📋 المصروفات",
+    tab_charts:"📊 الرسوم البيانية",
+    tab_settings:"⚙️ الإعدادات",
+    lbl_warbixin:"📊 التقرير العام —",
+    lbl_ardayda_wadar:"إجمالي الطلاب",
+    lbl_lacag_saafi:"الإيرادات الصافية",
+    lbl_kharash_guud:"إجمالي المصروفات",
+    lbl_kharash:"المصروفات",
+    lbl_bixisay:"الدافعون",
+    lbl_xarooday:"الإيراد الكلي",
+    lbl_saafi:"الصافي",
+    lbl_aan_bixin:"غير الدافعين",
+    lbl_nadiifi:"♻️ إعادة تعيين القسم",
+    msg_saved:"✅ تم حفظ البيانات",
+    msg_submitted:"📤 تم إرسال البيانات للإدارة!",
+    msg_unlocked:"🔓 تم فتح القسم",
+    modal_submit_title:"📤 إرسال البيانات",
+    modal_submit_body:"هل أنت متأكد من إرسال بيانات",
+    modal_submit_body2:"لن تتمكن من التعديل بعد الإرسال.",
+    modal_reset_title:"♻️ مسح البيانات",
+    modal_reset_body:"هل أنت متأكد من مسح جميع بيانات",
+    btn_jooji:"إلغاء",
+    btn_gudbi:"نعم، إرسال",
+    btn_nadiifi:"نعم، مسح",
+    lbl_loading:"⏳ جاري تحميل البيانات...",
+  },
+  en: {
+    name:"English",flag:"🇬🇧",
+    login_subtitle:"School Finance System",
+    lbl_username:"Username",
+    lbl_password:"Password",
+    btn_login:"Login →",
+    btn_show_logins:"Show Logins",
+    btn_hide_logins:"Hide Logins",
+    lbl_bisha:"Month:",
+    btn_bax:"Logout",
+    nav_faracyada:"Departments",
+    nav_guud:"📊 Overview",
+    nav_guud_short:"📊 Overview",
+    tab_xisaab:"💰 Accounting",
+    tab_kharash:"📋 Expenses",
+    tab_charts:"📊 Charts",
+    tab_settings:"⚙️ Settings",
+    lbl_warbixin:"📊 General Report —",
+    lbl_ardayda_wadar:"Total Students",
+    lbl_lacag_saafi:"Net Revenue (Total)",
+    lbl_kharash_guud:"Expenses (Total)",
+    lbl_kharash:"Expenses",
+    lbl_bixisay:"Paid",
+    lbl_xarooday:"Total Revenue",
+    lbl_saafi:"Net Revenue",
+    lbl_aan_bixin:"Unpaid",
+    lbl_nadiifi:"♻️ Reset Department",
+    msg_saved:"✅ Data saved successfully",
+    msg_submitted:"📤 Data submitted to management!",
+    msg_unlocked:"🔓 Department unlocked",
+    modal_submit_title:"📤 Submit Data",
+    modal_submit_body:"Are you sure you want to submit data for",
+    modal_submit_body2:"You cannot edit after submitting.",
+    modal_reset_title:"♻️ Reset Data",
+    modal_reset_body:"Are you sure you want to clear all data for",
+    btn_jooji:"Cancel",
+    btn_gudbi:"Yes, Submit",
+    btn_nadiifi:"Yes, Reset",
+    lbl_loading:"⏳ Loading data...",
+  }
+};
+
+// ══════════════════════════════════════════
 // DATA CONSTANTS
 // ══════════════════════════════════════════
-const USERS = {
+const DEFAULT_USERS = {
   maamul:{password:"maamul@2024",role:"maamul",label:"Maamulka"},
   sare:  {password:"sare@2024",  role:"sare",  label:"Dugsiga Sare"},
   dhexe: {password:"dhexe@2024", role:"dhexe", label:"Dugsiga Dhexe"},
   hoose1:{password:"hoose1@2024",role:"hoose1",label:"Hoose 1"},
   hoose2:{password:"hoose2@2024",role:"hoose2",label:"Hoose 2"},
 };
+let USERS = {...DEFAULT_USERS};
+
 const FARAC_COLORS = {sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a"};
 const FARAC_LABELS = {sare:"Dugsiga Sare",dhexe:"Dugsiga Dhexe",hoose1:"Hoose 1",hoose2:"Hoose 2"};
 const BILAHA = ["Janaayo","Febraayo","Maarso","Abriil","May","Juun","Luuliyo","Ogosto","Sebtembar","Oktoobar","Noofembar","Disembar"];
@@ -351,7 +491,8 @@ const FIELD_LABELS = {
   tiradaBixisay:"Tirada Bixisay", qiimaha:"Qiimaha ($)",
   lacagtaSooHormartay:"Soo Hormartay ($)", previewPayment:"Preview Pay ($)",
   tiradaAanBixin:"Aan Bixin", lacagtaAanBixin:"Lacag Aan Bixin ($)",
-  scholarship:"Scholarship", freeStudents:"Free Students"
+  scholarship:"Scholarship", freeStudents:"Free Students",
+  ardaydaCusub:"Ardayda Cusub", ardaydaBaxday:"Ardayda Baxday"
 };
 const KHARASH_LABELS = {
   maamulka:"Maamulka", macalimiinta:"Macalimiinta", shaqaalaha:"Shaqaalaha",
@@ -364,41 +505,54 @@ const PIE_COLORS = ["#0d6e4f","#1565c0","#7b3f00","#8b1a2a"];
 // ══════════════════════════════════════════
 let currentUser = null;
 let currentBisha = BILAHA[new Date().getMonth()];
-let appData = buildInitFarac();
 let activeFarac = null;
 let activeTab = "xisaab";
+let activeSettingsTab = "fasalada"; // fasalada | users | qiimaha | luuqad
 let modalAction = null;
 let chartInstances = {};
+let currentLang = "so";
+let defaultQiimaha = {sare:13, dhexe:10, hoose1:8, hoose2:8};
+let pwdVisible = false;
+let appData = buildInitFarac();
 
-function emptyFasal(name){
-  return {magaca:name,tiradaBixisay:0,qiimaha:13,lacagtaSooHormartay:0,previewPayment:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0};
+function L(key){ return (LUUQADAHA[currentLang]||LUUQADAHA.so)[key] || key; }
+
+function emptyFasal(name, faracKey){
+  const q = (defaultQiimaha && defaultQiimaha[faracKey]) ? defaultQiimaha[faracKey] : 13;
+  return {magaca:name,tiradaBixisay:0,qiimaha:q,lacagtaSooHormartay:0,previewPayment:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0,ardaydaCusub:0,ardaydaBaxday:0};
 }
 function buildInitFarac(){
   const d={};
   Object.keys(DEFAULT_FASALADA).forEach(k=>{
-    d[k]={fasalada:DEFAULT_FASALADA[k].map(emptyFasal),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,submitted:false,savedAt:null};
+    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,submitted:false,savedAt:null};
   });
   return d;
 }
 function calcFarac(fd){
-  let tB=0,tL=0,tH=0,tP=0,tAB=0,tLAB=0,tS=0,tF=0;
+  let tB=0,tL=0,tH=0,tP=0,tAB=0,tLAB=0,tS=0,tF=0,tCusub=0,tBaxday=0;
   fd.fasalada.forEach(f=>{
     tB +=+f.tiradaBixisay; tL +=+f.tiradaBixisay * +f.qiimaha;
     tH +=+f.lacagtaSooHormartay; tP +=+f.previewPayment;
     tAB+=+f.tiradaAanBixin; tLAB+=+f.lacagtaAanBixin;
     tS +=+f.scholarship; tF +=+f.freeStudents;
+    tCusub+=+(f.ardaydaCusub||0); tBaxday+=+(f.ardaydaBaxday||0);
   });
   const kWadar=Object.values(fd.kharash).reduce((a,b)=>a+(+b),0);
   const xarooday=tL+tH+tP;
   const saafi=xarooday-(+fd.discount)-(+fd.lacagKhususi);
-  const totalArdayda=tB+tAB+tS+tF;
-  return {totalBixisay:tB,totalLacag:tL,totalHormartay:tH,totalPreview:tP,totalAanBixin:tAB,totalLacagAanBixin:tLAB,totalScholarship:tS,totalFree:tF,kharashWadar:kWadar,xarooday,saafi,totalArdayda};
+  // ardaydaCusub ku biirto totalka, ardaydaBaxday kuma biirto
+  const totalArdayda=tB+tAB+tS+tF+tCusub;
+  return {totalBixisay:tB,totalLacag:tL,totalHormartay:tH,totalPreview:tP,totalAanBixin:tAB,totalLacagAanBixin:tLAB,totalScholarship:tS,totalFree:tF,totalCusub:tCusub,totalBaxday:tBaxday,kharashWadar:kWadar,xarooday,saafi,totalArdayda};
 }
 
 // ══════════════════════════════════════════
 // FIREBASE LOAD/SAVE
 // ══════════════════════════════════════════
-function setFbLoading(on){ document.getElementById("fb-loading").style.display=on?"block":"none"; }
+function setFbLoading(on){
+  const el=document.getElementById("fb-loading");
+  el.textContent = L("lbl_loading");
+  el.style.display=on?"block":"none";
+}
 
 async function loadBisha(targetBisha){
   setFbLoading(true);
@@ -410,7 +564,7 @@ async function loadBisha(targetBisha){
     } else { appData=buildInitFarac(); }
   }catch(e){ appData=buildInitFarac(); }
   finally{ setFbLoading(false); }
-  startListener(targetBisha); // start real-time listener
+  startListener(targetBisha);
 }
 
 let saveTimeout = null;
@@ -422,12 +576,32 @@ function scheduleSave(){
 }
 
 async function handleBishaChange(bisha){
-  // Save current before switching
   try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
   currentBisha = bisha;
   try{ await fbSet(BISHA_FB_PATH, bisha); }catch{}
   await loadBisha(bisha);
   renderAll();
+}
+
+// ══════════════════════════════════════════
+// SAVE/LOAD USERS & SETTINGS TO FIREBASE
+// ══════════════════════════════════════════
+async function saveUsersToFb(){
+  try{ await fbSet(USERS_FB_PATH, USERS); }catch{}
+}
+async function saveSettingsToFb(){
+  try{ await fbSet(SETTINGS_FB_PATH, {lang: currentLang, qiimaha: defaultQiimaha}); }catch{}
+}
+async function loadUsersAndSettings(){
+  try{
+    const savedUsers = await fbGetOnce(USERS_FB_PATH);
+    if(savedUsers && typeof savedUsers==="object") USERS = savedUsers;
+    const savedSettings = await fbGetOnce(SETTINGS_FB_PATH);
+    if(savedSettings){
+      if(savedSettings.lang) currentLang = savedSettings.lang;
+      if(savedSettings.qiimaha) defaultQiimaha = savedSettings.qiimaha;
+    }
+  }catch{}
 }
 
 // ══════════════════════════════════════════
@@ -444,33 +618,91 @@ function doLogin(){
     activeTab = "xisaab";
     document.getElementById("login-page").style.display="none";
     document.getElementById("app-page").classList.add("show");
-    document.getElementById("header-user-label").textContent = "👤 "+usr.label;
+    document.getElementById("header-user-label").textContent = "👤 "+(usr.label||u);
+    resetSessionTimer();
     renderAll();
   } else {
     document.getElementById("login-err").style.display="block";
   }
 }
 function doLogout(){
+  clearTimeout(sessionTimer);
   currentUser=null; activeFarac=null; activeTab="xisaab";
   document.getElementById("app-page").classList.remove("show");
   document.getElementById("login-page").style.display="flex";
   document.getElementById("inp-user").value="";
   document.getElementById("inp-pass").value="";
+  applyLangToLogin();
 }
+// ── PASSWORD SHOW/HIDE ────────────────────
+function togglePassView(){
+  const inp = document.getElementById("inp-pass");
+  const btn = document.getElementById("btn-pass-eye");
+  if(inp.type === "password"){
+    inp.type = "text";
+    btn.textContent = "🙈";
+    btn.style.color = "rgba(255,215,0,.8)";
+  } else {
+    inp.type = "password";
+    btn.textContent = "👁";
+    btn.style.color = "rgba(255,255,255,.6)";
+  }
+}
+
+// ── SESSION EXPIRY (10 daqiiqo maqnaansho) ──
+const SESSION_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+let sessionTimer = null;
+
+function resetSessionTimer(){
+  clearTimeout(sessionTimer);
+  if(!currentUser) return;
+  sessionTimer = setTimeout(()=>{
+    if(currentUser){
+      doLogout();
+      // Small notice after logout
+      const t = document.getElementById("toast");
+      t.textContent = "⏰ Session waa dhacday. Fadlan dib u gal.";
+      t.style.background = "#e65100";
+      t.style.display = "block";
+      setTimeout(()=>{ t.style.display="none"; }, 4000);
+    }
+  }, SESSION_TIMEOUT_MS);
+}
+
+// Listen for user activity to reset the timer
+["mousemove","mousedown","keydown","touchstart","scroll","click"].forEach(evt=>{
+  document.addEventListener(evt, ()=>{ if(currentUser) resetSessionTimer(); }, {passive:true});
+});
+
 function togglePwdList(){
   const el=document.getElementById("pwd-list");
   const btn=document.querySelector(".show-pwd-btn");
-  if(el.style.display==="block"){ el.style.display="none"; btn.textContent="Muuji Login-yada"; return; }
-  el.style.display="block"; btn.textContent="Qari Login-yada";
+  pwdVisible=!pwdVisible;
+  if(!pwdVisible){ el.style.display="none"; btn.textContent=L("btn_show_logins"); return; }
+  el.style.display="block"; btn.textContent=L("btn_hide_logins");
   el.innerHTML = Object.entries(USERS).map(([k,v])=>
     `<div class="pwd-row"><span>${k}</span><span>${v.password}</span></div>`
   ).join("");
+}
+
+function applyLangToLogin(){
+  const setT = (id,key)=>{ const el=document.getElementById(id); if(el) el.textContent=L(key); };
+  setT("login-subtitle","login_subtitle");
+  setT("lbl-username","lbl_username");
+  setT("lbl-password","lbl_password");
+  setT("btn-login-text","btn_login");
+  setT("btn-show-logins","btn_show_logins");
+  setT("lbl-bisha-header","lbl_bisha");
+  setT("btn-bax-txt","btn_bax");
+  document.getElementById("fb-loading").textContent = L("lbl_loading");
+  document.getElementById("modal-confirm-btn").textContent = "";
 }
 
 // ══════════════════════════════════════════
 // RENDER ALL
 // ══════════════════════════════════════════
 function renderAll(){
+  applyLangToLogin();
   populateBishaSelect();
   renderSidebar();
   renderContent();
@@ -492,7 +724,7 @@ function renderSidebar(){
   const sb = document.getElementById("sidebar");
   let html="";
   if(isMaamul){
-    html += `<div class="sb-section-lbl">Faracyada</div>`;
+    html += `<div class="sb-section-lbl">${L("nav_faracyada")}</div>`;
     Object.keys(FARAC_COLORS).forEach(k=>{
       const activeClass = activeFarac===k ? `active-${k}` : "";
       html += `<button class="sb-farac-btn ${activeClass}" onclick="selectFarac('${k}')">
@@ -501,22 +733,25 @@ function renderSidebar(){
       </button>`;
     });
     html += `<div class="sb-divider sidebar-divider-block">
-      <button class="sb-guud-btn ${activeFarac===null?"active":""}" onclick="selectGuud()">📊 Guud Ahaan</button>
+      <button class="sb-guud-btn ${activeFarac===null?"active":""}" onclick="selectGuud()">${L("nav_guud")}</button>
     </div>`;
-    // mobile guud button
-    html += `<button class="sb-farac-btn ${activeFarac===null?"active-guud":""}" style="white-space:nowrap;flex-shrink:0" onclick="selectGuud()">📊 Guud</button>`;
+    html += `<button class="sb-farac-btn ${activeFarac===null?"active-guud":""}" style="white-space:nowrap;flex-shrink:0" onclick="selectGuud()">${L("nav_guud_short")}</button>`;
   } else {
     html += `<div class="non-maamul-badge" style="background:${FARAC_COLORS[currentUser.role]}">
       <div class="label">${FARAC_LABELS[currentUser.role]}</div>
-      ${appData[currentUser.role]?.submitted?`<div class="sub">✅ Gudbi la sameeyey</div>`:""}
+      ${appData[currentUser.role]?.submitted?`<div class="sub">✅ ${L("msg_submitted").replace("📤 ","")}</div>`:""}
     </div>`;
   }
   if(activeFarac){
     html += `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:6px">
       <div class="sb-section-lbl">TABS</div>`;
-    const tabs=[{id:"xisaab",icon:"💰",label:"Xisaab Xirka"},{id:"kharash",icon:"📋",label:"Kharashka"},{id:"charts",icon:"📊",label:"Charts"}];
-    if(isMaamul) tabs.push({id:"settings",icon:"⚙️",label:"Settings"});
-    tabs.forEach(t=>{ html+=`<button class="sb-tab-btn ${activeTab===t.id?"active":""}" onclick="selectTab('${t.id}')">${t.icon} ${t.label}</button>`; });
+    const tabs=[
+      {id:"xisaab",label:L("tab_xisaab")},
+      {id:"kharash",label:L("tab_kharash")},
+      {id:"charts",label:L("tab_charts")}
+    ];
+    if(isMaamul) tabs.push({id:"settings",label:L("tab_settings")});
+    tabs.forEach(t=>{ html+=`<button class="sb-tab-btn ${activeTab===t.id?"active":""}" onclick="selectTab('${t.id}')">${t.label}</button>`; });
     html+="</div>";
   }
   sb.innerHTML=html;
@@ -543,33 +778,65 @@ function renderGuud(){
   const allStats = Object.keys(FARAC_COLORS).map(k=>({key:k,label:FARAC_LABELS[k],color:FARAC_COLORS[k],submitted:appData[k]?.submitted,...calcFarac(appData[k])}));
   const grand = allStats.reduce((a,s)=>({saafi:a.saafi+s.saafi,kharashWadar:a.kharashWadar+s.kharashWadar,totalArdayda:a.totalArdayda+s.totalArdayda}),{saafi:0,kharashWadar:0,totalArdayda:0});
 
-  let html=`<h2 style="color:#1a3a5c;margin:0 0 16px;font-size:16px">📊 Warbixinta Guud — ${currentBisha}</h2>
-  <div class="stat-grid-3">
-    ${statCard("Wadarta Ardayda",grand.totalArdayda,"👨‍🎓","#1a3a5c",false)}
-    ${statCard("Lacag Saafi (Guud)","$"+grand.saafi.toLocaleString(),"💵","#0d6e4f",false)}
-    ${statCard("Kharash (Guud)","$"+grand.kharashWadar.toLocaleString(),"📤","#8b1a2a",false)}
+  const totalProfit = grand.saafi - grand.kharashWadar;
+  let html=`
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <div>
+      <h2 style="color:#0f172a;margin:0;font-size:20px;font-weight:800;font-family:'Space Grotesk',sans-serif">${L("lbl_warbixin")} <span style="color:var(--blue)">${currentBisha}</span></h2>
+      <p style="color:#64748b;font-size:13px;margin-top:4px;font-weight:500">Warbixinta Xisaabta Guud — Dhammaan Faracyada</p>
+    </div>
+    <div style="background:${totalProfit>=0?'linear-gradient(135deg,#ecfdf5,#d1fae5)':'linear-gradient(135deg,#fef2f2,#fee2e2)'};border:1.5px solid ${totalProfit>=0?'#a7f3d0':'#fca5a5'};border-radius:12px;padding:10px 18px;text-align:right">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${totalProfit>=0?'#065f46':'#991b1b'}">Faa'iido / Khasaare</div>
+      <div style="font-size:22px;font-weight:800;color:${totalProfit>=0?'#059669':'#dc2626'};font-family:'Space Grotesk',sans-serif">$${totalProfit.toLocaleString()}</div>
+    </div>
   </div>
-  <div class="panel"><h4>📈 Barbardhig Faracyada</h4><div class="chart-canvas-wrap"><canvas id="chart-guud-bar"></canvas></div></div>
+  <div class="stat-grid-3">
+    ${statCard(L("lbl_ardayda_wadar"),grand.totalArdayda,"👨‍🎓","#1a3a5c",false)}
+    ${statCard(L("lbl_lacag_saafi"),"$"+grand.saafi.toLocaleString(),"💵","#0d6e4f",false)}
+    ${statCard(L("lbl_kharash_guud"),"$"+grand.kharashWadar.toLocaleString(),"📤","#c62828",false)}
+  </div>
+  <div class="income-expense-wrap">
+    <div class="ie-card income">
+      <div class="ie-card-lbl">💰 Wadarta Dakhliga (Revenue)</div>
+      <div class="ie-card-val">$${grand.saafi.toLocaleString()}</div>
+      <div class="ie-card-sub">Lacagta saafi ee la aruuriyey ${currentBisha}</div>
+    </div>
+    <div class="ie-card expense">
+      <div class="ie-card-lbl">📤 Wadarta Kharashka (Expenses)</div>
+      <div class="ie-card-val">$${grand.kharashWadar.toLocaleString()}</div>
+      <div class="ie-card-sub">Kharashka oo dhan — dhammaan faracyada</div>
+    </div>
+  </div>
+  <div class="panel" style="margin-bottom:16px"><h4 style="margin-bottom:14px">📈 Barbardhig Faracyada — Dakhliga & Kharashka</h4><div class="chart-canvas-wrap"><canvas id="chart-guud-bar"></canvas></div></div>
   <div class="summary-grid">`;
   allStats.forEach(s=>{
     const profit = s.saafi - s.kharashWadar;
-    html+=`<div class="farac-overview-card" style="border-top-color:${s.color}">
+    html+=`<div class="farac-overview-card" style="--card-color:${s.color};border-top:4px solid ${s.color}">
       <div class="farac-ov-top">
-        <h3 style="color:${s.color};margin:0;font-size:15px">${s.label}</h3>
-        <span style="display:flex;gap:5px">
-          <span style="background:${s.color};color:#fff;border-radius:5px;padding:2px 8px;font-size:11px">${s.totalArdayda} Arday</span>
-          ${s.submitted?"<span style='background:#0d6e4f;color:#fff;border-radius:5px;padding:2px 7px;font-size:10px'>✅</span>":""}
+        <div>
+          <h3 style="color:${s.color};margin:0;font-size:15px;font-weight:800;font-family:'Space Grotesk',sans-serif">${s.label}</h3>
+          <span style="color:#94a3b8;font-size:11px;font-weight:600">${s.totalArdayda} Arday</span>
+        </div>
+        <span style="display:flex;gap:6px;align-items:center">
+          <span style="background:${s.color}22;color:${s.color};border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;border:1.5px solid ${s.color}44">👥 ${s.totalArdayda}</span>
+          ${s.submitted?"<span style='background:#ecfdf5;color:#059669;border-radius:6px;padding:4px 8px;font-size:10px;font-weight:800;border:1.5px solid #a7f3d0'>✅</span>":""}
         </span>
       </div>
-      <div class="farac-ov-mini">
-        <div class="mini-stat"><div class="mini-stat-lbl">Lacag Xarooday</div><div class="mini-stat-val">$${s.xarooday.toLocaleString()}</div></div>
-        <div class="mini-stat"><div class="mini-stat-lbl">Saafi</div><div class="mini-stat-val">$${s.saafi.toLocaleString()}</div></div>
-        <div class="mini-stat"><div class="mini-stat-lbl">Aan Bixin</div><div class="mini-stat-val">${s.totalAanBixin}</div></div>
-        <div class="mini-stat"><div class="mini-stat-lbl">Kharash</div><div class="mini-stat-val">$${s.kharashWadar.toLocaleString()}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+        <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-radius:10px;padding:10px 12px;">
+          <div style="color:#065f46;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px">💰 Dakhliga</div>
+          <div style="color:#059669;font-size:16px;font-weight:800;margin-top:3px;font-family:'Space Grotesk',sans-serif">$${s.saafi.toLocaleString()}</div>
+        </div>
+        <div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border-radius:10px;padding:10px 12px;">
+          <div style="color:#991b1b;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.6px">📤 Kharash</div>
+          <div style="color:#dc2626;font-size:16px;font-weight:800;margin-top:3px;font-family:'Space Grotesk',sans-serif">$${s.kharashWadar.toLocaleString()}</div>
+        </div>
+        <div class="mini-stat"><div class="mini-stat-lbl">${L("lbl_xarooday")}</div><div class="mini-stat-val">$${s.xarooday.toLocaleString()}</div></div>
+        <div class="mini-stat"><div class="mini-stat-lbl">⚠️ ${L("lbl_aan_bixin")}</div><div class="mini-stat-val" style="color:#dc2626">${s.totalAanBixin}</div></div>
       </div>
       <div class="farac-ov-footer ${profit>=0?"profit":"loss"}">
-        <span style="font-size:12px;color:#555">Faa'iido / Khasaare</span>
-        <span style="font-weight:700;color:${profit>=0?"#0d6e4f":"#c62828"};font-size:13px">$${profit.toLocaleString()}</span>
+        <span style="font-size:12px;color:#64748b;font-weight:600">📈 Faa'iido / Khasaare</span>
+        <span style="font-weight:800;color:${profit>=0?"#059669":"#dc2626"};font-size:15px;font-family:'Space Grotesk',sans-serif">${profit>=0?"▲":"▼"} $${Math.abs(profit).toLocaleString()}</span>
       </div>
       ${s.submitted?`<button class="btn-unlock-sm" onclick="unlockFarac('${s.key}')">🔓 Fur / Unlock</button>`:""}
     </div>`;
@@ -578,21 +845,35 @@ function renderGuud(){
   return html;
 }
 
+function chartDefaults(){
+  return {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{
+      legend:{labels:{font:{family:"'Plus Jakarta Sans',sans-serif",size:12,weight:'600'},padding:16,usePointStyle:true,pointStyle:'circle'}},
+      tooltip:{backgroundColor:'rgba(15,23,42,.9)',titleFont:{family:"'Space Grotesk',sans-serif",size:13,weight:'700'},bodyFont:{family:"'Plus Jakarta Sans',sans-serif",size:12},padding:12,cornerRadius:10,displayColors:true,boxWidth:8,boxHeight:8}
+    },
+    scales:{
+      x:{grid:{display:false},ticks:{font:{family:"'Plus Jakarta Sans',sans-serif",size:11,weight:'600'},color:'#64748b'},border:{display:false}},
+      y:{grid:{color:'rgba(241,245,249,.8)',lineWidth:1.5},ticks:{font:{family:"'Plus Jakarta Sans',sans-serif",size:11},color:'#94a3b8'},border:{display:false}}
+    }
+  };
+}
 function initGuudCharts(){
-  const allStats = Object.keys(FARAC_COLORS).map(k=>({label:FARAC_LABELS[k],...calcFarac(appData[k])}));
+  const allStats = Object.keys(FARAC_COLORS).map(k=>({label:FARAC_LABELS[k],color:FARAC_COLORS[k],...calcFarac(appData[k])}));
   const ctx = document.getElementById("chart-guud-bar");
   if(!ctx) return;
+  const opts = chartDefaults();
+  opts.scales.y.ticks.callback = v => `$${v.toLocaleString()}`;
   chartInstances["guud-bar"] = new Chart(ctx,{
     type:"bar",
     data:{
       labels:allStats.map(s=>s.label),
       datasets:[
-        {label:"Ardayda",data:allStats.map(s=>s.totalArdayda),backgroundColor:"#1a3a5c",borderRadius:3},
-        {label:"Lacag",data:allStats.map(s=>s.saafi),backgroundColor:"#0d6e4f",borderRadius:3},
-        {label:"Kharash",data:allStats.map(s=>s.kharashWadar),backgroundColor:"#c62828",borderRadius:3},
+        {label:"💰 Lacag Saafi",data:allStats.map(s=>s.saafi),backgroundColor:allStats.map(s=>s.color+'cc'),borderColor:allStats.map(s=>s.color),borderWidth:2,borderRadius:8,borderSkipped:false},
+        {label:"📤 Kharash",data:allStats.map(s=>s.kharashWadar),backgroundColor:"rgba(198,40,40,.18)",borderColor:"rgba(198,40,40,.7)",borderWidth:2,borderRadius:8,borderSkipped:false},
       ]
     },
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}}}
+    options:opts
   });
 }
 
@@ -626,11 +907,11 @@ function renderFaracDetail(){
   ${fd.savedAt && !fd.submitted?`<div class="alert-saved">💾 Kaydsan: ${new Date(fd.savedAt).toLocaleString()}</div>`:""}
 
   <div class="stat-grid-5">
-    ${statCard("Wadarta Ardayda",calc.totalArdayda,"👥",color,true)}
-    ${statCard("Bixisay",calc.totalBixisay,"✅","#0d6e4f",true)}
-    ${statCard("Lacag Xarooday","$"+calc.xarooday.toLocaleString(),"💰","#1565c0",true)}
-    ${statCard("Lacagta Saafi","$"+calc.saafi.toLocaleString(),"💵","#0d6e4f",true)}
-    ${statCard("Aan Bixin",calc.totalAanBixin,"⚠️","#e65100",true)}
+    ${statCard(L("lbl_ardayda_wadar"),calc.totalArdayda,"👥",color,true)}
+    ${statCard(L("lbl_bixisay"),calc.totalBixisay,"✅","#0d6e4f",true)}
+    ${statCard(L("lbl_xarooday"),"$"+calc.xarooday.toLocaleString(),"💰","#1565c0",true)}
+    ${statCard(L("lbl_saafi"),"$"+calc.saafi.toLocaleString(),"💵","#0d6e4f",true)}
+    ${statCard(L("lbl_aan_bixin"),calc.totalAanBixin,"⚠️","#e65100",true)}
   </div>`;
 
   if(activeTab==="xisaab") html+=renderXisaabTab(fd, calc, isLocked, color);
@@ -651,14 +932,18 @@ function renderXisaabTab(fd, calc, isLocked, color){
     </div>
     <div class="tbl-wrap"><table><thead><tr>
       <th>Fasalka</th>
-      ${fields.map(k=>`<th>${FIELD_LABELS[k]}</th>`).join("")}
+      ${fields.map(k=>{
+        if(k==='ardaydaCusub') return `<th style="background:#e3f2fd!important;color:#1565c0!important;font-weight:700!important">Ardayda Cusub</th>`;
+        if(k==='ardaydaBaxday') return `<th style="background:#fce4ec!important;color:#880e4f!important;font-weight:700!important">Ardayda Baxday</th>`;
+        return `<th>${FIELD_LABELS[k]}</th>`;
+      }).join("")}
       <th class="th-green">Wadarta Ardayda</th>
       <th class="th-blue">Wadarta Lacag</th>
     </tr></thead><tbody>`;
 
   fd.fasalada.forEach((f,i)=>{
     const wL = +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment;
-    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents;
+    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0);
     html+=`<tr><td style="font-weight:600;color:${color};white-space:nowrap;font-size:12px">${f.magaca}</td>`;
     fields.forEach(field=>{
       html+=`<td><input class="inp-cell" type="number" value="${f[field]}" ${isLocked?"disabled":""} onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
@@ -676,6 +961,8 @@ function renderXisaabTab(fd, calc, isLocked, color){
     <td class="td-red">$${calc.totalLacagAanBixin.toLocaleString()}</td>
     <td>${calc.totalScholarship}</td>
     <td>${calc.totalFree}</td>
+    <td style="color:#1565c0;font-weight:700">${calc.totalCusub}</td>
+    <td style="color:#888;font-weight:700">${calc.totalBaxday}</td>
     <td class="tfoot-total-arday">${calc.totalArdayda}</td>
     <td class="tfoot-total-lacag">$${calc.xarooday.toLocaleString()}</td>
   </tr></tfoot></table></div></div>
@@ -703,7 +990,7 @@ function renderXisaabTab(fd, calc, isLocked, color){
       <div class="info-row"><span>Scholarship</span><span>${calc.totalScholarship}</span></div>
       <div class="info-row"><span>Free Students</span><span>${calc.totalFree}</span></div>
       <div class="info-row"><span>Lacag Aan Bixin</span><span style="color:#c62828">$${calc.totalLacagAanBixin.toLocaleString()}</span></div>
-      <div class="info-row"><span>Kharashka</span><span style="color:#e65100">$${calc.kharashWadar.toLocaleString()}</span></div>
+      <div class="info-row"><span>${L("lbl_kharash")}</span><span style="color:#e65100">$${calc.kharashWadar.toLocaleString()}</span></div>
       <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-weight:700;font-size:14px;border-top:2px solid #e0e0e0;margin-top:8px">
         <span style="color:#1a3a5c">Faa'iido / Khasaare</span>
         <span style="color:${calc.saafi-calc.kharashWadar>=0?"#0d6e4f":"#c62828"}">$${(calc.saafi-calc.kharashWadar).toLocaleString()}</span>
@@ -716,7 +1003,7 @@ function renderXisaabTab(fd, calc, isLocked, color){
 // ── KHARASH TAB ────────────────────────────
 function renderKharashTab(fd, calc, isLocked){
   let html=`<div class="panel">
-    <h4>📋 Kharashka Dugsiga — ${currentBisha}</h4>`;
+    <h4>📋 ${L("lbl_kharash")} — ${currentBisha}</h4>`;
   Object.keys(KHARASH_LABELS).forEach(k=>{
     html+=`<div class="kharash-row">
       <span class="kharash-lbl">${KHARASH_LABELS[k]}</span>
@@ -735,11 +1022,35 @@ function renderKharashTab(fd, calc, isLocked){
 
 // ── CHARTS TAB ────────────────────────────
 function renderChartsTab(){
-  return `<div class="chart-grid">
-    <div class="panel"><h4 style="font-size:14px">👨‍🎓 Ardayda Fasal Kasta</h4><div class="chart-canvas-wrap"><canvas id="chart-arday"></canvas></div></div>
-    <div class="panel"><h4 style="font-size:14px">💰 Lacagta Fasal Kasta</h4><div class="chart-canvas-wrap"><canvas id="chart-lacag"></canvas></div></div>
-    <div class="panel"><h4 style="font-size:14px">🥧 Qeybsiga Ardayda</h4><div class="chart-canvas-wrap"><canvas id="chart-pie"></canvas></div></div>
-    <div class="panel"><h4 style="font-size:14px">📊 Lacag vs Kharash</h4><div class="chart-canvas-wrap"><canvas id="chart-lacagkharash"></canvas></div></div>
+  const fd = appData[activeFarac];
+  const calc = calcFarac(fd);
+  const profit = calc.saafi - calc.kharashWadar;
+  const color = FARAC_COLORS[activeFarac];
+  return `
+  <div class="income-expense-wrap" style="margin-bottom:16px">
+    <div class="ie-card income">
+      <div class="ie-card-lbl">💰 Lacagta Dakhliga</div>
+      <div class="ie-card-val">$${calc.saafi.toLocaleString()}</div>
+      <div class="ie-card-sub">Lacagta saafi ${currentBisha}</div>
+    </div>
+    <div class="ie-card expense">
+      <div class="ie-card-lbl">📤 Kharashka</div>
+      <div class="ie-card-val">$${calc.kharashWadar.toLocaleString()}</div>
+      <div class="ie-card-sub">Wadarta kharashka ${currentBisha}</div>
+    </div>
+  </div>
+  <div style="background:${profit>=0?'linear-gradient(135deg,#ecfdf5,#d1fae5)':'linear-gradient(135deg,#fef2f2,#fee2e2)'};border:2px solid ${profit>=0?'#a7f3d0':'#fca5a5'};border-radius:14px;padding:16px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${profit>=0?'#065f46':'#991b1b'}">📈 Wadarta Faa'iido / Khasaare</div>
+      <div style="font-size:28px;font-weight:800;color:${profit>=0?'#059669':'#dc2626'};font-family:'Space Grotesk',sans-serif;margin-top:4px">${profit>=0?"▲":"▼"} $${Math.abs(profit).toLocaleString()}</div>
+    </div>
+    <div style="font-size:42px;opacity:.3">${profit>=0?"💹":"📉"}</div>
+  </div>
+  <div class="chart-grid">
+    <div class="panel"><h4>👨‍🎓 Ardayda Fasal Kasta</h4><div class="chart-canvas-wrap"><canvas id="chart-arday"></canvas></div></div>
+    <div class="panel"><h4>💵 Lacagta Fasal Kasta</h4><div class="chart-canvas-wrap"><canvas id="chart-lacag"></canvas></div></div>
+    <div class="panel"><h4>🎯 Qeybsiga Ardayda</h4><div class="chart-canvas-wrap"><canvas id="chart-pie"></canvas></div></div>
+    <div class="panel"><h4>⚖️ Dakhliga vs Kharashka</h4><div class="chart-canvas-wrap"><canvas id="chart-lacagkharash"></canvas></div></div>
   </div>`;
 }
 
@@ -747,58 +1058,203 @@ function initFaracCharts(){
   const fd = appData[activeFarac];
   const calc = calcFarac(fd);
   const labels = fd.fasalada.map(f=>f.magaca);
+  const color = FARAC_COLORS[activeFarac];
+  const base = chartDefaults();
 
-  // Ardayda bar
   const c1 = document.getElementById("chart-arday");
-  if(c1) chartInstances["arday"] = new Chart(c1,{type:"bar",data:{labels,datasets:[
-    {label:"Bixisay",data:fd.fasalada.map(f=>+f.tiradaBixisay),backgroundColor:"#0d6e4f",borderRadius:3},
-    {label:"Aan Bixin",data:fd.fasalada.map(f=>+f.tiradaAanBixin),backgroundColor:"#c62828",borderRadius:3},
-    {label:"Scholarship",data:fd.fasalada.map(f=>+f.scholarship),backgroundColor:"#1565c0",borderRadius:3},
-    {label:"Free",data:fd.fasalada.map(f=>+f.freeStudents),backgroundColor:"#e65100",borderRadius:3},
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:9}}}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9}}}}}});
+  if(c1){
+    const o = JSON.parse(JSON.stringify(base));
+    chartInstances["arday"] = new Chart(c1,{type:"bar",data:{labels,datasets:[
+      {label:"✅ Bixisay",data:fd.fasalada.map(f=>+f.tiradaBixisay),backgroundColor:"rgba(5,150,105,.75)",borderColor:"#059669",borderWidth:2,borderRadius:8,borderSkipped:false},
+      {label:"⚠️ Aan Bixin",data:fd.fasalada.map(f=>+f.tiradaAanBixin),backgroundColor:"rgba(220,38,38,.65)",borderColor:"#dc2626",borderWidth:2,borderRadius:8,borderSkipped:false},
+      {label:"🎓 Scholarship",data:fd.fasalada.map(f=>+f.scholarship),backgroundColor:"rgba(37,99,235,.65)",borderColor:"#2563eb",borderWidth:2,borderRadius:8,borderSkipped:false},
+      {label:"🆓 Free",data:fd.fasalada.map(f=>+f.freeStudents),backgroundColor:"rgba(234,88,12,.65)",borderColor:"#ea580c",borderWidth:2,borderRadius:8,borderSkipped:false},
+    ]},options:o});
+  }
 
-  // Lacag bar
   const c2 = document.getElementById("chart-lacag");
-  if(c2) chartInstances["lacag"] = new Chart(c2,{type:"bar",data:{labels,datasets:[
-    {label:"Lacag",data:fd.fasalada.map(f=>+f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment),backgroundColor:"#1a3a5c",borderRadius:4},
-  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9},callback:v=>`$${v}`}}}}});
+  if(c2){
+    const o = JSON.parse(JSON.stringify(base));
+    o.scales.y.ticks.callback = v=>`$${v.toLocaleString()}`;
+    const lacagData = fd.fasalada.map(f=>+f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment);
+    const maxV = Math.max(...lacagData);
+    chartInstances["lacag"] = new Chart(c2,{type:"bar",data:{labels,datasets:[
+      {label:"💵 Lacag",data:lacagData,
+        backgroundColor:lacagData.map(v=>v===maxV?color+'ee':color+'88'),
+        borderColor:color,borderWidth:2,borderRadius:8,borderSkipped:false},
+    ]},options:o});
+  }
 
-  // Pie
   const c3 = document.getElementById("chart-pie");
-  const pieData = [{label:"Bixisay",v:calc.totalBixisay},{label:"Aan Bixin",v:calc.totalAanBixin},{label:"Scholarship",v:calc.totalScholarship},{label:"Free",v:calc.totalFree}].filter(d=>d.v>0);
-  if(c3 && pieData.length) chartInstances["pie"] = new Chart(c3,{type:"pie",data:{labels:pieData.map(d=>d.label),datasets:[{data:pieData.map(d=>d.v),backgroundColor:PIE_COLORS}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:10}}}}}});
+  const pieData = [
+    {label:"✅ Bixisay",v:calc.totalBixisay,c:"#059669"},
+    {label:"⚠️ Aan Bixin",v:calc.totalAanBixin,c:"#dc2626"},
+    {label:"🎓 Scholarship",v:calc.totalScholarship,c:"#2563eb"},
+    {label:"🆓 Free",v:calc.totalFree,c:"#ea580c"}
+  ].filter(d=>d.v>0);
+  if(c3 && pieData.length){
+    chartInstances["pie"] = new Chart(c3,{type:"doughnut",data:{
+      labels:pieData.map(d=>d.label),
+      datasets:[{data:pieData.map(d=>d.v),backgroundColor:pieData.map(d=>d.c),borderWidth:3,borderColor:'#fff',hoverOffset:6}]
+    },options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{
+      legend:{labels:{font:{family:"'Plus Jakarta Sans',sans-serif",size:12,weight:'600'},padding:12,usePointStyle:true}},
+      tooltip:{backgroundColor:'rgba(15,23,42,.9)',titleFont:{family:"'Space Grotesk',sans-serif",size:13,weight:'700'},bodyFont:{family:"'Plus Jakarta Sans',sans-serif",size:12},padding:12,cornerRadius:10}
+    }}});
+  }
 
-  // Lacag vs Kharash
   const c4 = document.getElementById("chart-lacagkharash");
   const profit = calc.saafi - calc.kharashWadar;
-  if(c4) chartInstances["lk"] = new Chart(c4,{type:"bar",data:{
-    labels:["Lacag Saafi","Kharash","Faa'iido"],
-    datasets:[{data:[calc.saafi,calc.kharashWadar,profit],backgroundColor:["#1565c0","#c62828",profit>=0?"#0d6e4f":"#c62828"],borderRadius:4}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9},callback:v=>`$${v}`}}}}});
+  if(c4){
+    const o = JSON.parse(JSON.stringify(base));
+    o.scales.y.ticks.callback = v=>`$${v.toLocaleString()}`;
+    o.plugins.legend.display = false;
+    chartInstances["lk"] = new Chart(c4,{type:"bar",data:{
+      labels:["💰 Lacag Saafi","📤 Kharash","📈 Faa'iido / Khasaare"],
+      datasets:[{
+        data:[calc.saafi,calc.kharashWadar,profit],
+        backgroundColor:["rgba(37,99,235,.75)","rgba(220,38,38,.75)",profit>=0?"rgba(5,150,105,.75)":"rgba(220,38,38,.55)"],
+        borderColor:["#2563eb","#dc2626",profit>=0?"#059669":"#dc2626"],
+        borderWidth:2,borderRadius:10,borderSkipped:false
+      }]
+    },options:o});
+  }
 }
 
 // ── SETTINGS TAB ──────────────────────────
 function renderSettingsTab(){
+  const tabs = [
+    {id:"fasalada", icon:"🏫", label:"Fasalada"},
+    {id:"users",    icon:"👥", label:"Isticmaalayaasha"},
+    {id:"luuqad",   icon:"🌐", label:"Luuqadda"},
+  ];
+
+  let html = `<div class="panel" style="padding:14px 18px">
+    <div class="settings-tab-bar">
+      ${tabs.map(t=>`<button class="settings-tab-btn ${activeSettingsTab===t.id?"active":""}" onclick="setSettingsTab('${t.id}')">${t.icon} ${t.label}</button>`).join("")}
+    </div>`;
+
+  if(activeSettingsTab==="fasalada") html += renderSettingsFasalada();
+  else if(activeSettingsTab==="users") html += renderSettingsUsers();
+  else if(activeSettingsTab==="luuqad") html += renderSettingsLuuqad();
+
+  html += `</div>`;
+  return html;
+}
+
+function setSettingsTab(t){ activeSettingsTab=t; renderContent(); }
+
+function renderSettingsFasalada(){
   const faracOpts = Object.keys(FARAC_COLORS).map(k=>`<option value="${k}">${FARAC_LABELS[k]}</option>`).join("");
-  const fasalList = (appData[activeFarac]?.fasalada||[]).map((f,i)=>
-    `<div class="fasal-item"><span style="font-size:13px;color:#333">${f.magaca}</span>
-     <button class="btn-del-fasal" onclick="removeFasal('${activeFarac}',${i})">🗑️</button></div>`
-  ).join("");
+
+  const fasalList = (appData[activeFarac]?.fasalada||[]).map((f,i)=>`
+    <div class="fasal-item" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-weight:600;color:${FARAC_COLORS[activeFarac]};font-size:13px">${f.magaca}</span>
+        <button class="btn-del-fasal" onclick="removeFasal('${activeFarac}',${i})">🗑️</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:#888;font-size:12px;min-width:80px">💵 Qiimaha ($):</span>
+        <input type="number" value="${f.qiimaha}" min="0"
+          style="width:90px;padding:5px 8px;border:1px solid #ccc;border-radius:5px;font-size:13px;text-align:right;"
+          onchange="updateFasalQiime('${activeFarac}',${i},this.value)"/>
+      </div>
+    </div>`).join("");
 
   return `<div class="settings-grid">
-    <div class="panel">
-      <h4>➕ Ku Dar Fasal Cusub</h4>
+    <div>
+      <h4 style="color:#1a3a5c;margin-bottom:14px">➕ Ku Dar Fasal Cusub</h4>
       <label class="form-lbl">Faracka</label>
       <select id="new-fasal-farac" class="form-select">${faracOpts}</select>
       <label class="form-lbl">Magaca Fasalka</label>
       <input id="new-fasal-name" class="form-input" placeholder="Tusaale: 6aad" onkeydown="if(event.key==='Enter')addFasal()"/>
+      <label class="form-lbl">Qiimaha ($)</label>
+      <input id="new-fasal-qiime" class="form-input" type="number" placeholder="Tusaale: 13" min="0"/>
       <button class="btn-add" onclick="addFasal()">➕ Ku Dar</button>
     </div>
-    <div class="panel">
-      <h4>📝 Fasalada ${FARAC_LABELS[activeFarac]}</h4>
-      <div class="fasal-list">${fasalList||"<p style='color:#aaa;font-size:13px'>Fasal ma jiro</p>"}</div>
-      <button class="btn-reset" onclick="openResetModal('${activeFarac}')">♻️ Dib u Deji (Reset) Faracka</button>
+    <div>
+      <h4 style="color:#1a3a5c;margin-bottom:14px">📝 Fasalada &amp; Qiimaha — ${FARAC_LABELS[activeFarac]}</h4>
+      <div class="fasal-list" style="max-height:320px">${fasalList||"<p style='color:#aaa;font-size:13px'>Fasal ma jiro</p>"}</div>
+      <button class="btn-reset" style="margin-top:10px" onclick="openResetModal('${activeFarac}')">${L("lbl_nadiifi")}</button>
     </div>
+  </div>`;
+}
+
+function renderSettingsUsers(){
+  const roleBgColors = {maamul:"#1a3a5c",sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a"};
+  const userList = Object.entries(USERS).map(([username, u])=>`
+    <div class="user-item">
+      <div class="user-item-info">
+        <div class="user-item-name">👤 ${username}</div>
+        <div class="user-item-meta">
+          <span class="role-badge" style="background:${roleBgColors[u.role]||'#555'}">${u.role}</span>
+          &nbsp;${u.label||""}
+          &nbsp;· 🔑 ${u.password}
+        </div>
+      </div>
+      <div class="user-item-btns">
+        <button class="btn-del-user" onclick="deleteUser('${username}')">🗑️</button>
+      </div>
+    </div>`).join("");
+
+  const roleOpts = [
+    {v:"maamul",l:"Maamulka"},
+    {v:"sare",l:"Dugsiga Sare"},
+    {v:"dhexe",l:"Dugsiga Dhexe"},
+    {v:"hoose1",l:"Hoose 1"},
+    {v:"hoose2",l:"Hoose 2"},
+  ].map(r=>`<option value="${r.v}">${r.l}</option>`).join("");
+
+  return `<div class="settings-grid">
+    <div>
+      <h4 style="color:#1a3a5c;margin-bottom:14px">➕ Ku Dar User Cusub</h4>
+      <label class="form-lbl">Username</label>
+      <input id="new-user-name" class="form-input" placeholder="tusaale: admin2"/>
+      <label class="form-lbl">Password</label>
+      <input id="new-user-pass" class="form-input" placeholder="sirta..."/>
+      <label class="form-lbl">Label (Magaca)</label>
+      <input id="new-user-label" class="form-input" placeholder="tusaale: Maamulka 2"/>
+      <label class="form-lbl">Role</label>
+      <select id="new-user-role" class="form-select">${roleOpts}</select>
+      <button class="btn-add" onclick="addUser()">➕ Ku Dar User</button>
+    </div>
+    <div>
+      <h4 style="color:#1a3a5c;margin-bottom:14px">👥 Isticmaalayaasha</h4>
+      <div class="fasal-list" style="max-height:320px">${userList}</div>
+      <button class="btn-reset" style="margin-top:10px" onclick="resetUsersToDefault()">♻️ Dib u Deji Users-ka</button>
+    </div>
+  </div>`;
+}
+
+function renderSettingsQiimaha(){
+  return `<div>
+    <h4 style="color:#1a3a5c;margin-bottom:14px">💵 Qiimaha Default ee Farac Kasta</h4>
+    <p style="color:#888;font-size:12px;margin-bottom:14px">Qiimahaani wuxuu la shaqeeyaa fasalada cusub ee la abuuraa.</p>
+    ${Object.keys(FARAC_COLORS).map(k=>`
+      <div class="qiime-row">
+        <span class="qiime-lbl" style="color:${FARAC_COLORS[k]};font-weight:600">${FARAC_LABELS[k]}</span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="color:#888;font-size:13px">$</span>
+          <input class="qiime-inp" type="number" value="${defaultQiimaha[k]||0}" onchange="updateDefaultQiime('${k}',this.value)"/>
+        </div>
+      </div>`).join("")}
+    <div style="margin-top:16px">
+      <button class="btn-add" onclick="saveQiimaha()">💾 Kaydi Qiimaha</button>
+    </div>
+  </div>`;
+}
+
+function renderSettingsLuuqad(){
+  return `<div>
+    <h4 style="color:#1a3a5c;margin-bottom:14px">🌐 Dooro Luuqadda Nidaamka</h4>
+    ${Object.entries(LUUQADAHA).map(([code,l])=>`
+      <div class="luuqad-option ${currentLang===code?"selected":""}" onclick="changeLang('${code}')">
+        <span class="luuqad-flag">${l.flag}</span>
+        <div>
+          <div class="luuqad-name">${l.name}</div>
+          <div class="luuqad-sub">${l.login_subtitle}</div>
+        </div>
+        ${currentLang===code?`<span style="margin-left:auto;color:#1565c0;font-size:18px">✓</span>`:""}
+      </div>`).join("")}
   </div>`;
 }
 
@@ -806,15 +1262,20 @@ function renderSettingsTab(){
 // STAT CARD HELPER
 // ══════════════════════════════════════════
 function statCard(label, value, icon, color, small){
-  return `<div class="stat-card ${small?"":"stat-card-lg"}" style="border-left-color:${color}">
+  const bgAlpha = color.startsWith('#') ? hexToRgba(color, 0.12) : color;
+  return `<div class="stat-card ${small?"":"stat-card-lg"}" style="--accent:${color}">
     <div class="stat-card-inner">
-      <div>
+      <div style="flex:1">
         <div class="stat-card-lbl">${label}</div>
         <div class="stat-card-val ${small?"small":""}" style="color:${color}">${value}</div>
       </div>
-      <span class="stat-card-icon ${small?"small":""}">${icon}</span>
+      <div class="stat-card-icon-wrap ${small?"small":""}" style="background:${bgAlpha}">${icon}</div>
     </div>
   </div>`;
+}
+function hexToRgba(hex, a){
+  const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${a})`;
 }
 
 // ══════════════════════════════════════════
@@ -842,8 +1303,6 @@ function updateMeta(key, field, val){
 }
 
 function refreshCalcDisplay(){
-  // re-render stat cards and summary without full re-render
-  // lightweight: just re-render content
   const scrollTop = document.getElementById("main-content").scrollTop;
   renderContent();
   document.getElementById("main-content").scrollTop = scrollTop;
@@ -852,7 +1311,7 @@ function refreshCalcDisplay(){
 function saveDraft(key){
   appData[key].savedAt = new Date().toISOString();
   scheduleSave();
-  showToast("✅ Xogtu waa la kaydiyey");
+  showToast(L("msg_saved"));
   renderAll();
 }
 function submitFarac(key){
@@ -860,24 +1319,27 @@ function submitFarac(key){
   appData[key].savedAt = new Date().toISOString();
   closeModal();
   scheduleSave();
-  showToast("📤 Xogtu waa la gudbiyey maamulka!","info");
+  showToast(L("msg_submitted"),"info");
   renderAll();
 }
 function unlockFarac(key){
   appData[key].submitted = false;
   scheduleSave();
-  showToast("🔓 Faracka waa la furiye","info");
+  showToast(L("msg_unlocked"),"info");
   renderAll();
 }
 function addFasal(){
   const nameEl = document.getElementById("new-fasal-name");
   const faracEl = document.getElementById("new-fasal-farac");
+  const qiimeEl = document.getElementById("new-fasal-qiime");
   if(!nameEl || !nameEl.value.trim()) return;
   const farac = faracEl ? faracEl.value : activeFarac;
   const name = nameEl.value.trim();
-  appData[farac].fasalada.push(emptyFasal(name));
+  const newFasal = emptyFasal(name, farac);
+  if(qiimeEl && qiimeEl.value !== "") newFasal.qiimaha = +qiimeEl.value;
+  appData[farac].fasalada.push(newFasal);
   scheduleSave();
-  showToast(`✅ "${name}" waa lagu daray ${FARAC_LABELS[farac]}`);
+  showToast(`✅ "${name}" ($${newFasal.qiimaha}) waa lagu daray ${FARAC_LABELS[farac]}`);
   renderAll();
 }
 function removeFasal(key, idx){
@@ -886,9 +1348,15 @@ function removeFasal(key, idx){
   showToast("🗑️ Fasalku waa la tirtirray","warning");
   renderAll();
 }
+function updateFasalQiime(key, idx, val){
+  if(!canEdit(key)) return;
+  appData[key].fasalada[idx].qiimaha = +val;
+  scheduleSave();
+  refreshCalcDisplay();
+}
 function resetFarac(key){
   appData[key] = {
-    fasalada: DEFAULT_FASALADA[key].map(emptyFasal),
+    fasalada: DEFAULT_FASALADA[key].map(n=>emptyFasal(n,key)),
     kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},
     discount:0, lacagKhususi:0, submitted:false, savedAt:null
   };
@@ -898,23 +1366,66 @@ function resetFarac(key){
   renderAll();
 }
 
+// ── USER MANAGEMENT ───────────────────────
+function addUser(){
+  const username = (document.getElementById("new-user-name")?.value||"").trim().toLowerCase();
+  const password = (document.getElementById("new-user-pass")?.value||"").trim();
+  const label    = (document.getElementById("new-user-label")?.value||"").trim();
+  const role     = document.getElementById("new-user-role")?.value || "sare";
+  if(!username || !password){ showToast("⚠️ Username iyo Password buuxi","warning"); return; }
+  if(USERS[username]){ showToast("⚠️ Username horey u jira","warning"); return; }
+  USERS[username] = {password, role, label: label||username};
+  saveUsersToFb();
+  showToast(`✅ User "${username}" waa la abuuray`);
+  renderContent();
+}
+function deleteUser(username){
+  if(username === currentUser.username){ showToast("⚠️ Nafta user-kaaga ma tirtiri kartid","warning"); return; }
+  delete USERS[username];
+  saveUsersToFb();
+  showToast(`🗑️ User "${username}" waa la tirtirray`,"warning");
+  renderContent();
+}
+function resetUsersToDefault(){
+  USERS = {...DEFAULT_USERS};
+  saveUsersToFb();
+  showToast("♻️ Users-ka waa dib loo dejiyey","warning");
+  renderContent();
+}
+
+// ── QIIMAHA / LANG SETTINGS ───────────────
+function updateDefaultQiime(key, val){
+  defaultQiimaha[key] = +val;
+}
+function saveQiimaha(){
+  saveSettingsToFb();
+  showToast("💾 Qiimaha waa la kaydiyey");
+}
+function changeLang(code){
+  currentLang = code;
+  saveSettingsToFb();
+  renderAll();
+}
+
 // ══════════════════════════════════════════
 // MODAL
 // ══════════════════════════════════════════
 function openSubmitModal(key){
   modalAction = {type:"submit", key};
-  document.getElementById("modal-title").textContent = "📤 Xogta Gudbi";
-  document.getElementById("modal-body").textContent = `Ma hubtaa inaad u gudbinayso maamulka xogta ${FARAC_LABELS[key]}? Kadib ma beddeli kartid.`;
+  document.getElementById("modal-title").textContent = L("modal_submit_title");
+  document.getElementById("modal-body").textContent = `${L("modal_submit_body")} ${FARAC_LABELS[key]}? ${L("modal_submit_body2")}`;
   const btn = document.getElementById("modal-confirm-btn");
-  btn.textContent = "Haa, Gudbi"; btn.style.background="#1565c0";
+  btn.textContent = L("btn_gudbi"); btn.style.background="#1565c0";
+  document.querySelector(".btn-cancel").textContent = L("btn_jooji");
   document.getElementById("modal-overlay").classList.add("show");
 }
 function openResetModal(key){
   modalAction = {type:"reset", key};
-  document.getElementById("modal-title").textContent = "♻️ Xog Nadiifi";
-  document.getElementById("modal-body").textContent = `Ma hubtaa inaad nadiifin lahayd dhammaan xogta ${FARAC_LABELS[key]}?`;
+  document.getElementById("modal-title").textContent = L("modal_reset_title");
+  document.getElementById("modal-body").textContent = `${L("modal_reset_body")} ${FARAC_LABELS[key]}?`;
   const btn = document.getElementById("modal-confirm-btn");
-  btn.textContent = "Haa, Nadiifi"; btn.style.background="#c62828";
+  btn.textContent = L("btn_nadiifi"); btn.style.background="#c62828";
+  document.querySelector(".btn-cancel").textContent = L("btn_jooji");
   document.getElementById("modal-overlay").classList.add("show");
 }
 function closeModal(){ document.getElementById("modal-overlay").classList.remove("show"); modalAction=null; }
@@ -946,16 +1457,17 @@ function destroyCharts(){
 }
 
 // ══════════════════════════════════════════
-// INIT — waits for Firebase SDK module to load
+// INIT
 // ══════════════════════════════════════════
 async function appInit(){
-  // Populate bisha dropdown
   const sel=document.getElementById("bisha-select");
   if(sel.options.length===0){
     BILAHA.forEach(b=>{ const o=document.createElement("option"); o.value=b; o.textContent=b; sel.appendChild(o); });
   }
   setFbLoading(true);
   try{
+    await loadUsersAndSettings();
+    applyLangToLogin();
     const savedBisha = await fbGetOnce(BISHA_FB_PATH);
     currentBisha = (savedBisha && BILAHA.includes(savedBisha)) ? savedBisha : BILAHA[new Date().getMonth()];
     sel.value = currentBisha;
@@ -966,11 +1478,9 @@ async function appInit(){
     }
   }catch{ appData=buildInitFarac(); }
   finally{ setFbLoading(false); }
-  // Start real-time listener for current bisha
   startListener(currentBisha);
 }
 
-// Wait for Firebase SDK module to be ready
 if(window._fbReady){
   appInit();
 } else {
