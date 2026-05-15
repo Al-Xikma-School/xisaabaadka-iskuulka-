@@ -219,9 +219,6 @@ window.dispatchEvent(new Event("fb-ready"));
   .report-toolbar{background:linear-gradient(135deg,#0a1628,#1a3a5c);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
   .report-toolbar-title{color:#ffd700;font-weight:800;font-size:15px;font-family:'Space Grotesk',sans-serif;}
   .report-date-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .report-date-lbl{color:rgba(255,255,255,.6);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
-  .report-date-inp{background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-family:'Plus Jakarta Sans',sans-serif;font-weight:600;outline:none;cursor:pointer;width:130px;}
-  .report-date-inp:focus{border-color:rgba(255,215,0,.5);}
   .report-btn-print{padding:9px 18px;background:linear-gradient(135deg,#ffd700,#ff8c00);border:none;border-radius:9px;color:#1a1a1a;font-weight:800;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 3px 12px rgba(255,215,0,.3);transition:.2s;display:flex;align-items:center;gap:6px;}
   .report-btn-print:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(255,215,0,.4);}
   .report-btn-pdf{padding:9px 18px;background:linear-gradient(135deg,#c62828,#ef4444);border:none;border-radius:9px;color:#fff;font-weight:800;font-size:13px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 3px 12px rgba(198,40,40,.3);transition:.2s;display:flex;align-items:center;gap:6px;}
@@ -636,7 +633,6 @@ function scheduleSave(){
 async function handleBishaChange(bisha){
   try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
   currentBisha = bisha;
-  reportStartDate = ""; reportEndDate = "";
   try{ await fbSet(BISHA_FB_PATH, bisha); }catch{}
   await loadBisha(bisha);
   renderAll();
@@ -1107,39 +1103,13 @@ function renderXisaabTab(fd, calc, isLocked, color){
 }
 
 // ── REPORT TAB ────────────────────────────
-let reportStartDate = "";
-let reportEndDate = "";
-
-function initReportDates(){
-  if(!reportStartDate || !reportEndDate){
-    // Default: start = 1st of currentBisha month, end = last day
-    const parts = currentBisha.split(" ");
-    const monthIdx = BILAHA.indexOf(parts[0]);
-    const year = parseInt(parts[1]) || new Date().getFullYear();
-    const d1 = new Date(year, monthIdx, 1);
-    const d2 = new Date(year, monthIdx+1, 0);
-    const fmt = d => d.toISOString().split("T")[0];
-    reportStartDate = fmt(d1);
-    reportEndDate = fmt(d2);
-  }
-}
-
 function renderReportTab(fd, calc, color){
-  initReportDates();
-  const isMaamul = currentUser.role==="maamul";
-  const fields = Object.keys(FIELD_LABELS);
-
-  // Build report HTML (same as print area)
   const reportInner = buildReportHTML(fd, calc, color);
 
   return `<div class="report-wrap" id="report-container">
     <div class="report-toolbar">
       <div class="report-toolbar-title">📄 Report — ${FARAC_LABELS[activeFarac]}</div>
       <div class="report-date-row">
-        <span class="report-date-lbl">Bilowga</span>
-        <input type="date" class="report-date-inp" id="rep-start" value="${reportStartDate}" onchange="reportStartDate=this.value;renderContent()"/>
-        <span class="report-date-lbl">Dhamaadka</span>
-        <input type="date" class="report-date-inp" id="rep-end" value="${reportEndDate}" onchange="reportEndDate=this.value;renderContent()"/>
         <button class="report-btn-print" onclick="printReport()">🖨️ Print</button>
         <button class="report-btn-pdf" onclick="savePDF()">📥 PDF</button>
       </div>
@@ -1155,11 +1125,8 @@ function buildReportHTML(fd, calc, color){
   const printedBy = currentUser?.label || currentUser?.username || "";
   const now = new Date().toLocaleDateString("so-SO",{year:"numeric",month:"long",day:"numeric"});
 
-  // Period display
-  let periodText = currentBisha;
-  if(reportStartDate && reportEndDate){
-    periodText = `${reportStartDate} — ${reportEndDate}`;
-  }
+  // Period display — bisha la dooratay
+  const periodText = currentBisha;
 
   // Xisaab table rows
   let xisaabRows = "";
