@@ -291,7 +291,21 @@ window.dispatchEvent(new Event("fb-ready"));
     </div>
     <div class="header-right">
       <span class="bisha-label">📅 <span id="lbl-bisha-header">Bisha:</span></span>
-      <select id="bisha-select" onchange="handleBishaChange(this.value)"></select>
+      <div style="position:relative;display:inline-block;">
+        <button id="bisha-btn" onclick="toggleBishaPicker()" style="background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);color:var(--gold);border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;font-weight:600;font-family:'Plus Jakarta Sans',sans-serif;min-width:120px;display:flex;align-items:center;gap:6px;">
+          <span id="bisha-btn-txt">...</span><span style="font-size:10px;opacity:.7">▼</span>
+        </button>
+        <div id="bisha-picker" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:#1a3a5c;border:1.5px solid rgba(255,255,255,.15);border-radius:12px;padding:14px;z-index:9000;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:260px;">
+          <!-- Year nav -->
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <button onclick="pickerChangeYear(-1)" style="background:rgba(255,255,255,.1);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">‹</button>
+            <span id="picker-year-lbl" style="color:var(--gold);font-weight:800;font-size:15px;font-family:'Space Grotesk',sans-serif;"></span>
+            <button onclick="pickerChangeYear(1)" style="background:rgba(255,255,255,.1);border:none;color:#fff;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">›</button>
+          </div>
+          <!-- Month grid -->
+          <div id="picker-months" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;"></div>
+        </div>
+      </div>
       <span style="color:rgba(255,255,255,.6);font-size:12px">|</span>
       <span class="header-user" id="header-user-label">👤</span>
       <button class="btn-bax" id="btn-bax-txt" onclick="doLogout()">Bax</button>
@@ -312,6 +326,9 @@ window.dispatchEvent(new Event("fb-ready"));
 // FIREBASE SDK HELPERS
 // ══════════════════════════════════════════
 function getFbPath(bisha){ return `xisaab/${bisha.replace(/\s/g,"_")}`; }
+// Helper: bisha name-ka kaliya (sanadka la'aanteed)
+function getBishaName(b){ return b.split(" ")[0]; }
+function getBishaYear(b){ return parseInt(b.split(" ")[1])||new Date().getFullYear(); }
 const BISHA_FB_PATH = "meta/bisha";
 const USERS_FB_PATH = "meta/users";
 const SETTINGS_FB_PATH = "meta/settings";
@@ -504,7 +521,7 @@ const PIE_COLORS = ["#0d6e4f","#1565c0","#7b3f00","#8b1a2a"];
 // STATE
 // ══════════════════════════════════════════
 let currentUser = null;
-let currentBisha = BILAHA[new Date().getMonth()];
+let currentBisha = BILAHA[new Date().getMonth()] + " " + new Date().getFullYear();
 let activeFarac = null;
 let activeTab = "xisaab";
 let activeSettingsTab = "fasalada"; // fasalada | users | qiimaha | luuqad
@@ -708,13 +725,61 @@ function renderAll(){
   renderContent();
 }
 
+let pickerYear = new Date().getFullYear();
+
 function populateBishaSelect(){
-  const sel=document.getElementById("bisha-select");
-  if(sel.options.length===0){
-    BILAHA.forEach(b=>{ const o=document.createElement("option"); o.value=b; o.textContent=b; sel.appendChild(o); });
-  }
-  sel.value = currentBisha;
+  const btn = document.getElementById("bisha-btn-txt");
+  if(btn) btn.textContent = currentBisha;
+  renderPickerMonths();
 }
+
+function toggleBishaPicker(){
+  const p = document.getElementById("bisha-picker");
+  if(!p) return;
+  const isOpen = p.style.display !== "none";
+  if(isOpen){ p.style.display="none"; return; }
+  pickerYear = getBishaYear(currentBisha);
+  document.getElementById("picker-year-lbl").textContent = pickerYear;
+  renderPickerMonths();
+  p.style.display = "block";
+}
+
+function renderPickerMonths(){
+  const grid = document.getElementById("picker-months");
+  if(!grid) return;
+  const selName = getBishaName(currentBisha);
+  const selYear = getBishaYear(currentBisha);
+  grid.innerHTML = BILAHA.map(b=>{
+    const isActive = (b===selName && pickerYear===selYear);
+    return `<button onclick="selectBishaFromPicker('${b}')" style="
+      padding:7px 4px;border:1.5px solid ${isActive?'var(--gold)':'rgba(255,255,255,.12)'};
+      background:${isActive?'rgba(255,215,0,.18)':'rgba(255,255,255,.05)'};
+      color:${isActive?'var(--gold)':'rgba(255,255,255,.8)'};
+      border-radius:8px;font-size:11px;font-weight:${isActive?'800':'600'};
+      cursor:pointer;font-family:\'Plus Jakarta Sans\',sans-serif;transition:.15s;
+    ">${b}</button>`;
+  }).join("");
+}
+
+function pickerChangeYear(dir){
+  pickerYear += dir;
+  document.getElementById("picker-year-lbl").textContent = pickerYear;
+  renderPickerMonths();
+}
+
+async function selectBishaFromPicker(bishaName){
+  const newBisha = bishaName + " " + pickerYear;
+  document.getElementById("bisha-picker").style.display = "none";
+  await handleBishaChange(newBisha);
+}
+
+document.addEventListener("click", function(e){
+  const picker = document.getElementById("bisha-picker");
+  const btn = document.getElementById("bisha-btn");
+  if(picker && btn && !picker.contains(e.target) && !btn.contains(e.target)){
+    picker.style.display="none";
+  }
+});
 
 // ══════════════════════════════════════════
 // SIDEBAR
@@ -735,7 +800,6 @@ function renderSidebar(){
     html += `<div class="sb-divider sidebar-divider-block">
       <button class="sb-guud-btn ${activeFarac===null?"active":""}" onclick="selectGuud()">${L("nav_guud")}</button>
     </div>`;
-    html += `<button class="sb-farac-btn ${activeFarac===null?"active-guud":""}" style="white-space:nowrap;flex-shrink:0" onclick="selectGuud()">${L("nav_guud_short")}</button>`;
   } else {
     html += `<div class="non-maamul-badge" style="background:${FARAC_COLORS[currentUser.role]}">
       <div class="label">${FARAC_LABELS[currentUser.role]}</div>
@@ -891,7 +955,7 @@ function renderFaracDetail(){
       <div class="farac-bar" style="background:${color}"></div>
       <div>
         <h2 style="margin:0;color:#1a3a5c;font-size:17px">${FARAC_LABELS[activeFarac]}</h2>
-        <span style="color:#888;font-size:11px">📅 ${currentBisha} ${new Date().getFullYear()}</span>
+        <span style="color:#888;font-size:11px">📅 ${currentBisha}</span>
       </div>
     </div>
     <div class="action-btns">
@@ -1460,17 +1524,21 @@ function destroyCharts(){
 // INIT
 // ══════════════════════════════════════════
 async function appInit(){
-  const sel=document.getElementById("bisha-select");
-  if(sel.options.length===0){
-    BILAHA.forEach(b=>{ const o=document.createElement("option"); o.value=b; o.textContent=b; sel.appendChild(o); });
-  }
+  populateBishaSelect();
   setFbLoading(true);
   try{
     await loadUsersAndSettings();
     applyLangToLogin();
     const savedBisha = await fbGetOnce(BISHA_FB_PATH);
-    currentBisha = (savedBisha && BILAHA.includes(savedBisha)) ? savedBisha : BILAHA[new Date().getMonth()];
-    sel.value = currentBisha;
+    // Support both old format ("Abriil") and new format ("Abriil 2026")
+    if(savedBisha){
+      if(savedBisha.includes(" ")){
+        currentBisha = savedBisha; // new format
+      } else if(BILAHA.includes(savedBisha)){
+        currentBisha = savedBisha + " " + new Date().getFullYear(); // upgrade old
+      }
+    }
+    populateBishaSelect();
     const snap = await fbGetOnce(getFbPath(currentBisha));
     if(snap && typeof snap==="object"){
       appData = snap;
