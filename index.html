@@ -346,6 +346,7 @@ window.dispatchEvent(new Event("fb-ready"));
       </div>
       <span style="color:rgba(255,255,255,.6);font-size:12px">|</span>
       <span class="header-user" id="header-user-label">👤</span>
+      <button id="btn-install-pwa" onclick="installPWA()" style="display:none;background:linear-gradient(135deg,var(--gold),var(--gold2));border:none;color:#1a1a1a;padding:6px 13px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 2px 10px rgba(255,215,0,.35);" title="App-ka ku rakib taleefoonkaaga">⬇ Install</button>
       <button class="btn-bax" id="btn-bax-txt" onclick="doLogout()">Bax</button>
     </div>
   </div>
@@ -1874,6 +1875,34 @@ if(window._fbReady){
   appInit();
 } else {
   window.addEventListener("fb-ready", appInit, {once:true});
+}
+
+// ══════════════════════════════════════════
+// PWA INSTALL BUTTON
+// ══════════════════════════════════════════
+let _pwaInstallPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  _pwaInstallPrompt = e;
+  const btn = document.getElementById("btn-install-pwa");
+  if(btn) btn.style.display = "inline-flex";
+});
+window.addEventListener("appinstalled", () => {
+  _pwaInstallPrompt = null;
+  const btn = document.getElementById("btn-install-pwa");
+  if(btn) btn.style.display = "none";
+});
+function installPWA(){
+  if(!_pwaInstallPrompt) return;
+  _pwaInstallPrompt.prompt();
+  _pwaInstallPrompt.userChoice.then(result => {
+    if(result.outcome === "accepted"){
+      showToast("✅ App-ka si guul leh ayaa loo rakibay!","info");
+    }
+    _pwaInstallPrompt = null;
+    const btn = document.getElementById("btn-install-pwa");
+    if(btn) btn.style.display = "none";
+  });
 }
 </script>
 </body>
