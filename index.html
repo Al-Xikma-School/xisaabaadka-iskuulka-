@@ -326,10 +326,6 @@ window.dispatchEvent(new Event("fb-ready"));
     </div>
     <p id="login-err">Magaca ama sirta waa khalad.</p>
     <button class="btn-login" id="btn-login-text" onclick="doLogin()">Gal →</button>
-    <div style="border-top:1px solid rgba(255,255,255,.1);padding-top:16px;">
-      <button class="show-pwd-btn" onclick="togglePwdList()" id="btn-show-logins">Muuji Login-yada</button>
-      <div id="pwd-list"></div>
-    </div>
   </div>
 </div>
 
@@ -595,7 +591,7 @@ function emptyFasal(name, faracKey){
 function buildInitFarac(){
   const d={};
   Object.keys(DEFAULT_FASALADA).forEach(k=>{
-    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,submitted:false,savedAt:null};
+    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,faalo:"",submitted:false,savedAt:null};
   });
   return d;
 }
@@ -752,7 +748,7 @@ function togglePwdList(){
   if(!pwdVisible){ el.style.display="none"; btn.textContent=L("btn_show_logins"); return; }
   el.style.display="block"; btn.textContent=L("btn_hide_logins");
   el.innerHTML = Object.entries(USERS).map(([k,v])=>
-    `<div class="pwd-row"><span>${k}</span><span>${v.password}</span></div>`
+    `<div class="pwd-row"><span>${k}</span><span>${"•".repeat(v.password.length)}</span></div>`
   ).join("");
 }
 
@@ -1084,6 +1080,18 @@ function renderXisaabTab(fd, calc, isLocked, color){
     <td class="tfoot-total-arday">${calc.totalArdayda}</td>
     <td class="tfoot-total-lacag">$${calc.xarooday.toLocaleString()}</td>
   </tr></tfoot></table></div></div>
+
+  <div class="panel" style="margin-bottom:16px">
+    <h4 style="margin-bottom:10px">📝 Faalo / Xusuus-qor</h4>
+    <textarea
+      placeholder="Faalo ku qor xisaab xirka iyo kharashka..."
+      style="width:100%;min-height:90px;padding:10px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;resize:vertical;outline:none;transition:.2s;color:#334155;line-height:1.6;"
+      onfocus="this.style.borderColor='#3b82f6'"
+      onblur="this.style.borderColor='#e2e8f0'"
+      ${isLocked?"disabled":""}
+      onchange="updateMeta('${activeFarac}','faalo',this.value)"
+    >${fd.faalo||""}</textarea>
+  </div>
 
   <div class="summary-grid">
     <div class="panel">
@@ -1472,11 +1480,11 @@ function renderSettingsTab(isMaamul){
     ? [
         {id:"fasalada", icon:"🏫", label:"Fasalada"},
         {id:"users",    icon:"👥", label:"Isticmaalayaasha"},
+        {id:"qiimaha",  icon:"💵", label:"Qiimaha"},
         {id:"luuqad",   icon:"🌐", label:"Luuqadda"},
       ]
     : [
         {id:"fasalada", icon:"🏫", label:"Fasalada"},
-        {id:"qiimaha",  icon:"💵", label:"Qiimaha"},
         {id:"luuqad",   icon:"🌐", label:"Luuqadda"},
       ];
 
@@ -1759,7 +1767,7 @@ function resetFarac(key){
   appData[key] = {
     fasalada: DEFAULT_FASALADA[key].map(n=>emptyFasal(n,key)),
     kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},
-    discount:0, lacagKhususi:0, submitted:false, savedAt:null
+    discount:0, lacagKhususi:0, faalo:"", submitted:false, savedAt:null
   };
   closeModal();
   scheduleSave();
