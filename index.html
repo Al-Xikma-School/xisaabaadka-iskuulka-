@@ -591,7 +591,7 @@ function emptyFasal(name, faracKey){
 function buildInitFarac(){
   const d={};
   Object.keys(DEFAULT_FASALADA).forEach(k=>{
-    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,faalo:"",submitted:false,savedAt:null};
+    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,lacagLagaJiiday:0,faalo:"",submitted:false,savedAt:null};
   });
   return d;
 }
@@ -1011,7 +1011,13 @@ function renderFaracDetail(){
       ${fd.submitted?"<span class='badge-submitted'>✅ La Gudbiyey</span>":""}
       ${!fd.submitted?`
         <button class="btn-save" onclick="saveDraft('${activeFarac}')">💾 Save</button>
-        ${!isMaamul?`<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`:""}
+        ${!isMaamul?(()=>{
+          const jiiday = +(fd.lacagLagaJiiday||0);
+          const canSubmit = jiiday > 0;
+          return canSubmit
+            ? `<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`
+            : `<button class="btn-gudbi" disabled title="Gali lacagta laga jiiday akoonka iskuulka" style="opacity:.45;cursor:not-allowed;">🔒 Gali Lacagta Marka Hore</button>`;
+        })():""}
       `:""}
       ${fd.submitted && isMaamul?`<button class="btn-unlock" onclick="unlockFarac('${activeFarac}')">🔓 Unlock</button>`:""}
     </div>
@@ -1025,9 +1031,61 @@ function renderFaracDetail(){
     ${statCard(L("lbl_xarooday"),"$"+calc.xarooday.toLocaleString(),"💰","#1565c0",true)}
     ${statCard(L("lbl_saafi"),"$"+calc.saafi.toLocaleString(),"💵","#0d6e4f",true)}
     ${statCard(L("lbl_aan_bixin"),calc.totalAanBixin,"⚠️","#e65100",true)}
+  </div>
+  <div style="background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1.5px solid #e2e8f0;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:220px;">
+      <div style="color:#64748b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">🏦 Lacagta Laga Jiiday Akoonka Iskuulka</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="color:#475569;font-size:15px;font-weight:700;">$</span>
+        <input
+          id="inp-lacag-jiiday-${activeFarac}"
+          type="number"
+          min="0"
+          placeholder="0"
+          value="${fd.lacagLagaJiiday||0}"
+          ${isLocked?"disabled":""}
+          oninput="updateLacagJiiday('${activeFarac}',this.value)"
+          style="width:160px;padding:9px 13px;border:2px solid ${(fd.lacagLagaJiiday&&+fd.lacagLagaJiiday>0)?'#1565c0':'#e2e8f0'};border-radius:9px;font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;outline:none;transition:.2s;color:#1a3a5c;background:${isLocked?'#f8fafc':'#fff'};"
+          onfocus="this.style.borderColor='#3b82f6'"
+          onblur="this.style.borderColor=(this.value&&+this.value>0)?'#1565c0':'#e2e8f0'"
+        />
+        ${(!fd.lacagLagaJiiday||+fd.lacagLagaJiiday===0)&&!isLocked?`<span style="color:#e65100;font-size:11px;font-weight:700;">⚠️ Buuxi si aad u xidhid</span>`:""}
+      </div>
+    </div>
+    <div id="miisaan-box-${activeFarac}" style="flex-shrink:0;">
+      ${(()=>{
+        const jiiday = +(fd.lacagLagaJiiday||0);
+        const xisaab = calc.saafi;
+        if(!jiiday||jiiday===0) return `<div style="color:#94a3b8;font-size:12px;font-weight:600;text-align:center;padding:10px 16px;background:#f8fafc;border-radius:10px;border:1.5px dashed #e2e8f0;">Gali lacagta si miisaanka u muuqdo</div>`;
+        // pct = xisaab / jiiday * 100  (xisaab waxay u dhigantaa jiiday meeqaan%)
+        const pct = jiiday>0 ? Math.round((xisaab/jiiday)*100) : 0;
+        const isMatch = pct===100;
+        const isLow = pct<100;
+        const bg = isMatch?"linear-gradient(135deg,#ecfdf5,#d1fae5)":isLow?"linear-gradient(135deg,#fff7ed,#ffedd5)":"linear-gradient(135deg,#fef2f2,#fee2e2)";
+        const border = isMatch?"#a7f3d0":isLow?"#fed7aa":"#fca5a5";
+        const col = isMatch?"#059669":isLow?"#ea580c":"#dc2626";
+        const icon = isMatch?"✅":isLow?"⬇️":"⬆️";
+        return `<div style="background:${bg};border:2px solid ${border};border-radius:12px;padding:12px 20px;text-align:center;min-width:160px;">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${col};margin-bottom:4px;">⚖️ Miisaanka</div>
+          <div style="font-size:26px;font-weight:800;color:${col};font-family:'Space Grotesk',sans-serif;line-height:1.1;">${icon} ${pct}%</div>
+          <div style="font-size:10px;color:${col};font-weight:600;margin-top:3px;">${isMatch?"Sax":"Xisaab $"+xisaab.toLocaleString()+" / Jiiday $"+jiiday.toLocaleString()}</div>
+        </div>`;
+      })()}
+    </div>
   </div>`;
 
-  if(activeTab==="xisaab") html+=renderXisaabTab(fd, calc, isLocked, color);
+  if(activeTab==="xisaab"){
+    const jiiday = +(fd.lacagLagaJiiday||0);
+    if(!isLocked && jiiday===0){
+      html+=`<div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);border:2px dashed #e2e8f0;padding:40px 20px;text-align:center;margin-bottom:18px;">
+        <div style="font-size:36px;margin-bottom:12px;">🏦</div>
+        <div style="color:#1a3a5c;font-size:16px;font-weight:800;margin-bottom:6px;">Fadlan Lacagta Laga Jiiday Akoonka Gali</div>
+        <div style="color:#94a3b8;font-size:13px;font-weight:500;">Marka aad geliso lacagta laga jiiday iskuulkaaga, xisaab xirka ayaa u furan doona.</div>
+      </div>`;
+    } else {
+      html+=renderXisaabTab(fd, calc, isLocked, color);
+    }
+  }
   if(activeTab==="kharash") html+=renderKharashTab(fd, calc, isLocked);
   if(activeTab==="charts") html+=renderChartsTab();
   if(activeTab==="report") html+=renderReportTab(fd, calc, color);
@@ -1710,6 +1768,12 @@ function updateMeta(key, field, val){
   scheduleSave();
   refreshCalcDisplay();
 }
+function updateLacagJiiday(key, val){
+  if(!canEdit(key)) return;
+  appData[key].lacagLagaJiiday = +val||0;
+  scheduleSave();
+  refreshCalcDisplay();
+}
 
 function refreshCalcDisplay(){
   const scrollTop = document.getElementById("main-content").scrollTop;
@@ -1767,7 +1831,7 @@ function resetFarac(key){
   appData[key] = {
     fasalada: DEFAULT_FASALADA[key].map(n=>emptyFasal(n,key)),
     kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},
-    discount:0, lacagKhususi:0, faalo:"", submitted:false, savedAt:null
+    discount:0, lacagKhususi:0, lacagLagaJiiday:0, faalo:"", submitted:false, savedAt:null
   };
   closeModal();
   scheduleSave();
