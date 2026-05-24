@@ -144,7 +144,7 @@ window.dispatchEvent(new Event("fb-ready"));
   .panel-header{background:linear-gradient(135deg,var(--navy3),var(--navy2));color:#fff;padding:14px 20px;font-weight:700;display:flex;justify-content:space-between;align-items:center;font-size:14px;letter-spacing:.2px;}
   .tbl-wrap{overflow-x:auto;border-radius:var(--radius-sm);border:1px solid #e2e8f0;}
   table{width:100%;border-collapse:collapse;font-size:12px;}
-  th{padding:10px 8px;text-align:center;font-weight:700;color:#475569;font-size:11px;border-bottom:2px solid #e2e8f0;white-space:nowrap;background:#f8fafc;letter-spacing:.3px;text-transform:uppercase;}
+  th{padding:10px 6px;text-align:center;font-weight:700;color:#475569;font-size:11px;border-bottom:2px solid #e2e8f0;white-space:normal;word-break:break-word;max-width:90px;background:#f8fafc;letter-spacing:.3px;text-transform:uppercase;line-height:1.3;}
   td{padding:8px 7px;text-align:center;color:#334155;border-bottom:1px solid #f1f5f9;}
   tr:hover td{background:#f8fafc;}
   tfoot tr{background:#f1f5f9;font-weight:800;}
@@ -556,7 +556,7 @@ const DEFAULT_FASALADA = {
 };
 const FIELD_LABELS = {
   tiradaBixisay:"Tirada Bixisay", qiimaha:"Qiimaha ($)",
-  lacagtaSooHormartay:"Soo Hormartay ($)", previewPayment:"Preview Pay ($)",
+  lacagtaSooHormartay:"Hormarisay (Tiro)", lacagtaDhimanayd:"Lacagtii Dhimanayd ($)", lacagtaBishatanHormartay:"Lacag Bishatan ($)",
   tiradaAanBixin:"Aan Bixin", lacagtaAanBixin:"Lacag Aan Bixin ($)",
   scholarship:"Scholarship", freeStudents:"Free Students",
   ardaydaCusub:"Ardayda Cusub", ardaydaBaxday:"Ardayda Baxday"
@@ -574,11 +574,17 @@ let currentUser = null;
 let currentBisha = BILAHA[new Date().getMonth()] + " " + new Date().getFullYear();
 let activeFarac = null;
 let activeTab = "xisaab";
-let activeSettingsTab = "fasalada"; // fasalada | users | qiimaha | luuqad
+let activeSettingsTab = "fasalada"; // fasalada | users | qiimaha | luuqad | kolomyada
 let modalAction = null;
 let chartInstances = {};
 let currentLang = "so";
 let defaultQiimaha = {sare:13, dhexe:10, hoose1:8, hoose2:8};
+// Custom editable column/expense labels (overrides defaults)
+let customFieldLabels = {};
+let customKharashLabels = {};
+// Helper: get current label (custom or default)
+function FL(key){ return customFieldLabels[key] || FIELD_LABELS[key] || key; }
+function KL(key){ return customKharashLabels[key] || KHARASH_LABELS[key] || key; }
 let pwdVisible = false;
 let appData = buildInitFarac();
 
@@ -586,30 +592,33 @@ function L(key){ return (LUUQADAHA[currentLang]||LUUQADAHA.so)[key] || key; }
 
 function emptyFasal(name, faracKey){
   const q = (defaultQiimaha && defaultQiimaha[faracKey]) ? defaultQiimaha[faracKey] : 13;
-  return {magaca:name,tiradaBixisay:0,qiimaha:q,lacagtaSooHormartay:0,previewPayment:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0,ardaydaCusub:0,ardaydaBaxday:0};
+  return {magaca:name,tiradaBixisay:0,qiimaha:q,lacagtaSooHormartay:0,lacagtaDhimanayd:0,lacagtaBishatanHormartay:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0,ardaydaCusub:0,ardaydaBaxday:0};
 }
 function buildInitFarac(){
   const d={};
   Object.keys(DEFAULT_FASALADA).forEach(k=>{
-    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,lacagLagaJiiday:0,faalo:"",submitted:false,savedAt:null};
+    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,lacagLagaJiiday:0,lacagHormarshay:0,lacagDhimanaydKore:0,faalo:"",submitted:false,savedAt:null};
   });
   return d;
 }
 function calcFarac(fd){
-  let tB=0,tL=0,tH=0,tP=0,tAB=0,tLAB=0,tS=0,tF=0,tCusub=0,tBaxday=0;
+  let tB=0,tL=0,tH=0,tHTiro=0,tD=0,tBH=0,tAB=0,tLAB=0,tS=0,tF=0,tCusub=0,tBaxday=0;
   fd.fasalada.forEach(f=>{
-    tB +=+f.tiradaBixisay; tL +=+f.tiradaBixisay * +f.qiimaha;
-    tH +=+f.lacagtaSooHormartay; tP +=+f.previewPayment;
-    tAB+=+f.tiradaAanBixin; tLAB+=+f.lacagtaAanBixin;
-    tS +=+f.scholarship; tF +=+f.freeStudents;
+    tB +=+(f.tiradaBixisay||0); tL +=+(f.tiradaBixisay||0) * +(f.qiimaha||0);
+    tHTiro +=+(f.lacagtaSooHormartay||0);
+    tH +=+(f.lacagtaSooHormartay||0) * +(f.qiimaha||0); tD +=+(f.lacagtaDhimanayd||0);
+    tBH +=+(f.lacagtaBishatanHormartay||0);
+    tAB+=+(f.tiradaAanBixin||0); tLAB+=+(f.lacagtaAanBixin||0);
+    tS +=+(f.scholarship||0); tF +=+(f.freeStudents||0);
     tCusub+=+(f.ardaydaCusub||0); tBaxday+=+(f.ardaydaBaxday||0);
   });
   const kWadar=Object.values(fd.kharash).reduce((a,b)=>a+(+b),0);
-  const xarooday=tL+tH+tP;
+  // Wadarta lacagta bishatan = (bixisay*qiime) + lacagtii dhimanayd + lacagtii bishatan hormartay
+  const xarooday=tL+tD+tBH;
   const saafi=xarooday-(+fd.discount)-(+fd.lacagKhususi);
   // ardaydaCusub ku biirto totalka, ardaydaBaxday kuma biirto
-  const totalArdayda=tB+tAB+tS+tF+tCusub;
-  return {totalBixisay:tB,totalLacag:tL,totalHormartay:tH,totalPreview:tP,totalAanBixin:tAB,totalLacagAanBixin:tLAB,totalScholarship:tS,totalFree:tF,totalCusub:tCusub,totalBaxday:tBaxday,kharashWadar:kWadar,xarooday,saafi,totalArdayda};
+  const totalArdayda=tB+tAB+tS+tF+tCusub+tHTiro;
+  return {totalBixisay:tB,totalLacag:tL,totalHormartay:tH,totalHormartayTiro:tHTiro,totalDhimanayd:tD,totalBishatanHormartay:tBH,totalAanBixin:tAB,totalLacagAanBixin:tLAB,totalScholarship:tS,totalFree:tF,totalCusub:tCusub,totalBaxday:tBaxday,kharashWadar:kWadar,xarooday,saafi,totalArdayda};
 }
 
 // ══════════════════════════════════════════
@@ -621,14 +630,58 @@ function setFbLoading(on){
   el.style.display=on?"block":"none";
 }
 
+async function getPrevBisha(targetBisha){
+  // Hel bisha ka horeeysay si balance-ka carry-over lagu sameeyo
+  const name = getBishaName(targetBisha);
+  const year = getBishaYear(targetBisha);
+  const idx = BILAHA.indexOf(name);
+  if(idx < 0) return null;
+  if(idx === 0){ return BILAHA[11] + " " + (year - 1); }
+  return BILAHA[idx - 1] + " " + year;
+}
+
 async function loadBisha(targetBisha){
   setFbLoading(true);
   try{
+    // Hel bisha hore si carry-over lagu sameeyo
+    const prevBisha = await getPrevBisha(targetBisha);
+    let prevSnap = null;
+    if(prevBisha){
+      try{ prevSnap = await fbGetOnce(getFbPath(prevBisha)); }catch{}
+    }
+
     const snap = await fbGetOnce(getFbPath(targetBisha));
     if(snap && typeof snap==="object"){
       appData = snap;
       Object.keys(DEFAULT_FASALADA).forEach(k=>{ if(!appData[k]) appData[k]=buildInitFarac()[k]; });
-    } else { appData=buildInitFarac(); }
+    } else {
+      appData = buildInitFarac();
+    }
+
+    // MAR WALBA: bisha hore _nextHormar/_nextDhiman soo qaad oo kaararka cusboonaysii
+    // Laakiin kaliya haddii bisha hadda kaararkeedu weli "carry" laga helin
+    // (_carryApplied flag ayaa xukuma si laba jeer loogu darin)
+    if(prevSnap && typeof prevSnap==="object"){
+      Object.keys(DEFAULT_FASALADA).forEach(k=>{
+        if(prevSnap[k]){
+          const addH = +(prevSnap[k]._nextHormar||0);
+          const addD = +(prevSnap[k]._nextDhiman||0);
+          // Haddii carry horaan loogu darin (flag ku jiro) ha darin
+          if(!appData[k]._carryApplied && (addH>0 || addD>0)){
+            // Kaarka cagaar: _nextHormar kaliya (cagHadda + lacagBishatan horay lagu xisaabiyey)
+            appData[k].lacagHormarshay    = addH;
+            // Kaarka cas: _nextDhiman = balance buuxa (casBalanceHadda + lacag aan la bixin)
+            // lama darin — toos ayuu ku jiray _nextDhiman
+            appData[k].lacagDhimanaydKore = addD;
+            appData[k]._carryApplied = true;
+          }
+        }
+      });
+      // Firebase ku keydi carry-ka cusub
+      if(_activeListener){ _activeListener(); _activeListener=null; }
+      try{ await fbSet(getFbPath(targetBisha), appData); }catch{}
+    }
+
   }catch(e){ appData=buildInitFarac(); }
   finally{ setFbLoading(false); }
   startListener(targetBisha);
@@ -638,8 +691,8 @@ let saveTimeout = null;
 function scheduleSave(){
   if(saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(async()=>{
-    try{ await fbSet(getFbPath(currentBisha), appData); }catch{}
-  }, 800);
+    try{ await fbSet(getFbPath(currentBisha), appData); }catch(e){}
+  }, 1500);
 }
 
 async function handleBishaChange(bisha){
@@ -657,7 +710,7 @@ async function saveUsersToFb(){
   try{ await fbSet(USERS_FB_PATH, USERS); }catch{}
 }
 async function saveSettingsToFb(){
-  try{ await fbSet(SETTINGS_FB_PATH, {lang: currentLang, qiimaha: defaultQiimaha}); }catch{}
+  try{ await fbSet(SETTINGS_FB_PATH, {lang: currentLang, qiimaha: defaultQiimaha, customFieldLabels, customKharashLabels}); }catch{}
 }
 async function loadUsersAndSettings(){
   try{
@@ -667,6 +720,8 @@ async function loadUsersAndSettings(){
     if(savedSettings){
       if(savedSettings.lang) currentLang = savedSettings.lang;
       if(savedSettings.qiimaha) defaultQiimaha = savedSettings.qiimaha;
+      if(savedSettings.customFieldLabels) customFieldLabels = savedSettings.customFieldLabels;
+      if(savedSettings.customKharashLabels) customKharashLabels = savedSettings.customKharashLabels;
     }
   }catch{}
 }
@@ -1011,13 +1066,7 @@ function renderFaracDetail(){
       ${fd.submitted?"<span class='badge-submitted'>✅ La Gudbiyey</span>":""}
       ${!fd.submitted?`
         <button class="btn-save" onclick="saveDraft('${activeFarac}')">💾 Save</button>
-        ${!isMaamul?(()=>{
-          const jiiday = +(fd.lacagLagaJiiday||0);
-          const canSubmit = jiiday > 0;
-          return canSubmit
-            ? `<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`
-            : `<button class="btn-gudbi" disabled title="Gali lacagta laga jiiday akoonka iskuulka" style="opacity:.45;cursor:not-allowed;">🔒 Gali Lacagta Marka Hore</button>`;
-        })():""}
+        ${!isMaamul?`<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`:""}
       `:""}
       ${fd.submitted && isMaamul?`<button class="btn-unlock" onclick="unlockFarac('${activeFarac}')">🔓 Unlock</button>`:""}
     </div>
@@ -1032,59 +1081,44 @@ function renderFaracDetail(){
     ${statCard(L("lbl_saafi"),"$"+calc.saafi.toLocaleString(),"💵","#0d6e4f",true)}
     ${statCard(L("lbl_aan_bixin"),calc.totalAanBixin,"⚠️","#e65100",true)}
   </div>
-  <div style="background:#fff;border-radius:14px;padding:16px 20px;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1.5px solid #e2e8f0;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
-    <div style="flex:1;min-width:220px;">
-      <div style="color:#64748b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">🏦 Lacagta Laga Jiiday Akoonka Iskuulka</div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="color:#475569;font-size:15px;font-weight:700;">$</span>
-        <input
-          id="inp-lacag-jiiday-${activeFarac}"
-          type="number"
-          min="0"
-          placeholder="0"
-          value="${fd.lacagLagaJiiday||0}"
-          ${isLocked?"disabled":""}
-          oninput="updateLacagJiiday('${activeFarac}',this.value)"
-          style="width:160px;padding:9px 13px;border:2px solid ${(fd.lacagLagaJiiday&&+fd.lacagLagaJiiday>0)?'#1565c0':'#e2e8f0'};border-radius:9px;font-size:16px;font-weight:700;font-family:'Space Grotesk',sans-serif;outline:none;transition:.2s;color:#1a3a5c;background:${isLocked?'#f8fafc':'#fff'};"
-          onfocus="this.style.borderColor='#3b82f6'"
-          onblur="this.style.borderColor=(this.value&&+this.value>0)?'#1565c0':'#e2e8f0'"
-        />
-        ${(!fd.lacagLagaJiiday||+fd.lacagLagaJiiday===0)&&!isLocked?`<span style="color:#e65100;font-size:11px;font-weight:700;">⚠️ Buuxi si aad u xidhid</span>`:""}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+    <!-- KAARKA CAGAARAN: Lacagtii la hormarshey -->
+    <div style="background:linear-gradient(135deg,#0d6e4f,#059669);border-radius:14px;padding:16px 20px;box-shadow:0 4px 16px rgba(13,110,79,.3);">
+      <div style="color:rgba(255,255,255,.75);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">💚 Lacagtii la Hormarshey Bilihii Hore</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="color:#fff;font-size:16px;font-weight:700;">$</span>
+        <input type="number" min="0" placeholder="0"
+          value="${fd.lacagHormarshay||0}"
+          ${(!isMaamul)?"disabled":""}
+          oninput="updateMeta('${activeFarac}','lacagHormarshay',this.value)"
+          style="width:140px;padding:7px 11px;border:2px solid rgba(255,255,255,.4);border-radius:9px;font-size:18px;font-weight:800;font-family:'Space Grotesk',sans-serif;outline:none;color:#fff;background:rgba(255,255,255,.15);${(!isMaamul)?'cursor:not-allowed;opacity:.85':''}"/>
+      </div>
+      <div style="color:rgba(255,255,255,.9);font-size:13px;font-weight:700;">
+        Hadda: <span style="font-size:17px;font-weight:800;">$${Math.max(0,(+(fd.lacagHormarshay||0)) - calc.totalHormartay).toLocaleString()}</span>
+        <span style="font-size:10px;opacity:.7;display:block;margin-top:2px;">= $${+(fd.lacagHormarshay||0)} − $${calc.totalHormartay} (hormarisay)</span>
       </div>
     </div>
-    <div id="miisaan-box-${activeFarac}" style="flex-shrink:0;">
-      ${(()=>{
-        const jiiday = +(fd.lacagLagaJiiday||0);
-        const xisaab = calc.saafi;
-        if(!jiiday||jiiday===0) return `<div style="color:#94a3b8;font-size:12px;font-weight:600;text-align:center;padding:10px 16px;background:#f8fafc;border-radius:10px;border:1.5px dashed #e2e8f0;">Gali lacagta si miisaanka u muuqdo</div>`;
-        // pct = xisaab / jiiday * 100  (xisaab waxay u dhigantaa jiiday meeqaan%)
-        const pct = jiiday>0 ? Math.round((xisaab/jiiday)*100) : 0;
-        const isMatch = pct===100;
-        const isLow = pct<100;
-        const bg = isMatch?"linear-gradient(135deg,#ecfdf5,#d1fae5)":isLow?"linear-gradient(135deg,#fff7ed,#ffedd5)":"linear-gradient(135deg,#fef2f2,#fee2e2)";
-        const border = isMatch?"#a7f3d0":isLow?"#fed7aa":"#fca5a5";
-        const col = isMatch?"#059669":isLow?"#ea580c":"#dc2626";
-        const icon = isMatch?"✅":isLow?"⬇️":"⬆️";
-        return `<div style="background:${bg};border:2px solid ${border};border-radius:12px;padding:12px 20px;text-align:center;min-width:160px;">
-          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${col};margin-bottom:4px;">⚖️ Miisaanka</div>
-          <div style="font-size:26px;font-weight:800;color:${col};font-family:'Space Grotesk',sans-serif;line-height:1.1;">${icon} ${pct}%</div>
-          <div style="font-size:10px;color:${col};font-weight:600;margin-top:3px;">${isMatch?"Sax":"Xisaab $"+xisaab.toLocaleString()+" / Jiiday $"+jiiday.toLocaleString()}</div>
-        </div>`;
-      })()}
+    <!-- KAARKA CASAANKA: Lacagii dhimana -->
+    <div style="background:linear-gradient(135deg,#c62828,#ef4444);border-radius:14px;padding:16px 20px;box-shadow:0 4px 16px rgba(198,40,40,.3);">
+      <div style="color:rgba(255,255,255,.75);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">❤️ Lacagii Dhimanayd Bilihii Hore</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="color:#fff;font-size:16px;font-weight:700;">$</span>
+        <input type="number" min="0" placeholder="0"
+          value="${fd.lacagDhimanaydKore||0}"
+          ${(!isMaamul)?"disabled":""}
+          oninput="updateMeta('${activeFarac}','lacagDhimanaydKore',this.value)"
+          style="width:140px;padding:7px 11px;border:2px solid rgba(255,255,255,.4);border-radius:9px;font-size:18px;font-weight:800;font-family:'Space Grotesk',sans-serif;outline:none;color:#fff;background:rgba(255,255,255,.15);${(!isMaamul)?'cursor:not-allowed;opacity:.85':''}"/>
+      </div>
+      <div style="color:rgba(255,255,255,.9);font-size:13px;font-weight:700;">
+        Hadda: <span style="font-size:17px;font-weight:800;">$${Math.max(0,(+(fd.lacagDhimanaydKore||0)) - calc.totalDhimanayd).toLocaleString()}</span>
+        <span style="font-size:10px;opacity:.7;display:block;margin-top:2px;">= $${+(fd.lacagDhimanaydKore||0)} − $${calc.totalDhimanayd} (la soo qaatay)</span>
+      </div>
     </div>
-  </div>`;
+  </div>
+  `;
 
   if(activeTab==="xisaab"){
-    const jiiday = +(fd.lacagLagaJiiday||0);
-    if(!isLocked && jiiday===0){
-      html+=`<div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.07);border:2px dashed #e2e8f0;padding:40px 20px;text-align:center;margin-bottom:18px;">
-        <div style="font-size:36px;margin-bottom:12px;">🏦</div>
-        <div style="color:#1a3a5c;font-size:16px;font-weight:800;margin-bottom:6px;">Fadlan Lacagta Laga Jiiday Akoonka Gali</div>
-        <div style="color:#94a3b8;font-size:13px;font-weight:500;">Marka aad geliso lacagta laga jiiday iskuulkaaga, xisaab xirka ayaa u furan doona.</div>
-      </div>`;
-    } else {
-      html+=renderXisaabTab(fd, calc, isLocked, color);
-    }
+    html+=renderXisaabTab(fd, calc, isLocked, color);
   }
   if(activeTab==="kharash") html+=renderKharashTab(fd, calc, isLocked);
   if(activeTab==="charts") html+=renderChartsTab();
@@ -1105,17 +1139,18 @@ function renderXisaabTab(fd, calc, isLocked, color){
     <div class="tbl-wrap"><table><thead><tr>
       <th>Fasalka</th>
       ${fields.map(k=>{
-        if(k==='ardaydaCusub') return `<th style="background:#e3f2fd!important;color:#1565c0!important;font-weight:700!important">Ardayda Cusub</th>`;
-        if(k==='ardaydaBaxday') return `<th style="background:#fce4ec!important;color:#880e4f!important;font-weight:700!important">Ardayda Baxday</th>`;
-        return `<th>${FIELD_LABELS[k]}</th>`;
+        if(k==='lacagtaBishatanHormartay') return `<th style="background:#fff8e1!important;color:#e65100!important;font-weight:800!important">${FL(k)}</th>`;
+        if(k==='ardaydaCusub') return `<th style="background:#e3f2fd!important;color:#1565c0!important;font-weight:700!important">${FL(k)}</th>`;
+        if(k==='ardaydaBaxday') return `<th style="background:#fce4ec!important;color:#880e4f!important;font-weight:700!important">${FL(k)}</th>`;
+        return `<th>${FL(k)}</th>`;
       }).join("")}
       <th class="th-green">Wadarta Ardayda</th>
       <th class="th-blue">Wadarta Lacag</th>
     </tr></thead><tbody>`;
 
   fd.fasalada.forEach((f,i)=>{
-    const wL = +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment;
-    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0);
+    const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0);
+    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0);
     html+=`<tr><td style="font-weight:600;color:${color};white-space:nowrap;font-size:12px">${f.magaca}</td>`;
     fields.forEach(field=>{
       html+=`<td><input class="inp-cell" type="number" value="${f[field]}" ${isLocked?"disabled":""} onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
@@ -1127,8 +1162,9 @@ function renderXisaabTab(fd, calc, isLocked, color){
     <td style="color:#1a3a5c;font-size:12px">WADAR</td>
     <td class="td-green">${calc.totalBixisay}</td>
     <td>—</td>
-    <td class="td-green">$${calc.totalHormartay.toLocaleString()}</td>
-    <td class="td-green">$${calc.totalPreview.toLocaleString()}</td>
+    <td class="td-green">${calc.totalHormartayTiro}</td>
+    <td class="td-green">$${calc.totalDhimanayd.toLocaleString()}</td>
+    <td class="td-green">$${calc.totalBishatanHormartay.toLocaleString()}</td>
     <td class="td-red">${calc.totalAanBixin}</td>
     <td class="td-red">$${calc.totalLacagAanBixin.toLocaleString()}</td>
     <td>${calc.totalScholarship}</td>
@@ -1213,14 +1249,14 @@ function buildReportHTML(fd, calc, color){
   // Xisaab table rows
   let xisaabRows = "";
   fd.fasalada.forEach(f=>{
-    const wL = +f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment;
+    const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0);
     const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0);
     xisaabRows += `<tr>
       <td style="font-weight:700;color:${color};text-align:left;white-space:nowrap">${f.magaca}</td>
       <td>${f.tiradaBixisay}</td>
       <td>$${(+f.qiimaha).toLocaleString()}</td>
       <td>$${(+f.lacagtaSooHormartay).toLocaleString()}</td>
-      <td>$${(+f.previewPayment).toLocaleString()}</td>
+      <td>$${(+f.lacagtaDhimanayd).toLocaleString()}</td>
       <td style="color:#dc2626">${f.tiradaAanBixin}</td>
       <td style="color:#dc2626">$${(+f.lacagtaAanBixin).toLocaleString()}</td>
       <td>${f.scholarship}</td>
@@ -1238,7 +1274,7 @@ function buildReportHTML(fd, calc, color){
   Object.keys(KHARASH_LABELS).forEach(k=>{
     const v = +(fd.kharash[k]||0);
     kTotal += v;
-    kharashRows += `<tr><td style="text-align:left">${KHARASH_LABELS[k]}</td><td style="text-align:right;font-weight:700">$${v.toLocaleString()}</td></tr>`;
+    kharashRows += `<tr><td style="text-align:left">${KL(k)}</td><td style="text-align:right;font-weight:700">$${v.toLocaleString()}</td></tr>`;
   });
 
   return `
@@ -1295,9 +1331,9 @@ function buildReportHTML(fd, calc, color){
     <table class="report-tbl">
       <thead><tr>
         <th style="text-align:left">Fasalka</th>
-        <th>Bixisay</th><th>Qiimaha</th><th>Hormartay</th><th>Preview</th>
-        <th>Aan Bixin</th><th>Lacag tiri</th>
-        <th>Scholar</th><th>Free</th><th>Cusub</th><th>Baxday</th>
+        <th>${FL('tiradaBixisay')}</th><th>${FL('qiimaha')}</th><th>${FL('lacagtaSooHormartay')}</th><th>${FL('lacagtaDhimanayd')}</th>
+        <th>${FL('tiradaAanBixin')}</th><th>${FL('lacagtaAanBixin')}</th>
+        <th>${FL('scholarship')}</th><th>${FL('freeStudents')}</th><th>${FL('ardaydaCusub')}</th><th>${FL('ardaydaBaxday')}</th>
         <th style="background:#065f46">Wadarta A</th>
         <th style="background:#1d4ed8">Wadarta L</th>
       </tr></thead>
@@ -1306,8 +1342,8 @@ function buildReportHTML(fd, calc, color){
         <td style="text-align:left;color:#0a1628;font-weight:800">WADAR</td>
         <td style="color:#059669;font-weight:800">${calc.totalBixisay}</td>
         <td>—</td>
-        <td style="color:#059669">$${calc.totalHormartay.toLocaleString()}</td>
-        <td style="color:#059669">$${calc.totalPreview.toLocaleString()}</td>
+        <td style="color:#059669">${calc.totalHormartayTiro}</td>
+        <td style="color:#059669">$${calc.totalDhimanayd.toLocaleString()}</td>
         <td style="color:#dc2626">${calc.totalAanBixin}</td>
         <td style="color:#dc2626">$${calc.totalLacagAanBixin.toLocaleString()}</td>
         <td>${calc.totalScholarship}</td>
@@ -1417,7 +1453,7 @@ function renderKharashTab(fd, calc, isLocked){
     <h4>📋 ${L("lbl_kharash")} — ${currentBisha}</h4>`;
   Object.keys(KHARASH_LABELS).forEach(k=>{
     html+=`<div class="kharash-row">
-      <span class="kharash-lbl">${KHARASH_LABELS[k]}</span>
+      <span class="kharash-lbl">${KL(k)}</span>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="color:#888;font-size:13px">$</span>
         <input class="kharash-inp" type="number" value="${fd.kharash[k]}" ${isLocked?"disabled":""} onchange="updateKharash('${activeFarac}','${k}',this.value)"/>
@@ -1487,7 +1523,7 @@ function initFaracCharts(){
   if(c2){
     const o = JSON.parse(JSON.stringify(base));
     o.scales.y.ticks.callback = v=>`$${v.toLocaleString()}`;
-    const lacagData = fd.fasalada.map(f=>+f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.previewPayment);
+    const lacagData = fd.fasalada.map(f=>+f.tiradaBixisay * +f.qiimaha + +f.lacagtaSooHormartay + +f.lacagtaDhimanayd);
     const maxV = Math.max(...lacagData);
     chartInstances["lacag"] = new Chart(c2,{type:"bar",data:{labels,datasets:[
       {label:"💵 Lacag",data:lacagData,
@@ -1539,6 +1575,7 @@ function renderSettingsTab(isMaamul){
         {id:"fasalada", icon:"🏫", label:"Fasalada"},
         {id:"users",    icon:"👥", label:"Isticmaalayaasha"},
         {id:"qiimaha",  icon:"💵", label:"Qiimaha"},
+        {id:"kolomyada",icon:"🏷️", label:"Kolomyada"},
         {id:"luuqad",   icon:"🌐", label:"Luuqadda"},
       ]
     : [
@@ -1558,6 +1595,7 @@ function renderSettingsTab(isMaamul){
   if(activeSettingsTab==="fasalada") html += isMaamul ? renderSettingsFasalada() : renderSettingsFasaladaNonMaamul();
   else if(activeSettingsTab==="users" && isMaamul) html += renderSettingsUsers();
   else if(activeSettingsTab==="qiimaha") html += renderSettingsQiimaha();
+  else if(activeSettingsTab==="kolomyada" && isMaamul) html += renderSettingsKolomyada();
   else if(activeSettingsTab==="luuqad") html += renderSettingsLuuqad();
 
   html += `</div>`;
@@ -1725,9 +1763,77 @@ function renderSettingsLuuqad(){
   </div>`;
 }
 
-// ══════════════════════════════════════════
-// STAT CARD HELPER
-// ══════════════════════════════════════════
+function renderSettingsKolomyada(){
+  const fieldRows = Object.keys(FIELD_LABELS).map(key=>`
+    <div class="qiime-row">
+      <span class="qiime-lbl" style="min-width:180px;flex-shrink:0">${FIELD_LABELS[key]}</span>
+      <input class="qiime-inp" style="width:200px;min-width:120px" type="text"
+        placeholder="${FIELD_LABELS[key]}"
+        value="${customFieldLabels[key]||''}"
+        data-key="${key}" data-type="field"
+        onblur="applyKolomLabel('field','${key}',this.value); saveSettingsToFb();"
+        onkeydown="if(event.key==='Enter'){this.blur();}"
+      />
+    </div>`).join("");
+
+  const kharashRows = Object.keys(KHARASH_LABELS).map(key=>`
+    <div class="qiime-row">
+      <span class="qiime-lbl" style="min-width:180px;flex-shrink:0">${KHARASH_LABELS[key]}</span>
+      <input class="qiime-inp" style="width:200px;min-width:120px" type="text"
+        placeholder="${KHARASH_LABELS[key]}"
+        value="${customKharashLabels[key]||''}"
+        data-key="${key}" data-type="kharash"
+        onblur="applyKolomLabel('kharash','${key}',this.value); saveSettingsToFb();"
+        onkeydown="if(event.key==='Enter'){this.blur();}"
+      />
+    </div>`).join("");
+
+  return `<div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h4 style="color:#1a3a5c;margin:0">🏷️ Magacyada Kolomyada Xisaab Xirka</h4>
+      <button class="btn-save" style="font-size:12px;padding:6px 14px" onclick="resetKolomyada()">♻️ Dib u Deji</button>
+    </div>
+    <p style="color:#888;font-size:12px;margin-bottom:14px">Qor magac cusub si aad ugu beddesho kolomka. Banaan ka tag haddaad rabto mid default ah.</p>
+    <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:18px;border:1px solid #e2e8f0">
+      <div style="font-size:11px;font-weight:700;color:#1565c0;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📊 Kolomyada Xisaab Xirka</div>
+      ${fieldRows}
+    </div>
+    <div style="background:#f8fafc;border-radius:10px;padding:14px;border:1px solid #e2e8f0">
+      <div style="font-size:11px;font-weight:700;color:#c62828;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📋 Kolomyada Kharashka</div>
+      ${kharashRows}
+    </div>
+    <div style="margin-top:14px">
+      <button class="btn-add" onclick="saveKolomyada()">💾 Kaydi Magacyada</button>
+    </div>
+  </div>`;
+}
+
+function applyKolomLabel(type, key, val){
+  if(type==='field') customFieldLabels[key] = val.trim() || '';
+  else customKharashLabels[key] = val.trim() || '';
+}
+
+function saveKolomyada(){
+  // Read all current input values before saving (in case user clicked button without blurring)
+  document.querySelectorAll('[data-type="field"]').forEach(el=>{
+    customFieldLabels[el.dataset.key] = el.value.trim() || '';
+  });
+  document.querySelectorAll('[data-type="kharash"]').forEach(el=>{
+    customKharashLabels[el.dataset.key] = el.value.trim() || '';
+  });
+  saveSettingsToFb();
+  showToast("💾 Magacyada kolomyada waa la kaydiyey");
+}
+
+function resetKolomyada(){
+  customFieldLabels = {};
+  customKharashLabels = {};
+  saveSettingsToFb();
+  renderAll();
+  showToast("♻️ Kolomyada waa dib loo dejiyey","warning");
+}
+
+
 function statCard(label, value, icon, color, small){
   const bgAlpha = color.startsWith('#') ? hexToRgba(color, 0.12) : color;
   return `<div class="stat-card ${small?"":"stat-card-lg"}" style="--accent:${color}">
@@ -1781,23 +1887,54 @@ function refreshCalcDisplay(){
   document.getElementById("main-content").scrollTop = scrollTop;
 }
 
-function saveDraft(key){
+async function saveDraft(key){
   appData[key].savedAt = new Date().toISOString();
-  scheduleSave();
+  if(_activeListener){ _activeListener(); _activeListener=null; }
+  if(saveTimeout){ clearTimeout(saveTimeout); saveTimeout=null; }
+  const snap = JSON.parse(JSON.stringify(appData));
+  try{ await fbSet(getFbPath(currentBisha), snap); }catch(e){}
+  startListener(currentBisha);
   showToast(L("msg_saved"));
   renderAll();
 }
-function submitFarac(key){
-  appData[key].submitted = true;
-  appData[key].savedAt = new Date().toISOString();
+async function submitFarac(key){
+  const fd = appData[key];
+  const calc = calcFarac(fd);
+
+  // Kaarka cagaaran bisha xigta: Hadda (lacagHormarshay - totalHormartay) + lacagBishatan
+  const cagHadda = Math.max(0, (+(fd.lacagHormarshay||0)) - calc.totalHormartay);
+  fd._nextHormar = cagHadda + calc.totalBishatanHormartay;
+  // Kaarka cas bisha xigta: Hadda (lacagDhimanaydKore - totalDhimanayd) + lacagAanBixin
+  const casHadda = Math.max(0, (+(fd.lacagDhimanaydKore||0)) - calc.totalDhimanayd);
+  fd._nextDhiman = casHadda + calc.totalLacagAanBixin;
+  fd.submitted = true;
+  fd.savedAt = new Date().toISOString();
+
+  // Jooji listener — si uusan xogta dib ugu qori
+  if(_activeListener){ _activeListener(); _activeListener=null; }
+  if(saveTimeout){ clearTimeout(saveTimeout); saveTimeout=null; }
+
+  // Snapshot saxsan kaydi
+  const snap = JSON.parse(JSON.stringify(appData));
+  try{ await fbSet(getFbPath(currentBisha), snap); }catch(e){}
+
+  // Dib u bilow listener
+  startListener(currentBisha);
+
   closeModal();
-  scheduleSave();
   showToast(L("msg_submitted"),"info");
   renderAll();
 }
-function unlockFarac(key){
-  appData[key].submitted = false;
-  scheduleSave();
+async function unlockFarac(key){
+  const fd = appData[key];
+  fd._nextHormar = 0;
+  fd._nextDhiman = 0;
+  fd.submitted = false;
+  if(_activeListener){ _activeListener(); _activeListener=null; }
+  if(saveTimeout){ clearTimeout(saveTimeout); saveTimeout=null; }
+  const snap = JSON.parse(JSON.stringify(appData));
+  try{ await fbSet(getFbPath(currentBisha), snap); }catch(e){}
+  startListener(currentBisha);
   showToast(L("msg_unlocked"),"info");
   renderAll();
 }
@@ -1831,7 +1968,7 @@ function resetFarac(key){
   appData[key] = {
     fasalada: DEFAULT_FASALADA[key].map(n=>emptyFasal(n,key)),
     kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},
-    discount:0, lacagKhususi:0, lacagLagaJiiday:0, faalo:"", submitted:false, savedAt:null
+    discount:0, lacagKhususi:0, lacagLagaJiiday:0, lacagHormarshay:0, lacagDhimanaydKore:0, faalo:"", submitted:false, savedAt:null
   };
   closeModal();
   scheduleSave();
