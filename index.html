@@ -608,7 +608,7 @@ function emptyFasal(name, faracKey){
 function buildInitFarac(){
   const d={};
   Object.keys(DEFAULT_FASALADA).forEach(k=>{
-    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,lacagLagaJiiday:0,lacagHormarshay:0,lacagDhimanaydKore:0,faalo:"",submitted:false,savedAt:null};
+    d[k]={fasalada:DEFAULT_FASALADA[k].map(n=>emptyFasal(n,k)),kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},discount:0,lacagKhususi:0,lacagLagaJiiday:0,lacagHormarshay:0,lacagDhimanaydKore:0,faalo:"",submitted:false,savedAt:null,baxayaasha:[],prevMonthArdayda:0};
   });
   return d;
 }
@@ -679,13 +679,12 @@ async function loadBisha(targetBisha){
           const addD = +(prevSnap[k]._nextDhiman||0);
           // Haddii carry horaan loogu darin (flag ku jiro) ha darin
           if(!appData[k]._carryApplied && (addH>0 || addD>0)){
-            // Kaarka cagaar: _nextHormar kaliya (cagHadda + lacagBishatan horay lagu xisaabiyey)
             appData[k].lacagHormarshay    = addH;
-            // Kaarka cas: _nextDhiman = balance buuxa (casBalanceHadda + lacag aan la bixin)
-            // lama darin — toos ayuu ku jiray _nextDhiman
             appData[k].lacagDhimanaydKore = addD;
             appData[k]._carryApplied = true;
           }
+          // Kaydi ardayda bishii hore si farqiga loo xisaabiyo
+          appData[k].prevMonthArdayda = +(prevSnap[k]._nextArdayda||0) || calcFarac(prevSnap[k]).totalArdayda;
         }
       });
       // Firebase ku keydi carry-ka cusub
@@ -1238,8 +1237,8 @@ function renderXisaabTab(fd, calc, isLocked, color){
         <input class="discount-inp" type="number" value="${fd.discount}" ${isLocked?"disabled":""} onchange="updateMeta('${activeFarac}','discount',this.value)"/>
       </div>
       <div class="discount-row">
-        <span style="color:#555;font-size:13px">Lacagta Ku Dhiman</span>
-        <input class="discount-inp" type="number" value="${fd.lacagKhususi}" ${isLocked?"disabled":""} onchange="updateMeta('${activeFarac}','lacagKhususi',this.value)"/>
+        <span style="color:#555;font-size:13px">Baaqi ku ah</span>
+        <input class="discount-inp" type="number" value="${fd.lacagKhususi}" ${isLocked?"disabled":""} onchange="updateBaaqi('${activeFarac}',this.value)"/>
       </div>
       <div style="display:flex;justify-content:space-between;padding:12px 0 0;font-weight:700;font-size:15px">
         <span style="color:#1a3a5c">Wadarta Saafi</span>
@@ -1258,8 +1257,148 @@ function renderXisaabTab(fd, calc, isLocked, color){
         <span style="color:${calc.saafi-calc.kharashWadar>=0?"#0d6e4f":"#c62828"}">$${(calc.saafi-calc.kharashWadar).toLocaleString()}</span>
       </div>
     </div>
-  </div>`;
+  </div>
+
+  ${renderBaxayaashaPanel(fd, calc, isLocked, activeFarac)}
+  `;
   return html;
+}
+
+function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
+  const baxayaasha = fd.baxayaasha || [];
+  const prevTotal = +(fd.prevMonthArdayda||0);
+  const currTotal = calc.totalArdayda;
+  const farqi = currTotal - prevTotal;
+
+  // Farqi section
+  let farqiHtml = "";
+  if(prevTotal > 0){
+    if(farqi < 0){
+      const need = Math.abs(farqi);
+      farqiHtml = `
+      <div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border:2px solid #fca5a5;border-radius:12px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px;">
+        <div style="font-size:28px">⚠️</div>
+        <div>
+          <div style="font-weight:800;color:#c62828;font-size:14px">Ardayda ay yaraatay!</div>
+          <div style="color:#991b1b;font-size:13px;margin-top:3px">
+            Bishii hore: <b>${prevTotal}</b> arday — Bishatan: <b>${currTotal}</b> arday
+            &nbsp;→&nbsp; <b style="color:#c62828">${farqi} arday</b>
+          </div>
+          <div style="color:#c62828;font-size:12px;margin-top:5px;font-weight:700">
+            ⛔ Waa khasab inaad buuxisaa liiska ardayda baxday (${need} arday oo ka maqan)
+          </div>
+        </div>
+      </div>`;
+    } else {
+      farqiHtml = `
+      <div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #a7f3d0;border-radius:12px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:12px;">
+        <div style="font-size:24px">✅</div>
+        <div style="color:#065f46;font-size:13px;font-weight:600">
+          Bishii hore: <b>${prevTotal}</b> → Bishatan: <b>${currTotal}</b>
+          ${farqi > 0 ? `&nbsp;(+${farqi} arday cusub)` : " (isla qadarka)"}
+        </div>
+      </div>`;
+    }
+  }
+
+  // Baxayaasha rows
+  // Sabab: "Maka quustay" KOLOM MA JIRO sababaha — waxay soo baxdaa kaliya marka bixiyey=maya
+  const SABAB_OPTIONS = ["Bedeshay","Xanuunsaday","Guuray","Dhintay","La caryriyey","Waxbarashada buu saluugay","Dhaliil buu tirsaday","Lacag baa lagu cayriyey"];
+  let rows = "";
+  baxayaasha.forEach((b, i) => {
+    const sabOptions = SABAB_OPTIONS.map(s =>
+      `<option value="${s}" ${b.sabab===s?"selected":""}>${s}</option>`).join("");
+    rows += `<tr>
+      <td style="color:#64748b;font-weight:700;font-size:12px">${i+1}</td>
+      <td><input class="inp-cell" style="width:120px" type="text" value="${b.magac||""}" ${isLocked?"disabled":""}
+        onchange="updateBaxay('${faracKey}',${i},'magac',this.value)" placeholder="Magaca..."/></td>
+      <td><input class="inp-cell" style="width:110px" type="text" value="${b.telefon||""}" ${isLocked?"disabled":""}
+        onchange="updateBaxay('${faracKey}',${i},'telefon',this.value)" placeholder="Telefon..."/></td>
+      <td>
+        <select class="inp-cell" style="width:130px" ${isLocked?"disabled":""}
+          onchange="updateBaxay('${faracKey}',${i},'sabab',this.value)">
+          <option value="">-- Dooro --</option>
+          ${sabOptions}
+        </select>
+      </td>
+      <td>
+        <select class="inp-cell" style="width:110px" ${isLocked?"disabled":""}
+          onchange="updateBaxay('${faracKey}',${i},'bixiyey',this.value)">
+          <option value="">-- Dooro --</option>
+          <option value="haa" ${b.bixiyey==="haa"?"selected":""}>✅ Bixiyey</option>
+          <option value="maya" ${b.bixiyey==="maya"?"selected":""}>❌ Kama bixin</option>
+        </select>
+      </td>
+      <td>
+        ${b.bixiyey==="maya" ? `
+        <select class="inp-cell" style="width:100px" ${isLocked?"disabled":""}
+          onchange="updateBaxay('${faracKey}',${i},'quustay',this.value)">
+          <option value="">-- Dooro --</option>
+          <option value="Haa" ${b.quustay==="Haa"?"selected":""}>✅ Haa</option>
+          <option value="Maya" ${b.quustay==="Maya"?"selected":""}>❌ Maya</option>
+        </select>` : `<span style="color:#ccc;font-size:12px">—</span>`}
+      </td>
+      ${!isLocked?`<td><button onclick="removeBaxay('${faracKey}',${i})"
+        style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;">🗑️</button></td>`:"<td></td>"}
+    </tr>`;
+  });
+
+  // Hubi liiska: ardayda baxday dhammaantood magac, sabab, lacag waa in laga buuxiyaa
+  const liiskaMidlamaJirin = baxayaasha.some(b => !b.magac.trim() || !b.sabab || !b.bixiyey);
+
+  return `
+  <div class="panel" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h4 style="margin:0">🚪 Liiska Ardayda Baxday</h4>
+      ${!isLocked?`<button onclick="addBaxay('${faracKey}')"
+        style="padding:7px 16px;background:linear-gradient(135deg,#c62828,#ef4444);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">➕ Ku Dar</button>`:""}
+    </div>
+    ${farqiHtml}
+    ${baxayaasha.length===0
+      ? `<div style="color:#94a3b8;font-size:13px;text-align:center;padding:20px 0">Ardayd baxday ma jirto — ku dar haddii jiraan</div>`
+      : `<div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th style="width:30px">#</th>
+            <th>Magaca</th>
+            <th>Telefon</th>
+            <th>Sababta Bixitaanka</th>
+            <th>Lacag Bisha La Tagay</th>
+            <th>Maka Quustay?</th>
+            <th></th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${liiskaMidlamaJirin ? `<div style="background:#fff7ed;border:1.5px solid #fb923c;border-radius:8px;padding:9px 14px;margin-top:10px;color:#ea580c;font-size:12px;font-weight:700;">
+        ⚠️ Liiska dhamaystir: ardayda dhammaantood waa in Magac, Sabab, iyo Lacag laga buuxiyaa</div>` : ""}
+      `
+    }
+    <div style="margin-top:10px;color:#94a3b8;font-size:12px;text-align:right">
+      Wadarta Baxay: <b style="color:#c62828">${baxayaasha.length}</b> arday
+    </div>
+  </div>`;
+}
+
+function addBaxay(key){
+  if(!canEdit(key)) return;
+  if(!appData[key].baxayaasha) appData[key].baxayaasha = [];
+  appData[key].baxayaasha.push({magac:"",telefon:"",sabab:"",quustay:"",bixiyey:""});
+  scheduleSave();
+  refreshCalcDisplay();
+}
+function removeBaxay(key, idx){
+  if(!canEdit(key)) return;
+  appData[key].baxayaasha.splice(idx,1);
+  scheduleSave();
+  refreshCalcDisplay();
+}
+function updateBaxay(key, idx, field, val){
+  if(!canEdit(key)) return;
+  if(!appData[key].baxayaasha) appData[key].baxayaasha = [];
+  appData[key].baxayaasha[idx][field] = val;
+  scheduleSave();
+  refreshCalcDisplay();
 }
 
 // ── REPORT TAB ────────────────────────────
@@ -1922,7 +2061,39 @@ function canEdit(key){ return !appData[key]?.submitted || currentUser.role==="ma
 
 function updateFasal(key, idx, field, val){
   if(!canEdit(key)) return;
-  appData[key].fasalada[idx][field] = val;
+  const fd = appData[key];
+
+  // VALIDATION: Kaarka cagaaran (lacagtaSooHormartay) — dollar = tiro * qiimaha
+  if(field === "lacagtaSooHormartay"){
+    const newVal = +val||0;
+    const qiime = +(fd.fasalada[idx].qiimaha||0);
+    // Wadarta dollar-ka cusub (tiro kasta * qiimaheedu)
+    const totalDollarNew = fd.fasalada.reduce((sum, f, i2) => {
+      const tiro = i2 === idx ? newVal : +(f.lacagtaSooHormartay||0);
+      return sum + tiro * +(f.qiimaha||0);
+    }, 0);
+    const maxCag = +(fd.lacagHormarshay||0);
+    if(totalDollarNew > maxCag){
+      showToast("Lacagtii aad hormarsatay way dhamaatay! Ugu badan: $" + maxCag, "warning");
+      refreshCalcDisplay();
+      return;
+    }
+  }
+
+  // VALIDATION: Kaarka cas (lacagtaDhimanayd)
+  if(field === "lacagtaDhimanayd"){
+    const newVal = +val||0;
+    const totalNew = fd.fasalada.reduce((sum, f, i2) =>
+      sum + (i2 === idx ? newVal : +(f.lacagtaDhimanayd||0)), 0);
+    const maxCas = +(fd.lacagDhimanaydKore||0);
+    if(totalNew > maxCas){
+      showToast("Lacagta aad ku leedahay kaarka cas way dhamaatay! Ugu badan: $" + maxCas, "warning");
+      refreshCalcDisplay();
+      return;
+    }
+  }
+
+  fd.fasalada[idx][field] = val;
   scheduleSave();
   refreshCalcDisplay();
 }
@@ -1941,6 +2112,12 @@ function updateMeta(key, field, val){
 function updateLacagJiiday(key, val){
   if(!canEdit(key)) return;
   appData[key].lacagLagaJiiday = +val||0;
+  scheduleSave();
+  refreshCalcDisplay();
+}
+function updateBaaqi(key, val){
+  if(!canEdit(key)) return;
+  appData[key].lacagKhususi = +val||0;
   scheduleSave();
   refreshCalcDisplay();
 }
@@ -1968,9 +2145,11 @@ async function submitFarac(key){
   // Kaarka cagaaran bisha xigta: Hadda (lacagHormarshay - totalHormartay) + lacagBishatan
   const cagHadda = Math.max(0, (+(fd.lacagHormarshay||0)) - calc.totalHormartay);
   fd._nextHormar = cagHadda + calc.totalBishatanHormartay;
-  // Kaarka cas bisha xigta: Hadda (lacagDhimanaydKore - totalDhimanayd) + lacagAanBixin
+  // Kaarka cas bisha xigta: Hadda (lacagDhimanaydKore - totalDhimanayd) + lacagAanBixin + Baaqi ku ah
   const casHadda = Math.max(0, (+(fd.lacagDhimanaydKore||0)) - calc.totalDhimanayd);
-  fd._nextDhiman = casHadda + calc.totalLacagAanBixin;
+  fd._nextDhiman = casHadda + calc.totalLacagAanBixin + (+(fd.lacagKhususi||0));
+  // Kaydi ardayda totalka si bisha xigtu u ogaato farqiga
+  fd._nextArdayda = calc.totalArdayda;
   fd.submitted = true;
   fd.savedAt = new Date().toISOString();
 
@@ -2032,7 +2211,8 @@ function resetFarac(key){
   appData[key] = {
     fasalada: DEFAULT_FASALADA[key].map(n=>emptyFasal(n,key)),
     kharash:{maamulka:0,macalimiinta:0,shaqaalaha:0,canshuurta:0,dareewalada:0,kharashDugsiga:0},
-    discount:0, lacagKhususi:0, lacagLagaJiiday:0, lacagHormarshay:0, lacagDhimanaydKore:0, faalo:"", submitted:false, savedAt:null
+    discount:0, lacagKhususi:0, lacagLagaJiiday:0, lacagHormarshay:0, lacagDhimanaydKore:0,
+    faalo:"", submitted:false, savedAt:null, baxayaasha:[], prevMonthArdayda:0
   };
   closeModal();
   scheduleSave();
@@ -2085,6 +2265,29 @@ function changeLang(code){
 // MODAL
 // ══════════════════════════════════════════
 function openSubmitModal(key){
+  const fd = appData[key];
+  const baxayaasha = fd.baxayaasha || [];
+  const prevTotal = +(fd.prevMonthArdayda||0);
+  const calc = calcFarac(fd);
+  const currTotal = calc.totalArdayda;
+  const farqi = currTotal - prevTotal;
+
+  // Hubi 1: Liiska dhamaystirnaanta (magac + sabab + bixiyey dhammaantood)
+  const midlamaJirin = baxayaasha.some(b => !b.magac.trim() || !b.sabab || !b.bixiyey);
+  if(midlamaJirin){
+    showToast("⛔ Liiska ardayda baxday dhamaystir — Magac, Sabab, iyo Lacag buuxi", "warning");
+    return;
+  }
+
+  // Hubi 2: Haddii ardaydu yaraatay, liiska waa in uu ku jiraan ardaydii ka maqan
+  if(prevTotal > 0 && farqi < 0){
+    const need = Math.abs(farqi);
+    if(baxayaasha.length < need){
+      showToast(`⛔ Waa khasab inaad liiska ku darsataa ardaydii ka maqan — waxaad u baahan tahay ${need} arday, hadda ${baxayaasha.length} kaliya`, "warning");
+      return;
+    }
+  }
+
   modalAction = {type:"submit", key};
   document.getElementById("modal-title").textContent = L("modal_submit_title");
   document.getElementById("modal-body").textContent = `${L("modal_submit_body")} ${FARAC_LABELS[key]}? ${L("modal_submit_body2")}`;
