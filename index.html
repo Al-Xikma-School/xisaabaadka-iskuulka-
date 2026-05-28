@@ -202,8 +202,18 @@ window.dispatchEvent(new Event("fb-ready"));
   .btn-add{width:100%;padding:11px;background:linear-gradient(135deg,#059669,#0d6e4f);border:none;border-radius:10px;color:#fff;font-weight:700;font-size:14px;cursor:pointer;box-shadow:0 3px 12px rgba(13,110,79,.3);transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
   .btn-reset{width:100%;padding:10px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;color:#dc2626;font-weight:700;font-size:13px;cursor:pointer;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
   .fasal-item{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;border-radius:9px;margin-bottom:6px;background:#f8fafc;border:1.5px solid #f1f5f9;transition:.15s;}
-  .btn-del-fasal{background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;}
+  .fasal-item-colored{border-radius:10px;margin-bottom:7px;border:1.5px solid transparent;transition:.18s;overflow:hidden;}
+  .fasal-item-colored:hover{filter:brightness(.96);transform:translateX(2px);}
+  .fasal-item-bas{background:linear-gradient(135deg,rgba(234,88,12,.13),rgba(251,146,60,.08))!important;border-color:rgba(234,88,12,.35)!important;}
+  .fasal-bas-badge{display:inline-flex;align-items:center;gap:4px;background:linear-gradient(135deg,#ea580c,#fb923c);color:#fff;border-radius:5px;padding:2px 7px;font-size:9px;font-weight:800;letter-spacing:.3px;}
+  .btn-del-fasal{background:rgba(255,255,255,.55);border:1px solid rgba(220,38,38,.35);color:#dc2626;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:700;}
   .fasal-list{max-height:200px;overflow-y:auto;margin-bottom:14px;}
+  .fasal-list-colored{max-height:340px;overflow-y:auto;padding-right:2px;}
+  .fasal-list-colored::-webkit-scrollbar{width:4px;}
+  .fasal-list-colored::-webkit-scrollbar-track{background:rgba(0,0,0,.04);border-radius:4px;}
+  .fasal-list-colored::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;}
+  .settings-fasal-section{margin-top:18px;border-top:2px dashed rgba(0,0,0,.08);padding-top:14px;}
+  .settings-fasal-section-title{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;display:flex;align-items:center;gap:7px;}
   .non-maamul-badge{border-radius:12px;padding:12px 14px;margin-bottom:12px;flex-shrink:0;}
   .non-maamul-badge .label{color:#fff;font-weight:800;font-size:14px;}
   .non-maamul-badge .sub{color:rgba(255,255,255,.7);font-size:11px;margin-top:4px;font-weight:500;}
@@ -553,6 +563,7 @@ const DEFAULT_USERS = {
   dhexe: {password:"dhexe@2024", role:"dhexe", label:"Dugsiga Dhexe"},
   hoose1:{password:"hoose1@2024",role:"hoose1",label:"Hoose 1"},
   hoose2:{password:"hoose2@2024",role:"hoose2",label:"Hoose 2"},
+  kormeere:{password:"kormeere@2024",role:"kormeere",label:"Kormeere"},
 };
 let USERS = {...DEFAULT_USERS};
 
@@ -601,9 +612,9 @@ let appData = buildInitFarac();
 
 function L(key){ return (LUUQADAHA[currentLang]||LUUQADAHA.so)[key] || key; }
 
-function emptyFasal(name, faracKey){
+function emptyFasal(name, faracKey, nooca){
   const q = (defaultQiimaha && defaultQiimaha[faracKey]) ? defaultQiimaha[faracKey] : 13;
-  return {magaca:name,tiradaBixisay:0,qiimaha:q,lacagtaSooHormartay:0,lacagtaDhimanayd:0,lacagtaBishatanHormartay:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0,ardaydaCusub:0,ardaydaBaxday:0};
+  return {magaca:name,nooca:nooca||"caadi",tiradaBixisay:0,qiimaha:q,lacagtaSooHormartay:0,lacagtaDhimanayd:0,lacagtaBishatanHormartay:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0,ardaydaCusub:0,ardaydaBaxday:0};
 }
 function buildInitFarac(){
   const d={};
@@ -614,22 +625,52 @@ function buildInitFarac(){
 }
 function calcFarac(fd){
   let tB=0,tL=0,tH=0,tHTiro=0,tD=0,tBH=0,tAB=0,tLAB=0,tS=0,tF=0,tCusub=0,tBaxday=0;
+  // Caadi (non-bas) totals — tirada kolomyada: bas kuma biirto wadarta tirada
+  let tB_w=0, tHTiro_w=0, tAB_w=0, tS_w=0, tF_w=0, tCusub_w=0, tBaxday_w=0;
   fd.fasalada.forEach(f=>{
-    tB +=+(f.tiradaBixisay||0); tL +=+(f.tiradaBixisay||0) * +(f.qiimaha||0);
-    tHTiro +=+(f.lacagtaSooHormartay||0);
-    tH +=+(f.lacagtaSooHormartay||0) * +(f.qiimaha||0); tD +=+(f.lacagtaDhimanayd||0);
-    tBH +=+(f.lacagtaBishatanHormartay||0);
-    tAB+=+(f.tiradaAanBixin||0); tLAB+=+(f.lacagtaAanBixin||0);
-    tS +=+(f.scholarship||0); tF +=+(f.freeStudents||0);
-    tCusub+=+(f.ardaydaCusub||0); tBaxday+=+(f.ardaydaBaxday||0);
+    const isBas = f.nooca === "bas";
+    tB    +=+(f.tiradaBixisay||0);
+    tL    +=+(f.tiradaBixisay||0) * +(f.qiimaha||0);
+    tHTiro+=+(f.lacagtaSooHormartay||0);
+    tH    +=+(f.lacagtaSooHormartay||0) * +(f.qiimaha||0);
+    tD    +=+(f.lacagtaDhimanayd||0);
+    tBH   +=+(f.lacagtaBishatanHormartay||0);
+    tAB   +=+(f.tiradaAanBixin||0);
+    tLAB  +=+(f.lacagtaAanBixin||0);
+    tS    +=+(f.scholarship||0);
+    tF    +=+(f.freeStudents||0);
+    tCusub+=+(f.ardaydaCusub||0);
+    tBaxday+=+(f.ardaydaBaxday||0);
+    // Wadarta tirada — bas fasalada kuma biirto kolomyada tirada
+    if(!isBas){
+      tB_w     +=+(f.tiradaBixisay||0);
+      tHTiro_w +=+(f.lacagtaSooHormartay||0);
+      tAB_w    +=+(f.tiradaAanBixin||0);
+      tS_w     +=+(f.scholarship||0);
+      tF_w     +=+(f.freeStudents||0);
+      tCusub_w +=+(f.ardaydaCusub||0);
+      tBaxday_w+=+(f.ardaydaBaxday||0);
+    }
   });
   const kWadar=Object.values(fd.kharash).reduce((a,b)=>a+(+b),0);
-  // Wadarta lacagta bishatan = (bixisay*qiime) + lacagtii dhimanayd + lacagtii bishatan hormartay
   const xarooday=tL+tD+tBH;
   const saafi=xarooday-(+fd.discount)-(+fd.lacagKhususi);
-  // ardaydaCusub ku biirto totalka, ardaydaBaxday kuma biirto
-  const totalArdayda=tB+tAB+tS+tF+tCusub+tHTiro;
-  return {totalBixisay:tB,totalLacag:tL,totalHormartay:tH,totalHormartayTiro:tHTiro,totalDhimanayd:tD,totalBishatanHormartay:tBH,totalAanBixin:tAB,totalLacagAanBixin:tLAB,totalScholarship:tS,totalFree:tF,totalCusub:tCusub,totalBaxday:tBaxday,kharashWadar:kWadar,xarooday,saafi,totalArdayda};
+  // totalArdayda: bas fasalada tiradooda kuma jirto
+  const totalArdayda=tB_w+tAB_w+tS_w+tF_w+tCusub_w+tHTiro_w;
+  return {
+    totalBixisay:tB, totalBixisay_w:tB_w,
+    totalLacag:tL,
+    totalHormartay:tH, totalHormartayTiro:tHTiro, totalHormartayTiro_w:tHTiro_w,
+    totalDhimanayd:tD,
+    totalBishatanHormartay:tBH,
+    totalAanBixin:tAB, totalAanBixin_w:tAB_w,
+    totalLacagAanBixin:tLAB,
+    totalScholarship:tS, totalScholarship_w:tS_w,
+    totalFree:tF, totalFree_w:tF_w,
+    totalCusub:tCusub, totalCusub_w:tCusub_w,
+    totalBaxday:tBaxday, totalBaxday_w:tBaxday_w,
+    kharashWadar:kWadar, xarooday, saafi, totalArdayda
+  };
 }
 
 // ══════════════════════════════════════════
@@ -746,7 +787,7 @@ function doLogin(){
   if(usr && usr.password===p){
     currentUser = {...usr, username:u};
     document.getElementById("login-err").style.display="none";
-    activeFarac = usr.role!=="maamul" ? usr.role : "sare";
+    activeFarac = (usr.role!=="maamul" && usr.role!=="kormeere") ? usr.role : "sare";
     activeTab = "xisaab";
     document.getElementById("login-page").style.display="none";
     document.getElementById("app-page").classList.add("show");
@@ -901,9 +942,16 @@ document.addEventListener("click", function(e){
 // ══════════════════════════════════════════
 function renderSidebar(){
   const isMaamul = currentUser.role==="maamul";
+  const isKormeere = currentUser.role==="kormeere";
   const sb = document.getElementById("sidebar");
   let html="";
-  if(isMaamul){
+  if(isMaamul || isKormeere){
+    if(isKormeere){
+      html += `<div style="background:linear-gradient(135deg,#1565c0,#3b82f6);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="color:#fff;font-weight:800;font-size:13px;">👁️ Kormeere</div>
+        <div style="color:rgba(255,255,255,.75);font-size:11px;margin-top:3px;">Daawasho Kaliya</div>
+      </div>`;
+    }
     html += `<div class="sb-section-lbl">${L("nav_faracyada")}</div>`;
     Object.keys(FARAC_COLORS).forEach(k=>{
       const activeClass = activeFarac===k ? `active-${k}` : "";
@@ -912,7 +960,10 @@ function renderSidebar(){
         ${appData[k]?.submitted?"<span style='font-size:10px'>✅</span>":""}
       </button>`;
     });
-    html += `<button class="sb-guud-btn ${activeFarac===null?"active":""}" onclick="selectGuud()" style="margin-top:4px">${L("nav_guud_short")}</button>`;
+    html += `<button class="sb-guud-btn ${activeFarac===null && activeTab!=="maamul-settings"?"active":""}" onclick="selectGuud()" style="margin-top:4px">${L("nav_guud_short")}</button>`;
+    if(isMaamul){
+      html += `<button class="sb-guud-btn ${activeTab==="maamul-settings"?"active":""}" onclick="selectMaamulSettings()" style="margin-top:4px;background:${activeTab==="maamul-settings"?'linear-gradient(135deg,#1565c0,#3b82f6)':'transparent'};color:${activeTab==="maamul-settings"?'#fff':'rgba(255,255,255,.75)'}">${L("tab_settings")}</button>`;
+    }
   } else {
     html += `<div class="non-maamul-badge" style="background:${FARAC_COLORS[currentUser.role]}">
       <div class="label">${FARAC_LABELS[currentUser.role]}</div>
@@ -928,7 +979,7 @@ function renderSidebar(){
       {id:"charts",label:L("tab_charts")}
     ];
     tabs.push({id:"report",label:"📄 Report"});
-    tabs.push({id:"settings",label:L("tab_settings")});
+    if(!isKormeere) tabs.push({id:"settings",label:L("tab_settings")});
     tabs.forEach(t=>{ html+=`<button class="sb-tab-btn ${activeTab===t.id?"active":""}" onclick="selectTab('${t.id}')">${t.label}</button>`; });
     html+="</div>";
   }
@@ -937,6 +988,7 @@ function renderSidebar(){
 
 function selectFarac(k){ activeFarac=k; activeTab="xisaab"; renderAll(); }
 function selectGuud(){ activeFarac=null; activeTab="guud"; renderAll(); }
+function selectMaamulSettings(){ activeFarac=null; activeTab="maamul-settings"; activeSettingsTab="fasalada"; renderAll(); }
 function selectTab(t){ activeTab=t; renderContent(); renderSidebar(); }
 
 // ══════════════════════════════════════════
@@ -945,8 +997,19 @@ function selectTab(t){ activeTab=t; renderContent(); renderSidebar(); }
 function renderContent(){
   destroyCharts();
   const isMaamul = currentUser.role==="maamul";
+  const isKormeere = currentUser.role==="kormeere";
   const mc = document.getElementById("main-content");
-  if(activeFarac===null && isMaamul){ mc.innerHTML=renderGuud(); initGuudCharts(); return; }
+  if(activeTab==="maamul-settings" && isMaamul){
+    mc.innerHTML = `<div class="panel" style="padding:14px 18px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+        <div style="width:5px;height:32px;border-radius:4px;background:linear-gradient(135deg,var(--blue),var(--blue2))"></div>
+        <h2 style="margin:0;color:#1a3a5c;font-size:17px;font-weight:800">${L("tab_settings")} — Maamulka</h2>
+      </div>
+      ${renderSettingsTab(true)}
+    </div>`;
+    return;
+  }
+  if((activeFarac===null) && (isMaamul || isKormeere)){ mc.innerHTML=renderGuud(); initGuudCharts(); return; }
   if(activeFarac){ mc.innerHTML=renderFaracDetail(); if(activeTab==="charts") initFaracCharts(); return; }
   mc.innerHTML="";
 }
@@ -1084,9 +1147,10 @@ function initGuudCharts(){
 // ── FARAC DETAIL ──────────────────────────
 function renderFaracDetail(){
   const isMaamul = currentUser.role==="maamul";
+  const isKormeere = currentUser.role==="kormeere";
   const fd = appData[activeFarac];
   const calc = calcFarac(fd);
-  const isLocked = fd.submitted && !isMaamul;
+  const isLocked = (fd.submitted && !isMaamul) || isKormeere;
   const color = FARAC_COLORS[activeFarac];
 
   let html=`
@@ -1100,27 +1164,29 @@ function renderFaracDetail(){
     </div>
     <div class="action-btns">
       ${fd.submitted?"<span class='badge-submitted'>✅ La Gudbiyey</span>":""}
-      ${!fd.submitted?`
+      ${!fd.submitted && !isKormeere?`
         <button class="btn-save" onclick="saveDraft('${activeFarac}')">💾 Save</button>
         ${!isMaamul?`<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`:""}
       `:""}
       ${fd.submitted && isMaamul?`<button class="btn-unlock" onclick="unlockFarac('${activeFarac}')">🔓 Unlock</button>`:""}
+      ${isKormeere?`<span style="background:#eff6ff;color:#1565c0;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid #bfdbfe;">👁️ Daawasho Kaliya</span>`:""}
     </div>
   </div>
-  ${isLocked?`<div class="alert-locked">🔒 Xogtan waa la gudbiyey maamulka. Waxaad arki kartaa laakiin ma bedeli kartid.</div>`:""}
-  ${fd.savedAt && !fd.submitted?`<div class="alert-saved">💾 Kaydsan: ${new Date(fd.savedAt).toLocaleString()}</div>`:""}
+  ${isKormeere?`<div class="alert-locked" style="background:#eff6ff;border-color:#bfdbfe;color:#1565c0;">👁️ Adigu waxaad tahay Kormeere — waxaad arki kartaa xogta laakiin ma bedeli kartid.</div>`:
+    isLocked?`<div class="alert-locked">🔒 Xogtan waa la gudbiyey maamulka. Waxaad arki kartaa laakiin ma bedeli kartid.</div>`:""}
+  ${fd.savedAt && !fd.submitted && !isKormeere?`<div class="alert-saved">💾 Kaydsan: ${new Date(fd.savedAt).toLocaleString()}</div>`:""}
 
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
     ${statCardSm(L("lbl_ardayda_wadar"),calc.totalArdayda,"👥",color)}
-    ${statCardSm(L("lbl_bixisay"),calc.totalBixisay,"✅","#0d6e4f")}
+    ${statCardSm(L("lbl_bixisay"),calc.totalBixisay_w,"✅","#0d6e4f")}
     ${statCardSm(L("lbl_xarooday"),"$"+calc.xarooday.toLocaleString(),"💰","#1565c0")}
     ${statCardSm(L("lbl_saafi"),"$"+calc.saafi.toLocaleString(),"💵","#0d6e4f")}
   </div>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
     ${(()=>{ const haraagCas=Math.max(0,(+(fd.lacagDhimanaydKore||0))-calc.totalDhimanayd); const lacagKuDhiman=calc.totalLacagAanBixin+haraagCas; return statCardSm("💸 Lacag Ku Dhiman","$"+lacagKuDhiman.toLocaleString(),"💸","#c62828"); })()}
-    ${statCardSm("🆕 Ardayda Cusub",calc.totalCusub,"📥","#1565c0")}
-    ${statCardSm("🚪 Ardayda Baxday",calc.totalBaxday,"📤","#7b3f00")}
-    ${statCardSm("⚠️ Aan Bixin (Tiro)",calc.totalAanBixin,"⚠️","#e65100")}
+    ${statCardSm("🆕 Ardayda Cusub",calc.totalCusub_w,"📥","#1565c0")}
+    ${statCardSm("🚪 Ardayda Baxday",calc.totalBaxday_w,"📤","#7b3f00")}
+    ${statCardSm("⚠️ Aan Bixin (Tiro)",calc.totalAanBixin_w,"⚠️","#e65100")}
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
     <!-- KAARKA CAGAARAN: Lacagtii la hormarshey -->
@@ -1164,7 +1230,7 @@ function renderFaracDetail(){
   if(activeTab==="kharash") html+=renderKharashTab(fd, calc, isLocked);
   if(activeTab==="charts") html+=renderChartsTab();
   if(activeTab==="report") html+=renderReportTab(fd, calc, color);
-  if(activeTab==="settings") html+=renderSettingsTab(isMaamul);
+  if(activeTab==="settings") html+=`<div class="panel" style="padding:14px 18px">${renderSettingsTab(isMaamul)}</div>`;
 
   return html;
 }
@@ -1189,29 +1255,45 @@ function renderXisaabTab(fd, calc, isLocked, color){
       <th class="th-blue">Wadarta Lacag</th>
     </tr></thead><tbody>`;
 
-  fd.fasalada.forEach((f,i)=>{
+  // Sort fasalada for display: caadi hore, bas dambeba — laakiin original index (i_orig) ayaa xifaala
+  const fasaladaSorted = fd.fasalada
+    .map((f, i_orig) => ({f, i_orig}))
+    .sort((a, b) => {
+      const aB = a.f.nooca === "bas" ? 1 : 0;
+      const bB = b.f.nooca === "bas" ? 1 : 0;
+      return aB - bB;
+    });
+
+  fasaladaSorted.forEach(({f, i_orig: i})=>{
     const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0);
-    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0);
-    html+=`<tr><td style="font-weight:600;color:${color};white-space:nowrap;font-size:12px">${f.magaca}</td>`;
+    const isBas = f.nooca === "bas";
+    // Bas fasalada: tirada ardayda kuma biirto — kaliya lacagta
+    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
+    const rowBg = isBas ? "background:linear-gradient(90deg,rgba(234,88,12,.07),rgba(251,146,60,.04));" : "";
+    const nameStyle = isBas ? "font-weight:700;color:#ea580c;white-space:nowrap;font-size:12px" : `font-weight:600;color:${color};white-space:nowrap;font-size:12px`;
+    const ardaydaCell = isBas
+      ? `<td style="color:#cbd5e1;font-weight:600;font-size:13px;background:rgba(234,88,12,.04)">—</td>`
+      : `<td class="td-green-bg">${wA}</td>`;
+    html+=`<tr style="${rowBg}"><td style="${nameStyle}">${isBas?'🚌 ':''} ${f.magaca}</td>`;
     fields.forEach(field=>{
       html+=`<td><input class="inp-cell" type="number" value="${f[field]}" ${isLocked?"disabled":""} onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
     });
-    html+=`<td class="td-green-bg">${wA}</td><td class="td-blue-bg">$${wL.toLocaleString()}</td></tr>`;
+    html+=`${ardaydaCell}<td class="td-blue-bg">$${wL.toLocaleString()}</td></tr>`;
   });
 
   html+=`</tbody><tfoot><tr>
     <td style="color:#1a3a5c;font-size:12px">WADAR</td>
-    <td class="td-green">${calc.totalBixisay}</td>
+    <td class="td-green">${calc.totalBixisay_w}</td>
     <td>—</td>
-    <td class="td-green">${calc.totalHormartayTiro}</td>
+    <td class="td-green">${calc.totalHormartayTiro_w}</td>
     <td class="td-green">$${calc.totalDhimanayd.toLocaleString()}</td>
     <td class="td-green">$${calc.totalBishatanHormartay.toLocaleString()}</td>
-    <td class="td-red">${calc.totalAanBixin}</td>
+    <td class="td-red">${calc.totalAanBixin_w}</td>
     <td class="td-red">$${calc.totalLacagAanBixin.toLocaleString()}</td>
-    <td>${calc.totalScholarship}</td>
-    <td>${calc.totalFree}</td>
-    <td style="color:#1565c0;font-weight:700">${calc.totalCusub}</td>
-    <td style="color:#888;font-weight:700">${calc.totalBaxday}</td>
+    <td>${calc.totalScholarship_w}</td>
+    <td>${calc.totalFree_w}</td>
+    <td style="color:#1565c0;font-weight:700">${calc.totalCusub_w}</td>
+    <td style="color:#888;font-weight:700">${calc.totalBaxday_w}</td>
     <td class="tfoot-total-arday">${calc.totalArdayda}</td>
     <td class="tfoot-total-lacag">$${calc.xarooday.toLocaleString()}</td>
   </tr></tfoot></table></div></div>
@@ -1331,6 +1413,16 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
       </td>
       <td>
         ${b.bixiyey==="maya" ? `
+        <div style="display:flex;align-items:center;gap:3px">
+          <span style="color:#888;font-size:11px">$</span>
+          <input class="inp-cell" style="width:80px" type="number" min="0" step="0.01"
+            value="${+(b.lacagBishaLaTagay||0)}" ${isLocked?"disabled":""}
+            onchange="updateBaxay('${faracKey}',${i},'lacagBishaLaTagay',this.value)"
+            placeholder="0.00"/>
+        </div>` : `<span style="color:#1565c0;font-weight:700;font-size:12px">$${(+(b.lacagBishaLaTagay||0)).toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:2})}</span>`}
+      </td>
+      <td>
+        ${b.bixiyey==="maya" ? `
         <select class="inp-cell" style="width:100px" ${isLocked?"disabled":""}
           onchange="updateBaxay('${faracKey}',${i},'quustay',this.value)">
           <option value="">-- Dooro --</option>
@@ -1364,6 +1456,7 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
             <th>Telefon</th>
             <th>Sababta Bixitaanka</th>
             <th>Lacag Bisha La Tagay</th>
+            <th>Lacag Bisha La Tagay ($)</th>
             <th>Maka Quustay?</th>
             <th></th>
           </tr></thead>
@@ -1383,7 +1476,7 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
 function addBaxay(key){
   if(!canEdit(key)) return;
   if(!appData[key].baxayaasha) appData[key].baxayaasha = [];
-  appData[key].baxayaasha.push({magac:"",telefon:"",sabab:"",quustay:"",bixiyey:""});
+  appData[key].baxayaasha.push({magac:"",telefon:"",sabab:"",quustay:"",bixiyey:"",lacagBishaLaTagay:0});
   scheduleSave();
   refreshCalcDisplay();
 }
@@ -1430,8 +1523,9 @@ function buildReportHTML(fd, calc, color){
   // Xisaab table rows
   let xisaabRows = "";
   fd.fasalada.forEach(f=>{
-    const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0);
-    const wA = +f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0);
+    const isBas = f.nooca === "bas";
+    const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0);
+    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
     xisaabRows += `<tr>
       <td style="font-weight:700;color:${color};text-align:left;white-space:nowrap">${f.magaca}</td>
       <td>${f.tiradaBixisay}</td>
@@ -1444,7 +1538,7 @@ function buildReportHTML(fd, calc, color){
       <td>${f.freeStudents}</td>
       <td style="color:#1565c0">${f.ardaydaCusub||0}</td>
       <td style="color:#888">${f.ardaydaBaxday||0}</td>
-      <td style="font-weight:800;color:#059669">${wA}</td>
+      <td style="font-weight:800;color:#059669">${isBas ? "—" : wA}</td>
       <td style="font-weight:800;color:#1d4ed8">$${wL.toLocaleString()}</td>
     </tr>`;
   });
@@ -1465,44 +1559,30 @@ function buildReportHTML(fd, calc, color){
     <div class="report-period">📅 ${periodText}</div>
   </div>
 
-  <!-- Summary Cards -->
-  <div class="report-summary-grid">
-    <div class="report-sum-card">
-      <div class="report-sum-lbl">👨‍🎓 Wadarta Ardayda</div>
-      <div class="report-sum-val" style="color:#0d6e4f">${calc.totalArdayda}</div>
-    </div>
-    <div class="report-sum-card">
-      <div class="report-sum-lbl">💵 Lacag Saafi</div>
-      <div class="report-sum-val" style="color:#1d4ed8">$${calc.saafi.toLocaleString()}</div>
-    </div>
-    <div class="report-sum-card">
-      <div class="report-sum-lbl">📤 Kharash</div>
-      <div class="report-sum-val" style="color:#dc2626">$${calc.kharashWadar.toLocaleString()}</div>
-    </div>
-    <div class="report-sum-card">
-      <div class="report-sum-lbl">✅ Bixisay</div>
-      <div class="report-sum-val" style="color:#059669">${calc.totalBixisay}</div>
-    </div>
-    <div class="report-sum-card">
-      <div class="report-sum-lbl">⚠️ Aan Bixin</div>
-      <div class="report-sum-val" style="color:#dc2626">${calc.totalAanBixin}</div>
-    </div>
-    <div class="report-sum-card">
-      <div class="report-sum-lbl">🎓 Scholarship</div>
-      <div class="report-sum-val" style="color:#7c3aed">${calc.totalScholarship}</div>
-    </div>
+  <!-- Dashboard Summary Cards — exact same style as Xisaab Xirka -->
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px">
+    ${statCardSm(L("lbl_ardayda_wadar"),calc.totalArdayda,"👥",color)}
+    ${statCardSm(L("lbl_bixisay"),calc.totalBixisay_w,"✅","#0d6e4f")}
+    ${statCardSm(L("lbl_xarooday"),"$"+calc.xarooday.toLocaleString(),"💰","#1565c0")}
+    ${statCardSm(L("lbl_saafi"),"$"+calc.saafi.toLocaleString(),"💵","#0d6e4f")}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">
+    ${(()=>{ const haraagCas=Math.max(0,(+(fd.lacagDhimanaydKore||0))-calc.totalDhimanayd); const lacagKuDhiman=calc.totalLacagAanBixin+haraagCas; return statCardSm("💸 Lacag Ku Dhiman","$"+lacagKuDhiman.toLocaleString(),"💸","#c62828"); })()}
+    ${statCardSm("🆕 Ardayda Cusub",calc.totalCusub_w,"📥","#1565c0")}
+    ${statCardSm("🚪 Ardayda Baxday",calc.totalBaxday_w,"📤","#7b3f00")}
+    ${statCardSm("⚠️ Aan Bixin (Tiro)",calc.totalAanBixin_w,"⚠️","#e65100")}
   </div>
 
-  <!-- Profit bar -->
-  <div class="report-profit-bar" style="background:${profit>=0?'linear-gradient(135deg,#ecfdf5,#d1fae5)':'linear-gradient(135deg,#fef2f2,#fee2e2)'};border:2px solid ${profit>=0?'#a7f3d0':'#fca5a5'}">
+  <!-- Profit / Loss bar -->
+  <div style="background:${profit>=0?'linear-gradient(135deg,#ecfdf5,#d1fae5)':'linear-gradient(135deg,#fef2f2,#fee2e2)'};border:2px solid ${profit>=0?'#a7f3d0':'#fca5a5'};border-radius:14px;padding:16px 22px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
     <div>
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:${profit>=0?'#065f46':'#991b1b'}">📈 Wadarta Faa'iido / Khasaare</div>
-      <div style="font-size:26px;font-weight:800;color:${profit>=0?'#059669':'#dc2626'};font-family:'Space Grotesk',sans-serif;margin-top:3px">${profit>=0?"▲":"▼"} $${Math.abs(profit).toLocaleString()}</div>
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:${profit>=0?'#065f46':'#991b1b'}">📊 WADARTA FAA'IIDO / KHASAARE</div>
+      <div style="font-size:28px;font-weight:800;color:${profit>=0?'#059669':'#dc2626'};font-family:'Space Grotesk',sans-serif;margin-top:4px">${profit>=0?"▲":"▼"} $${Math.abs(profit).toLocaleString()}</div>
     </div>
-    <div style="text-align:right;font-size:12px;color:#64748b">
+    <div style="text-align:right;font-size:13px;color:#64748b;font-weight:600">
       <div>💵 Dakhli: <strong style="color:#059669">$${calc.saafi.toLocaleString()}</strong></div>
-      <div style="margin-top:4px">📤 Kharash: <strong style="color:#dc2626">$${calc.kharashWadar.toLocaleString()}</strong></div>
-      ${fd.discount>0?`<div style="margin-top:4px">🔻 Discount: <strong style="color:#7c3aed">$${(+fd.discount).toLocaleString()}</strong></div>`:""}
+      <div style="margin-top:5px">📤 Kharash: <strong style="color:#dc2626">$${calc.kharashWadar.toLocaleString()}</strong></div>
+      ${fd.discount>0?`<div style="margin-top:5px">🔻 Discount: <strong style="color:#7c3aed">$${(+fd.discount).toLocaleString()}</strong></div>`:""}
     </div>
   </div>
 
@@ -1521,16 +1601,16 @@ function buildReportHTML(fd, calc, color){
       <tbody>${xisaabRows}</tbody>
       <tfoot><tr>
         <td style="text-align:left;color:#0a1628;font-weight:800">WADAR</td>
-        <td style="color:#059669;font-weight:800">${calc.totalBixisay}</td>
+        <td style="color:#059669;font-weight:800">${calc.totalBixisay_w}</td>
         <td>—</td>
-        <td style="color:#059669">${calc.totalHormartayTiro}</td>
+        <td style="color:#059669">${calc.totalHormartayTiro_w}</td>
         <td style="color:#059669">$${calc.totalDhimanayd.toLocaleString()}</td>
-        <td style="color:#dc2626">${calc.totalAanBixin}</td>
+        <td style="color:#dc2626">${calc.totalAanBixin_w}</td>
         <td style="color:#dc2626">$${calc.totalLacagAanBixin.toLocaleString()}</td>
-        <td>${calc.totalScholarship}</td>
-        <td>${calc.totalFree}</td>
-        <td style="color:#1565c0">${calc.totalCusub}</td>
-        <td style="color:#888">${calc.totalBaxday}</td>
+        <td>${calc.totalScholarship_w}</td>
+        <td>${calc.totalFree_w}</td>
+        <td style="color:#1565c0">${calc.totalCusub_w}</td>
+        <td style="color:#888">${calc.totalBaxday_w}</td>
         <td style="background:#d1fae5;color:#065f46;font-weight:800">${calc.totalArdayda}</td>
         <td style="background:#dbeafe;color:#1d4ed8;font-weight:800">$${calc.xarooday.toLocaleString()}</td>
       </tr></tfoot>
@@ -1546,6 +1626,39 @@ function buildReportHTML(fd, calc, color){
     </table>
   </div>
 
+  <!-- Ardayda Baxday Table -->
+  ${(fd.baxayaasha && fd.baxayaasha.length > 0) ? `
+  <div class="report-section-title">🚪 Liiska Ardayda Baxday (${fd.baxayaasha.length} Arday)</div>
+  <div class="report-tbl-wrap">
+    <table class="report-tbl">
+      <thead><tr>
+        <th style="width:22px">#</th>
+        <th style="text-align:left">Magaca</th>
+        <th>Telefon</th>
+        <th>Sababta</th>
+        <th>Lacag Bisha La Tagay</th>
+        <th>Lacag Bisha La Tagay ($)</th>
+        <th>Maka Quustay</th>
+      </tr></thead>
+      <tbody>
+        ${fd.baxayaasha.map((b,i)=>`<tr>
+          <td style="color:#64748b;font-weight:700">${i+1}</td>
+          <td style="text-align:left;font-weight:700;color:#0a1628">${b.magac||"—"}</td>
+          <td>${b.telefon||"—"}</td>
+          <td>${b.sabab||"—"}</td>
+          <td><span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:800;background:${b.bixiyey==="haa"?"#ecfdf5":"#fef2f2"};color:${b.bixiyey==="haa"?"#059669":"#dc2626"}">${b.bixiyey==="haa"?"✅ Bixiyey":"❌ Kama bixin"}</span></td>
+          <td style="color:#1d4ed8;font-weight:700">$${(+(b.lacagBishaLaTagay||0)).toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:2})}</td>
+          <td>${b.bixiyey==="maya"?(b.quustay==="Haa"?"✅ Haa":b.quustay==="Maya"?"❌ Maya":"—"):"—"}</td>
+        </tr>`).join("")}
+      </tbody>
+      <tfoot><tr>
+        <td colspan="5" style="text-align:left;font-weight:800;color:#c62828">Wadarta Baxday: ${fd.baxayaasha.length} Arday</td>
+        <td style="color:#1d4ed8;font-weight:800">$${fd.baxayaasha.reduce((s,b)=>s+(+(b.lacagBishaLaTagay||0)),0).toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:2})}</td>
+        <td></td>
+      </tr></tfoot>
+    </table>
+  </div>` : ""}
+
   <div class="report-footer">
     🖨️ La daabacay: ${now} &nbsp;|&nbsp; 👤 ${printedBy} &nbsp;|&nbsp; 📅 ${currentBisha} &nbsp;|&nbsp; AL-XIKMA SCHOOL
   </div>`;
@@ -1559,10 +1672,10 @@ function getPrintCSS(){
   +".report-school-header h1{color:#0a1628;font-size:20px;font-weight:900;font-family:'Space Grotesk',sans-serif;margin-bottom:3px;}"
   +".report-school-header p{color:#64748b;font-size:12px;}"
   +".report-period{display:inline-block;background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:6px;padding:3px 11px;font-size:11px;font-weight:700;margin-top:5px;}"
-  +".report-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px;}"
-  +".report-sum-card{background:#f8fafc;border-radius:7px;padding:9px 11px;border:1.5px solid #e2e8f0;text-align:center;}"
-  +".report-sum-lbl{color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;}"
-  +".report-sum-val{font-size:16px;font-weight:800;font-family:'Space Grotesk',sans-serif;}"
+  +".report-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:13px;}"
+  +".report-sum-card{background:#fff;border-radius:10px;padding:13px 15px;border:1.5px solid #e2e8f0;position:relative;overflow:hidden;}"
+  +".report-sum-lbl{color:#94a3b8;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px;}"
+  +".report-sum-val{font-size:20px;font-weight:800;font-family:'Space Grotesk',sans-serif;}"
   +".report-profit-bar{border-radius:9px;padding:11px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}"
   +".report-section-title{color:#0a1628;font-size:12px;font-weight:800;margin:13px 0 7px;padding-left:8px;border-left:4px solid #1565c0;font-family:'Space Grotesk',sans-serif;}"
   +".report-tbl-wrap{overflow:hidden;border-radius:7px;border:1.5px solid #e2e8f0;margin-bottom:13px;}"
@@ -1573,7 +1686,14 @@ function getPrintCSS(){
   +".report-kharash-tbl{width:100%;border-collapse:collapse;font-size:11px;}"
   +".report-kharash-tbl td{padding:6px 10px;border-bottom:1px solid #f1f5f9;color:#334155;}"
   +".report-footer{text-align:center;padding:11px;color:#94a3b8;font-size:9.5px;font-weight:500;border-top:1px solid #f1f5f9;margin-top:10px;}"
-  +".no-print{display:none!important;}";
+  +".no-print{display:none!important;}"
+  +".stat-card-sm{background:#fff;border-radius:10px;padding:9px 12px;border:1px solid #e2e8f0;position:relative;overflow:hidden;}"
+  +".stat-card-sm::before{content:'';position:absolute;top:0;left:0;bottom:0;width:4px;border-radius:10px 0 0 10px;}"
+  +".stat-card-inner{display:flex;justify-content:space-between;align-items:center;}"
+  +".stat-card-lbl{color:#94a3b8;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px;}"
+  +".stat-card-val{font-weight:800;font-size:15px;font-family:'Space Grotesk',sans-serif;}"
+  +".stat-card-val.small{font-size:12px;font-weight:700;}"
+  +".stat-card-icon-wrap{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}";
 }
 
 function buildPrintHTML(area){
@@ -1640,6 +1760,7 @@ function savePDF(){
 
 // ── KHARASH TAB ────────────────────────────
 function renderKharashTab(fd, calc, isLocked){
+  const isKormeere = currentUser.role==="kormeere";
   let html=`<div class="panel">
     <h4>📋 ${L("lbl_kharash")} — ${currentBisha}</h4>`;
   Object.keys(KHARASH_LABELS).forEach(k=>{
@@ -1647,7 +1768,7 @@ function renderKharashTab(fd, calc, isLocked){
       <span class="kharash-lbl">${KL(k)}</span>
       <div style="display:flex;align-items:center;gap:8px">
         <span style="color:#888;font-size:13px">$</span>
-        <input class="kharash-inp" type="number" value="${fd.kharash[k]}" ${isLocked?"disabled":""} onchange="updateKharash('${activeFarac}','${k}',this.value)"/>
+        <input class="kharash-inp" type="number" value="${fd.kharash[k]}" ${(isLocked||isKormeere)?"disabled":""} onchange="updateKharash('${activeFarac}','${k}',this.value)"/>
       </div>
     </div>`;
   });
@@ -1778,8 +1899,7 @@ function renderSettingsTab(isMaamul){
   const validIds = tabs.map(t=>t.id);
   if(!validIds.includes(activeSettingsTab)) activeSettingsTab = "fasalada";
 
-  let html = `<div class="panel" style="padding:14px 18px">
-    <div class="settings-tab-bar">
+  let html = `<div class="settings-tab-bar">
       ${tabs.map(t=>`<button class="settings-tab-btn ${activeSettingsTab===t.id?"active":""}" onclick="setSettingsTab('${t.id}')">${t.icon} ${t.label}</button>`).join("")}
     </div>`;
 
@@ -1789,44 +1909,163 @@ function renderSettingsTab(isMaamul){
   else if(activeSettingsTab==="kolomyada" && isMaamul) html += renderSettingsKolomyada();
   else if(activeSettingsTab==="luuqad") html += renderSettingsLuuqad();
 
-  html += `</div>`;
   return html;
 }
 
 function setSettingsTab(t){ activeSettingsTab=t; renderContent(); }
 
+function onNoocChange(val){
+  const btn = document.querySelector(".btn-add");
+  if(btn){
+    if(val==="bas"){
+      btn.style.background = "linear-gradient(135deg,#ea580c,#fb923c)";
+      btn.style.boxShadow = "0 3px 12px rgba(234,88,12,.3)";
+    } else {
+      btn.style.background = "linear-gradient(135deg,#059669,#0d6e4f)";
+      btn.style.boxShadow = "0 3px 12px rgba(13,110,79,.3)";
+    }
+  }
+}
+
 function renderSettingsFasalada(){
-  const faracOpts = Object.keys(FARAC_COLORS).map(k=>`<option value="${k}">${FARAC_LABELS[k]}</option>`).join("");
+  const faracOpts = Object.keys(FARAC_COLORS).map(k=>`<option value="${k}" ${k===activeFarac?"selected":""}>${FARAC_LABELS[k]}</option>`).join("");
 
-  const fasalList = (appData[activeFarac]?.fasalada||[]).map((f,i)=>`
-    <div class="fasal-item" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:600;color:${FARAC_COLORS[activeFarac]};font-size:13px">${f.magaca}</span>
-        <button class="btn-del-fasal" onclick="removeFasal('${activeFarac}',${i})">🗑️</button>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="color:#888;font-size:12px;min-width:80px">💵 Qiimaha ($):</span>
-        <input type="number" value="${f.qiimaha}" min="0"
-          style="width:90px;padding:5px 8px;border:1px solid #ccc;border-radius:5px;font-size:13px;text-align:right;"
-          onchange="updateFasalQiime('${activeFarac}',${i},this.value)"/>
-      </div>
-    </div>`).join("");
+  // Build all faracs' fasal lists with colored backgrounds at the bottom
+  const allFaracLists = Object.keys(FARAC_COLORS).map(faracKey => {
+    const color = FARAC_COLORS[faracKey];
+    const r = parseInt(color.slice(1,3),16), g = parseInt(color.slice(3,5),16), b = parseInt(color.slice(5,7),16);
+    const fasalada = appData[faracKey]?.fasalada || [];
+    if(fasalada.length === 0) return `
+      <div style="margin-bottom:18px;">
+        <div class="settings-fasal-section-title" style="color:${color}">
+          <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>
+          ${FARAC_LABELS[faracKey]}
+        </div>
+        <div style="color:#aaa;font-size:12px;padding:8px 12px;background:rgba(${r},${g},${b},.04);border-radius:8px;border:1.5px dashed rgba(${r},${g},${b},.2)">Fasal ma jiro</div>
+      </div>`;
 
-  return `<div class="settings-grid">
-    <div>
-      <h4 style="color:#1a3a5c;margin-bottom:14px">➕ Ku Dar Fasal Cusub</h4>
-      <label class="form-lbl">Faracka</label>
-      <select id="new-fasal-farac" class="form-select">${faracOpts}</select>
-      <label class="form-lbl">Magaca Fasalka</label>
-      <input id="new-fasal-name" class="form-input" placeholder="Tusaale: 6aad" onkeydown="if(event.key==='Enter')addFasal()"/>
-      <label class="form-lbl">Qiimaha ($)</label>
-      <input id="new-fasal-qiime" class="form-input" type="number" placeholder="Tusaale: 13" min="0"/>
-      <button class="btn-add" onclick="addFasal()">➕ Ku Dar</button>
+    const items = fasalada.map((f, i) => {
+      // Each fasal gets a slightly different shade — alternating light/lighter
+      const alpha1 = i%2===0 ? .10 : .06;
+      const alphaBorder = .25;
+      const alphaText = .9;
+      return `<div class="fasal-item-colored" style="background:rgba(${r},${g},${b},${alpha1});border-color:rgba(${r},${g},${b},${alphaBorder});padding:9px 12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+          <span style="font-weight:700;color:rgba(${r},${g},${b},1);font-size:13px;display:flex;align-items:center;gap:6px;">
+            <span style="width:6px;height:6px;border-radius:50%;background:${color};display:inline-block;opacity:.7;flex-shrink:0"></span>
+            ${f.magaca}
+          </span>
+          <div style="display:flex;gap:4px;align-items:center;">
+            <button style="background:rgba(255,255,255,.7);border:1px solid rgba(59,130,246,.35);color:#2563eb;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-weight:700;" onclick="openEditFasal('${faracKey}',${i})">✏️</button>
+            <button class="btn-del-fasal" onclick="removeFasal('${faracKey}',${i})">🗑️</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:rgba(${r},${g},${b},.7);font-size:11px;min-width:80px;font-weight:600">💵 Qiimaha ($):</span>
+          <input type="number" value="${f.qiimaha}" min="0"
+            style="width:90px;padding:4px 8px;border:1.5px solid rgba(${r},${g},${b},.3);border-radius:6px;font-size:13px;text-align:right;font-weight:700;background:rgba(255,255,255,.7);color:${color};outline:none;"
+            onchange="updateFasalQiime('${faracKey}',${i},this.value)"/>
+        </div>
+      </div>`;
+    }).join("");
+
+    return `<div style="margin-bottom:18px;">
+      <div class="settings-fasal-section-title" style="color:${color}">
+        <span style="width:10px;height:10px;border-radius:50%;background:${color};display:inline-block;flex-shrink:0"></span>
+        ${FARAC_LABELS[faracKey]}
+        <span style="background:rgba(${r},${g},${b},.12);color:${color};border-radius:10px;padding:1px 8px;font-size:10px;font-weight:800;border:1px solid rgba(${r},${g},${b},.25)">${fasalada.length}</span>
+      </div>
+      <div class="fasal-list-colored">${items}</div>
+      <button class="btn-reset" style="margin-top:6px;padding:6px 14px;font-size:12px;width:auto;background:rgba(${r},${g},${b},.07);border-color:rgba(${r},${g},${b},.3);color:${color};" onclick="openResetModal('${faracKey}')">♻️ Dib u Deji — ${FARAC_LABELS[faracKey]}</button>
+    </div>`;
+  }).join("");
+
+  return `
+  <div>
+    <div class="settings-grid" style="margin-bottom:0">
+      <div>
+        <h4 style="color:#1a3a5c;margin-bottom:14px">➕ Ku Dar Fasal Cusub</h4>
+        <label class="form-lbl">Faracka</label>
+        <select id="new-fasal-farac" class="form-select">${faracOpts}</select>
+        <label class="form-lbl">Nooca Fasalka</label>
+        <select id="new-fasal-nooc" class="form-select" onchange="onNoocChange(this.value)" style="margin-bottom:14px">
+          <option value="caadi">🏫 Fasal Caadi</option>
+          <option value="bas">🚌 Fasal Bas</option>
+        </select>
+        <label class="form-lbl">Magaca Fasalka</label>
+        <input id="new-fasal-name" class="form-input" placeholder="Tusaale: 6aad" onkeydown="if(event.key==='Enter')addFasal()"/>
+        <label class="form-lbl">Qiimaha ($)</label>
+        <input id="new-fasal-qiime" class="form-input" type="number" placeholder="Tusaale: 13" min="0"/>
+        <button class="btn-add" onclick="addFasal()">➕ Ku Dar</button>
+      </div>
+      <div>
+        <h4 style="color:#1a3a5c;margin-bottom:8px">ℹ️ Tilmaan</h4>
+        <p style="color:#64748b;font-size:12px;line-height:1.7;background:#f8fafc;border-radius:9px;padding:12px 14px;border:1px solid #e2e8f0">
+          • Fasalada cusub ee aad ku darsato waxay u hooseeyan doontaa <b>liiska fasalada</b> ee hoose.<br>
+          • Midabka fasalku wuxuu u dhigmaa faracdiisa.<br>
+          • Xisaabta kasta waxaad ka bedeli kartaa qiimaha si gaar ah.<br>
+          • 🗑️ si aad u tirtirto fasal.
+        </p>
+      </div>
     </div>
-    <div>
-      <h4 style="color:#1a3a5c;margin-bottom:14px">📝 Fasalada &amp; Qiimaha — ${FARAC_LABELS[activeFarac]}</h4>
-      <div class="fasal-list" style="max-height:320px">${fasalList||"<p style='color:#aaa;font-size:13px'>Fasal ma jiro</p>"}</div>
-      <button class="btn-reset" style="margin-top:10px" onclick="openResetModal('${activeFarac}')">${L("lbl_nadiifi")}</button>
+
+    <div class="settings-fasal-section">
+      <h4 style="color:#1a3a5c;margin-bottom:16px;font-size:14px">📝 Fasalada — Dhammaan Faracyada</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        ${Object.keys(FARAC_COLORS).map((faracKey, fi) => {
+          const color = FARAC_COLORS[faracKey];
+          const r = parseInt(color.slice(1,3),16), g = parseInt(color.slice(3,5),16), b = parseInt(color.slice(5,7),16);
+          const fasalada = appData[faracKey]?.fasalada || [];
+          const items = fasalada.length === 0
+            ? `<div style="color:#aaa;font-size:12px;padding:10px 12px;text-align:center;background:rgba(${r},${g},${b},.04);border-radius:8px;border:1.5px dashed rgba(${r},${g},${b},.2)">Fasal ma jiro</div>`
+            : fasalada
+                .map((f, i) => ({f, i}))
+                .sort((a, b) => (a.f.nooca==="bas"?1:0) - (b.f.nooca==="bas"?1:0))
+                .map(({f, i}) => {
+                const isBas = f.nooca === "bas";
+                const alpha = i%2===0 ? .10 : .06;
+                const bgStyle = isBas
+                  ? "background:linear-gradient(135deg,rgba(234,88,12,.14),rgba(251,146,60,.08));border-color:rgba(234,88,12,.4);"
+                  : `background:rgba(${r},${g},${b},${alpha});border-color:rgba(${r},${g},${b},.25);`;
+                const nameColor = isBas ? "#ea580c" : color;
+                const dotBg = isBas ? "#ea580c" : color;
+                const inputBorder = isBas ? "rgba(234,88,12,.35)" : `rgba(${r},${g},${b},.3)`;
+                const inputColor = isBas ? "#ea580c" : color;
+                return `<div class="fasal-item-colored" style="${bgStyle}padding:9px 12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+                    <span style="font-weight:700;color:${nameColor};font-size:13px;display:flex;align-items:center;gap:6px;">
+                      <span style="width:6px;height:6px;border-radius:50%;background:${dotBg};display:inline-block;flex-shrink:0;opacity:.9"></span>
+                      ${f.magaca}
+                      ${isBas ? `<span class="fasal-bas-badge">🚌 Bas</span>` : ""}
+                    </span>
+                    <div style="display:flex;gap:4px;align-items:center;">
+                      <button style="background:rgba(255,255,255,.7);border:1px solid rgba(59,130,246,.35);color:#2563eb;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-weight:700;" onclick="openEditFasal('${faracKey}',${i})">✏️</button>
+                      <button class="btn-del-fasal" onclick="removeFasal('${faracKey}',${i})">🗑️</button>
+                    </div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="color:${isBas?'rgba(234,88,12,.65)':`rgba(${r},${g},${b},.65)`};font-size:11px;min-width:80px;font-weight:600">💵 Qiimaha:</span>
+                    <input type="number" value="${f.qiimaha}" min="0"
+                      style="width:85px;padding:4px 8px;border:1.5px solid ${inputBorder};border-radius:6px;font-size:13px;text-align:right;font-weight:700;background:rgba(255,255,255,.75);color:${inputColor};outline:none;"
+                      onchange="updateFasalQiime('${faracKey}',${i},this.value)"/>
+                    <span style="color:${isBas?'rgba(234,88,12,.65)':`rgba(${r},${g},${b},.65)`};font-size:12px;font-weight:600">$</span>
+                  </div>
+                </div>`;
+              }).join("");
+
+          return `<div style="background:rgba(${r},${g},${b},.04);border-radius:14px;padding:14px 16px;border:1.5px solid rgba(${r},${g},${b},.18);">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;box-shadow:0 0 0 3px rgba(${r},${g},${b},.2)"></span>
+                <span style="font-weight:800;color:${color};font-size:13px;">${FARAC_LABELS[faracKey]}</span>
+                <span style="background:rgba(${r},${g},${b},.15);color:${color};border-radius:8px;padding:1px 7px;font-size:10px;font-weight:800;">${fasalada.length}</span>
+              </div>
+              <button style="background:rgba(${r},${g},${b},.1);border:1px solid rgba(${r},${g},${b},.25);color:${color};border-radius:6px;padding:3px 10px;font-size:11px;cursor:pointer;font-weight:700;" onclick="openResetModal('${faracKey}')">♻️</button>
+            </div>
+            <div class="fasal-list-colored">${items}</div>
+          </div>`;
+        }).join("")}
+      </div>
     </div>
   </div>`;
 }
@@ -1834,60 +2073,108 @@ function renderSettingsFasalada(){
 function renderSettingsFasaladaNonMaamul(){
   // Non-maamul: only add new class (no delete, no reset)
   const myFarac = currentUser.role;
-  const fasalList = (appData[myFarac]?.fasalada||[]).map((f,i)=>`
-    <div class="fasal-item" style="flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-weight:600;color:${FARAC_COLORS[myFarac]};font-size:13px">${f.magaca}</span>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span style="color:#888;font-size:12px;min-width:80px">💵 Qiimaha ($):</span>
-        <input type="number" value="${f.qiimaha}" min="0"
-          style="width:90px;padding:5px 8px;border:1px solid #ccc;border-radius:5px;font-size:13px;text-align:right;"
-          onchange="updateFasalQiime('${myFarac}',${i},this.value)"/>
-      </div>
-    </div>`).join("");
+  const color = FARAC_COLORS[myFarac];
+  const r = parseInt(color.slice(1,3),16), g = parseInt(color.slice(3,5),16), b = parseInt(color.slice(5,7),16);
+  const fasalada = appData[myFarac]?.fasalada || [];
 
-  return `<div class="settings-grid">
-    <div>
-      <h4 style="color:#1a3a5c;margin-bottom:14px">➕ Ku Dar Fasal Cusub</h4>
-      <label class="form-lbl">Magaca Fasalka</label>
-      <input id="new-fasal-name" class="form-input" placeholder="Tusaale: 6aad" onkeydown="if(event.key==='Enter')addFasalNonMaamul()"/>
-      <label class="form-lbl">Qiimaha ($)</label>
-      <input id="new-fasal-qiime" class="form-input" type="number" placeholder="Tusaale: 13" min="0"/>
-      <button class="btn-add" onclick="addFasalNonMaamul()">➕ Ku Dar</button>
+  const items = fasalada.length === 0
+    ? `<div style="color:#aaa;font-size:12px;padding:12px;text-align:center;background:rgba(${r},${g},${b},.04);border-radius:8px;border:1.5px dashed rgba(${r},${g},${b},.2)">Fasal ma jiro</div>`
+    : fasalada
+        .map((f, i) => ({f, i}))
+        .sort((a, b) => (a.f.nooca==="bas"?1:0) - (b.f.nooca==="bas"?1:0))
+        .map(({f, i}) => {
+        const isBas = f.nooca === "bas";
+        const alpha = i%2===0 ? .10 : .06;
+        const bgStyle = isBas
+          ? "background:linear-gradient(135deg,rgba(234,88,12,.14),rgba(251,146,60,.08));border-color:rgba(234,88,12,.4);"
+          : `background:rgba(${r},${g},${b},${alpha});border-color:rgba(${r},${g},${b},.25);`;
+        const nameColor = isBas ? "#ea580c" : color;
+        return `<div class="fasal-item-colored" style="${bgStyle}padding:9px 12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+            <span style="font-weight:700;color:${nameColor};font-size:13px;display:flex;align-items:center;gap:6px;">
+              <span style="width:6px;height:6px;border-radius:50%;background:${isBas?'#ea580c':color};display:inline-block;flex-shrink:0;opacity:.9"></span>
+              ${f.magaca}
+              ${isBas ? `<span class="fasal-bas-badge">🚌 Bas</span>` : ""}
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="color:${isBas?'rgba(234,88,12,.65)':`rgba(${r},${g},${b},.65)`};font-size:11px;min-width:80px;font-weight:600">💵 Qiimaha:</span>
+            <input type="number" value="${f.qiimaha}" min="0"
+              style="width:85px;padding:4px 8px;border:1.5px solid ${isBas?'rgba(234,88,12,.35)':`rgba(${r},${g},${b},.3)`};border-radius:6px;font-size:13px;text-align:right;font-weight:700;background:rgba(255,255,255,.75);color:${nameColor};outline:none;"
+              onchange="updateFasalQiime('${myFarac}',${i},this.value)"/>
+            <span style="color:${isBas?'rgba(234,88,12,.65)':`rgba(${r},${g},${b},.65)`};font-size:12px;font-weight:600">$</span>
+          </div>
+        </div>`;
+      }).join("");
+
+  return `
+  <div>
+    <div class="settings-grid">
+      <div>
+        <h4 style="color:#1a3a5c;margin-bottom:14px">➕ Ku Dar Fasal Cusub</h4>
+        <label class="form-lbl">Nooca Fasalka</label>
+        <select id="new-fasal-nooc" class="form-select" style="margin-bottom:14px">
+          <option value="caadi">🏫 Fasal Caadi</option>
+          <option value="bas">🚌 Fasal Bas</option>
+        </select>
+        <label class="form-lbl">Magaca Fasalka</label>
+        <input id="new-fasal-name" class="form-input" placeholder="Tusaale: 6aad" onkeydown="if(event.key==='Enter')addFasalNonMaamul()"/>
+        <label class="form-lbl">Qiimaha ($)</label>
+        <input id="new-fasal-qiime" class="form-input" type="number" placeholder="Tusaale: 13" min="0"/>
+        <button class="btn-add" onclick="addFasalNonMaamul()">➕ Ku Dar</button>
+      </div>
+      <div>
+        <h4 style="color:#1a3a5c;margin-bottom:8px">ℹ️ Tilmaan</h4>
+        <p style="color:#64748b;font-size:12px;line-height:1.7;background:#f8fafc;border-radius:9px;padding:12px 14px;border:1px solid #e2e8f0">
+          Fasalada cusub waxay u hooseeyan doontaa liiska hoose.<br>
+          Qiimaha waxaad ka bedeli kartaa meesha ku habboon.
+        </p>
+      </div>
     </div>
-    <div>
-      <h4 style="color:#1a3a5c;margin-bottom:14px">📝 Fasalada &amp; Qiimaha — ${FARAC_LABELS[myFarac]}</h4>
-      <div class="fasal-list" style="max-height:320px">${fasalList||"<p style='color:#aaa;font-size:13px'>Fasal ma jiro</p>"}</div>
+
+    <div class="settings-fasal-section">
+      <div style="background:rgba(${r},${g},${b},.04);border-radius:14px;padding:14px 16px;border:1.5px solid rgba(${r},${g},${b},.18);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="width:12px;height:12px;border-radius:50%;background:${color};display:inline-block;box-shadow:0 0 0 3px rgba(${r},${g},${b},.2)"></span>
+          <span style="font-weight:800;color:${color};font-size:13px;">${FARAC_LABELS[myFarac]}</span>
+          <span style="background:rgba(${r},${g},${b},.15);color:${color};border-radius:8px;padding:1px 7px;font-size:10px;font-weight:800;">${fasalada.length} fasal</span>
+        </div>
+        <div class="fasal-list-colored">${items}</div>
+      </div>
     </div>
   </div>`;
 }
 function addFasalNonMaamul(){
   const nameEl = document.getElementById("new-fasal-name");
   const qiimeEl = document.getElementById("new-fasal-qiime");
+  const noocEl  = document.getElementById("new-fasal-nooc");
   if(!nameEl || !nameEl.value.trim()) return;
   const farac = currentUser.role;
   const name = nameEl.value.trim();
-  const newFasal = emptyFasal(name, farac);
+  const nooca = noocEl ? noocEl.value : "caadi";
+  const newFasal = emptyFasal(name, farac, nooca);
   if(qiimeEl && qiimeEl.value !== "") newFasal.qiimaha = +qiimeEl.value;
   appData[farac].fasalada.push(newFasal);
   scheduleSave();
-  showToast(`✅ "${name}" ($${newFasal.qiimaha}) waa lagu daray ${FARAC_LABELS[farac]}`);
+  const noocLabel = nooca==="bas" ? "🚌 Bas" : "🏫 Caadi";
+  showToast(`✅ "${name}" [${noocLabel}] ($${newFasal.qiimaha}) waa lagu daray ${FARAC_LABELS[farac]}`);
   renderAll();
 }
 function renderSettingsUsers(){
-  const roleBgColors = {maamul:"#1a3a5c",sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a"};
+  const roleBgColors = {maamul:"#1a3a5c",sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a",kormeere:"#1565c0"};
+  const roleLabels = {maamul:"Maamulka",sare:"Dugsiga Sare",dhexe:"Dugsiga Dhexe",hoose1:"Hoose 1",hoose2:"Hoose 2",kormeere:"Kormeere"};
   const userList = Object.entries(USERS).map(([username, u])=>`
     <div class="user-item">
       <div class="user-item-info">
         <div class="user-item-name">👤 ${username}</div>
         <div class="user-item-meta">
-          <span class="role-badge" style="background:${roleBgColors[u.role]||'#555'}">${u.role}</span>
+          <span class="role-badge" style="background:${roleBgColors[u.role]||'#555'}">${roleLabels[u.role]||u.role}</span>
           &nbsp;${u.label||""}
           &nbsp;· 🔑 ${u.password}
         </div>
       </div>
       <div class="user-item-btns">
+        <button class="btn-save" style="font-size:11px;padding:5px 10px;margin-right:4px" onclick="openEditUser('${username}')">✏️ Edit</button>
         <button class="btn-del-user" onclick="deleteUser('${username}')">🗑️</button>
       </div>
     </div>`).join("");
@@ -1898,6 +2185,7 @@ function renderSettingsUsers(){
     {v:"dhexe",l:"Dugsiga Dhexe"},
     {v:"hoose1",l:"Hoose 1"},
     {v:"hoose2",l:"Hoose 2"},
+    {v:"kormeere",l:"Kormeere (Daawasho Kaliya)"},
   ].map(r=>`<option value="${r.v}">${r.l}</option>`).join("");
 
   return `<div class="settings-grid">
@@ -1917,6 +2205,25 @@ function renderSettingsUsers(){
       <h4 style="color:#1a3a5c;margin-bottom:14px">👥 Isticmaalayaasha</h4>
       <div class="fasal-list" style="max-height:320px">${userList}</div>
       <button class="btn-reset" style="margin-top:10px" onclick="resetUsersToDefault()">♻️ Dib u Deji Users-ka</button>
+    </div>
+  </div>
+  <!-- Edit User Modal -->
+  <div id="edit-user-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+    <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+      <h3 style="color:#1a3a5c;margin:0 0 18px;font-size:16px;font-weight:800">✏️ Wax ka Beddel User-ka</h3>
+      <input type="hidden" id="edit-user-orig-name"/>
+      <label class="form-lbl">Username</label>
+      <input id="edit-user-name" class="form-input" placeholder="username"/>
+      <label class="form-lbl">Password Cusub (banaan ka tag haddaadan bedelin)</label>
+      <input id="edit-user-pass" class="form-input" placeholder="Password cusub..."/>
+      <label class="form-lbl">Label (Magaca)</label>
+      <input id="edit-user-label" class="form-input" placeholder="Magaca"/>
+      <label class="form-lbl">Role</label>
+      <select id="edit-user-role" class="form-select">${roleOpts}</select>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn-cancel" style="flex:1" onclick="closeEditUser()">❌ Jooji</button>
+        <button class="btn-confirm" style="flex:1;background:#1565c0;color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;" onclick="saveEditUser()">💾 Keydi</button>
+      </div>
     </div>
   </div>`;
 }
@@ -2057,7 +2364,10 @@ function hexToRgba(hex, a){
 // ══════════════════════════════════════════
 // DATA MUTATIONS
 // ══════════════════════════════════════════
-function canEdit(key){ return !appData[key]?.submitted || currentUser.role==="maamul"; }
+function canEdit(key){ 
+  if(currentUser.role==="kormeere") return false;
+  return !appData[key]?.submitted || currentUser.role==="maamul"; 
+}
 
 function updateFasal(key, idx, field, val){
   if(!canEdit(key)) return;
@@ -2185,14 +2495,17 @@ function addFasal(){
   const nameEl = document.getElementById("new-fasal-name");
   const faracEl = document.getElementById("new-fasal-farac");
   const qiimeEl = document.getElementById("new-fasal-qiime");
+  const noocEl  = document.getElementById("new-fasal-nooc");
   if(!nameEl || !nameEl.value.trim()) return;
   const farac = faracEl ? faracEl.value : activeFarac;
   const name = nameEl.value.trim();
-  const newFasal = emptyFasal(name, farac);
+  const nooca = noocEl ? noocEl.value : "caadi";
+  const newFasal = emptyFasal(name, farac, nooca);
   if(qiimeEl && qiimeEl.value !== "") newFasal.qiimaha = +qiimeEl.value;
   appData[farac].fasalada.push(newFasal);
   scheduleSave();
-  showToast(`✅ "${name}" ($${newFasal.qiimaha}) waa lagu daray ${FARAC_LABELS[farac]}`);
+  const noocLabel = nooca==="bas" ? "🚌 Bas" : "🏫 Caadi";
+  showToast(`✅ "${name}" [${noocLabel}] ($${newFasal.qiimaha}) waa lagu daray ${FARAC_LABELS[farac]}`);
   renderAll();
 }
 function removeFasal(key, idx){
@@ -2245,6 +2558,102 @@ function resetUsersToDefault(){
   saveUsersToFb();
   showToast("♻️ Users-ka waa dib loo dejiyey","warning");
   renderContent();
+}
+
+// ── EDIT USER ─────────────────────────────
+function openEditUser(username){
+  const u = USERS[username];
+  if(!u) return;
+  document.getElementById("edit-user-orig-name").value = username;
+  document.getElementById("edit-user-name").value = username;
+  document.getElementById("edit-user-pass").value = "";
+  document.getElementById("edit-user-label").value = u.label||"";
+  const roleEl = document.getElementById("edit-user-role");
+  if(roleEl) roleEl.value = u.role;
+  const modal = document.getElementById("edit-user-modal");
+  if(modal) modal.style.display = "flex";
+}
+function closeEditUser(){
+  const modal = document.getElementById("edit-user-modal");
+  if(modal) modal.style.display = "none";
+}
+function saveEditUser(){
+  const origName = document.getElementById("edit-user-orig-name").value;
+  const newName = (document.getElementById("edit-user-name").value||"").trim().toLowerCase();
+  const newPass = (document.getElementById("edit-user-pass").value||"").trim();
+  const newLabel = (document.getElementById("edit-user-label").value||"").trim();
+  const newRole = document.getElementById("edit-user-role").value;
+  if(!newName){ showToast("⚠️ Username buuxi","warning"); return; }
+  if(newName !== origName && USERS[newName]){ showToast("⚠️ Username cusub horaan u jiray","warning"); return; }
+  const updatedUser = {
+    ...USERS[origName],
+    role: newRole,
+    label: newLabel || newName,
+  };
+  if(newPass) updatedUser.password = newPass;
+  if(newName !== origName){
+    delete USERS[origName];
+  }
+  USERS[newName] = updatedUser;
+  saveUsersToFb();
+  closeEditUser();
+  showToast(`✅ User "${newName}" waa la cusboonaysiiyey`);
+  renderContent();
+}
+
+// ── EDIT FASAL ────────────────────────────
+let _editFasalKey = null;
+let _editFasalIdx = null;
+function openEditFasal(faracKey, idx){
+  _editFasalKey = faracKey;
+  _editFasalIdx = idx;
+  const f = appData[faracKey].fasalada[idx];
+  if(!f) return;
+  // Build modal dynamically
+  let existingModal = document.getElementById("edit-fasal-modal");
+  if(!existingModal){
+    existingModal = document.createElement("div");
+    existingModal.id = "edit-fasal-modal";
+    document.body.appendChild(existingModal);
+  }
+  const color = FARAC_COLORS[faracKey];
+  existingModal.style.cssText = "display:flex;position:fixed;inset:0;background:rgba(10,22,40,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:16px;";
+  existingModal.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+      <h3 style="color:${color};margin:0 0 18px;font-size:16px;font-weight:800">✏️ Wax ka Beddel Fasalka</h3>
+      <label class="form-lbl">Magaca Fasalka</label>
+      <input id="ef-name" class="form-input" value="${f.magaca}"/>
+      <label class="form-lbl">Nooca</label>
+      <select id="ef-nooc" class="form-select">
+        <option value="caadi" ${f.nooca!=="bas"?"selected":""}>🏫 Fasal Caadi</option>
+        <option value="bas" ${f.nooca==="bas"?"selected":""}>🚌 Fasal Bas</option>
+      </select>
+      <label class="form-lbl">Qiimaha ($)</label>
+      <input id="ef-qiime" class="form-input" type="number" value="${f.qiimaha}" min="0"/>
+      <div style="display:flex;gap:10px;margin-top:6px">
+        <button class="btn-cancel" style="flex:1" onclick="closeEditFasal()">❌ Jooji</button>
+        <button style="flex:1;background:${color};color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;" onclick="saveEditFasal()">💾 Keydi</button>
+      </div>
+    </div>`;
+}
+function closeEditFasal(){
+  const modal = document.getElementById("edit-fasal-modal");
+  if(modal) modal.style.display = "none";
+}
+function saveEditFasal(){
+  if(_editFasalKey===null || _editFasalIdx===null) return;
+  const name = (document.getElementById("ef-name")?.value||"").trim();
+  const nooca = document.getElementById("ef-nooc")?.value || "caadi";
+  const qiime = +(document.getElementById("ef-qiime")?.value||0);
+  if(!name){ showToast("⚠️ Magaca fasalka buuxi","warning"); return; }
+  const f = appData[_editFasalKey].fasalada[_editFasalIdx];
+  f.magaca = name;
+  f.nooca = nooca;
+  f.qiimaha = qiime;
+  scheduleSave();
+  closeEditFasal();
+  showToast(`✅ Fasalka "${name}" waa la cusboonaysiiyey`);
+  renderAll();
 }
 
 // ── QIIMAHA / LANG SETTINGS ───────────────
