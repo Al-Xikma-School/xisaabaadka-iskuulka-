@@ -273,7 +273,7 @@ window.dispatchEvent(new Event("fb-ready"));
   .report-sum-val{font-size:18px;font-weight:800;font-family:'Space Grotesk',sans-serif;}
   .report-tbl-wrap{overflow-x:auto;border-radius:10px;border:1.5px solid #e2e8f0;margin-bottom:18px;-webkit-overflow-scrolling:touch;}
   .report-tbl{width:100%;border-collapse:collapse;font-size:11px;table-layout:auto;}
-  .report-tbl th{background:#0a1628;color:#ffd700;padding:7px 6px;text-align:center;font-weight:700;font-size:10px;white-space:normal;word-break:break-word;line-height:1.25;max-width:70px;}
+  .report-tbl th{background:#0a1628;color:#ffd700;padding:7px 6px;text-align:center;font-weight:700;font-size:10px;white-space:normal;word-break:normal;overflow-wrap:break-word;line-height:1.25;max-width:70px;}
   .report-tbl td{padding:6px 6px;text-align:center;border-bottom:1px solid #f1f5f9;color:#334155;font-size:11px;white-space:nowrap;}
   .report-tbl th:first-child{text-align:left;min-width:80px;position:sticky;left:0;z-index:2;background:#0a1628;}
   .report-tbl td:first-child{text-align:left;white-space:nowrap;position:sticky;left:0;z-index:1;background:#fff;}
@@ -1861,19 +1861,19 @@ function buildReportHTML(fd, calc, color){
   <div class="report-tbl-wrap">
     <table class="report-tbl">
       <thead><tr>
-        <th style="text-align:left;white-space:normal;word-break:break-word">Fasalka</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('tiradaBixisay')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('qiimaha')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('lacagtaSooHormartay')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('lacagtaDhimanayd')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('tiradaAanBixin')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('lacagtaAanBixin')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('scholarship')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('freeStudents')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('ardaydaCusub')}</th>
-        <th style="white-space:normal;word-break:break-word;max-width:60px">${FL('ardaydaBaxday')}</th>
-        <th style="background:#065f46;white-space:normal;word-break:break-word;max-width:60px">Wadarta A</th>
-        <th style="background:#1d4ed8;white-space:normal;word-break:break-word;max-width:60px">Wadarta L</th>
+        <th style="text-align:left;white-space:normal;word-break:normal;overflow-wrap:break-word">Fasalka</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('tiradaBixisay')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('qiimaha')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('lacagtaSooHormartay')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('lacagtaDhimanayd')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('tiradaAanBixin')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('lacagtaAanBixin')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('scholarship')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('freeStudents')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('ardaydaCusub')}</th>
+        <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('ardaydaBaxday')}</th>
+        <th style="background:#065f46;white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">Wadarta A</th>
+        <th style="background:#1d4ed8;white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">Wadarta L</th>
       </tr></thead>
       <tbody>${xisaabRows}</tbody>
       <tfoot><tr>
