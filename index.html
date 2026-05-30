@@ -829,7 +829,7 @@ async function saveUsersToFb(){
   try{ await fbSet(USERS_FB_PATH, USERS); }catch{}
 }
 async function saveSettingsToFb(){
-  try{ await fbSet(SETTINGS_FB_PATH, {lang: currentLang, qiimaha: defaultQiimaha, customFieldLabels, customKharashLabels}); }catch{}
+  try{ await fbSet(SETTINGS_FB_PATH, {lang: currentLang, qiimaha: defaultQiimaha, customFieldLabels, customKharashLabels, kharashLabels: KHARASH_LABELS}); }catch{}
 }
 async function loadUsersAndSettings(){
   try{
@@ -841,6 +841,9 @@ async function loadUsersAndSettings(){
       if(savedSettings.qiimaha) defaultQiimaha = savedSettings.qiimaha;
       if(savedSettings.customFieldLabels) customFieldLabels = savedSettings.customFieldLabels;
       if(savedSettings.customKharashLabels) customKharashLabels = savedSettings.customKharashLabels;
+      if(savedSettings.kharashLabels && typeof savedSettings.kharashLabels === "object"){
+        Object.assign(KHARASH_LABELS, savedSettings.kharashLabels);
+      }
     }
   }catch{}
 }
@@ -2166,11 +2169,12 @@ function renderSettingsTab(isMaamul){
   // Non-maamul sees only: fasalada (add only), qiimaha, luuqad
   const tabs = isMaamul
     ? [
-        {id:"fasalada", icon:"🏫", label:"Fasalada"},
-        {id:"users",    icon:"👥", label:"Isticmaalayaasha"},
-        {id:"qiimaha",  icon:"💵", label:"Qiimaha"},
-        {id:"kolomyada",icon:"🏷️", label:"Kolomyada"},
-        {id:"luuqad",   icon:"🌐", label:"Luuqadda"},
+        {id:"fasalada",  icon:"🏫", label:"Fasalada"},
+        {id:"users",     icon:"👥", label:"Isticmaalayaasha"},
+        {id:"qiimaha",   icon:"💵", label:"Qiimaha"},
+        {id:"kolomyada", icon:"🏷️", label:"Kolomyada"},
+        {id:"kharashMgr",icon:"📋", label:"Kharashka"},
+        {id:"luuqad",    icon:"🌐", label:"Luuqadda"},
       ]
     : [
         {id:"fasalada", icon:"🏫", label:"Fasalada"},
@@ -2189,6 +2193,7 @@ function renderSettingsTab(isMaamul){
   else if(activeSettingsTab==="users" && isMaamul) html += renderSettingsUsers();
   else if(activeSettingsTab==="qiimaha") html += renderSettingsQiimaha();
   else if(activeSettingsTab==="kolomyada" && isMaamul) html += renderSettingsKolomyada();
+  else if(activeSettingsTab==="kharashMgr" && isMaamul) html += renderSettingsKharashMgr();
   else if(activeSettingsTab==="luuqad") html += renderSettingsLuuqad();
 
   return html;
@@ -2611,6 +2616,120 @@ function resetKolomyada(){
   saveSettingsToFb();
   renderAll();
   showToast("♻️ Kolomyada waa dib loo dejiyey","warning");
+}
+
+// ══════════════════════════════════════════
+// SETTINGS: KHARASH MANAGER (Add/Edit/Delete)
+// ══════════════════════════════════════════
+function renderSettingsKharashMgr(){
+  const keys = Object.keys(KHARASH_LABELS);
+  const rows = keys.map((k, i) => {
+    const label = customKharashLabels[k] || KHARASH_LABELS[k];
+    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:9px;margin-bottom:6px;background:#f8fafc;border:1.5px solid #e2e8f0;">
+      <span style="flex:1;font-weight:600;color:#1a3a5c;font-size:13px">${label}</span>
+      <button onclick="openEditKharashItem('${k}')"
+        style="padding:5px 10px;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1565c0;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">✏️</button>
+      ${keys.length > 1
+        ? `<button onclick="removeKharashItem('${k}')"
+            style="padding:5px 10px;background:#fef2f2;border:1.5px solid #fecaca;color:#dc2626;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">🗑️</button>`
+        : `<button disabled style="padding:5px 10px;background:#f8fafc;border:1.5px solid #e2e8f0;color:#cbd5e1;border-radius:7px;font-size:12px;font-weight:700;cursor:not-allowed;">🗑️</button>`
+      }
+    </div>`;
+  }).join("");
+
+  return `<div>
+    <h4 style="color:#1a3a5c;margin-bottom:6px">📋 Maamulka Qaybaha Kharashka</h4>
+    <p style="color:#888;font-size:12px;margin-bottom:16px;line-height:1.6">Waxaad ku dari kartaa qaybaha kharash cusub, waxaad bedeli kartaa magacyada, ama waxaad tiri kartaa kuwa aadan u baahnayn.</p>
+
+    <div style="background:#f0fdf4;border:1.5px solid #a7f3d0;border-radius:12px;padding:16px;margin-bottom:18px">
+      <div style="font-size:11px;font-weight:800;color:#065f46;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">➕ Ku Dar Qaybta Kharash Cusub</div>
+      <div style="display:flex;gap:8px;align-items:flex-end">
+        <div style="flex:1">
+          <label class="form-lbl">Magaca Qaybta</label>
+          <input id="new-kharash-name" class="form-input" style="margin-bottom:0" placeholder="Tusaale: Koronto, Biyo, Kireynta..."
+            onkeydown="if(event.key==='Enter')addKharashItem()"/>
+        </div>
+        <button onclick="addKharashItem()" class="btn-add" style="width:auto;padding:9px 18px;white-space:nowrap">➕ Ku Dar</button>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:11px;font-weight:800;color:#1a3a5c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">📝 Qaybaha Jira (${keys.length})</div>
+      ${rows}
+    </div>
+
+    <div id="kharash-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+      <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+        <h3 style="color:#1a3a5c;margin:0 0 16px;font-size:16px;font-weight:800">✏️ Wax ka Beddel Magaca</h3>
+        <input type="hidden" id="kharash-edit-key"/>
+        <label class="form-lbl">Magaca Cusub</label>
+        <input id="kharash-edit-name" class="form-input" placeholder="Magaca qaybta..."
+          onkeydown="if(event.key==='Enter')saveKharashItemEdit()"/>
+        <div style="display:flex;gap:10px;margin-top:6px">
+          <button class="btn-cancel" style="flex:1" onclick="closeKharashEditModal()">❌ Jooji</button>
+          <button style="flex:1;background:#1565c0;color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;" onclick="saveKharashItemEdit()">💾 Keydi</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function addKharashItem(){
+  const inp = document.getElementById("new-kharash-name");
+  const name = inp ? inp.value.trim() : "";
+  if(!name){ showToast("⚠️ Magaca qaybta gali","warning"); return; }
+  const key = "kharash_" + Date.now();
+  KHARASH_LABELS[key] = name;
+  Object.keys(DEFAULT_FASALADA).forEach(fk=>{
+    if(appData[fk] && appData[fk].kharash) appData[fk].kharash[key] = 0;
+  });
+  saveSettingsToFb();
+  scheduleSave();
+  showToast("✅ Qaybta kharash waa la daray: " + name);
+  renderAll();
+  setSettingsTab("kharashMgr");
+}
+
+function openEditKharashItem(key){
+  const modal = document.getElementById("kharash-edit-modal");
+  if(!modal) return;
+  document.getElementById("kharash-edit-key").value = key;
+  document.getElementById("kharash-edit-name").value = customKharashLabels[key] || KHARASH_LABELS[key] || "";
+  modal.style.display = "flex";
+  setTimeout(()=>{ document.getElementById("kharash-edit-name").focus(); }, 100);
+}
+
+function closeKharashEditModal(){
+  const modal = document.getElementById("kharash-edit-modal");
+  if(modal) modal.style.display = "none";
+}
+
+function saveKharashItemEdit(){
+  const key = document.getElementById("kharash-edit-key").value;
+  const name = document.getElementById("kharash-edit-name").value.trim();
+  if(!name){ showToast("⚠️ Magaca gali","warning"); return; }
+  KHARASH_LABELS[key] = name;
+  customKharashLabels[key] = name;
+  saveSettingsToFb();
+  closeKharashEditModal();
+  showToast("✅ Magaca waa la beddelay: " + name);
+  renderAll();
+  setSettingsTab("kharashMgr");
+}
+
+function removeKharashItem(key){
+  const label = customKharashLabels[key] || KHARASH_LABELS[key] || key;
+  if(!confirm(`Ma hubtaa inaad tiraysid "${label}"?\n\nXogta kharashka ee qaybtan waa laga tirtiri doonaa dhammaan faracyada.`)) return;
+  delete KHARASH_LABELS[key];
+  delete customKharashLabels[key];
+  Object.keys(DEFAULT_FASALADA).forEach(fk=>{
+    if(appData[fk] && appData[fk].kharash) delete appData[fk].kharash[key];
+  });
+  saveSettingsToFb();
+  scheduleSave();
+  showToast("🗑️ Qaybta kharash waa la tiriyey","warning");
+  renderAll();
+  setSettingsTab("kharashMgr");
 }
 
 
