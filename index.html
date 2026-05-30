@@ -672,6 +672,8 @@ let defaultQiimaha = {sare:13, dhexe:10, hoose1:8, hoose2:8};
 // Custom editable column/expense labels (overrides defaults)
 let customFieldLabels = {};
 let customKharashLabels = {};
+// Bisha nidaamka lagu bilaabay (maamulku wuu dooran karaa)
+let systemStartBisha = "";
 // Helper: get current label (custom or default)
 function FL(key){ return customFieldLabels[key] || FIELD_LABELS[key] || key; }
 function KL(key){ return customKharashLabels[key] || KHARASH_LABELS[key] || key; }
@@ -829,7 +831,7 @@ async function saveUsersToFb(){
   try{ await fbSet(USERS_FB_PATH, USERS); }catch{}
 }
 async function saveSettingsToFb(){
-  try{ await fbSet(SETTINGS_FB_PATH, {lang: currentLang, qiimaha: defaultQiimaha, customFieldLabels, customKharashLabels, kharashLabels: KHARASH_LABELS}); }catch{}
+  try{ await fbSet(SETTINGS_FB_PATH, {lang: currentLang, qiimaha: defaultQiimaha, customFieldLabels, customKharashLabels, kharashLabels: KHARASH_LABELS, systemStartBisha}); }catch{}
 }
 async function loadUsersAndSettings(){
   try{
@@ -841,6 +843,7 @@ async function loadUsersAndSettings(){
       if(savedSettings.qiimaha) defaultQiimaha = savedSettings.qiimaha;
       if(savedSettings.customFieldLabels) customFieldLabels = savedSettings.customFieldLabels;
       if(savedSettings.customKharashLabels) customKharashLabels = savedSettings.customKharashLabels;
+      if(savedSettings.systemStartBisha) systemStartBisha = savedSettings.systemStartBisha;
       if(savedSettings.kharashLabels && typeof savedSettings.kharashLabels === "object"){
         Object.assign(KHARASH_LABELS, savedSettings.kharashLabels);
       }
@@ -2175,6 +2178,7 @@ function renderSettingsTab(isMaamul){
         {id:"kolomyada", icon:"🏷️", label:"Kolomyada"},
         {id:"kharashMgr",icon:"📋", label:"Kharashka"},
         {id:"luuqad",    icon:"🌐", label:"Luuqadda"},
+        {id:"bilawga",   icon:"🗓️", label:"Bisha Bilawga"},
       ]
     : [
         {id:"fasalada", icon:"🏫", label:"Fasalada"},
@@ -2195,11 +2199,69 @@ function renderSettingsTab(isMaamul){
   else if(activeSettingsTab==="kolomyada" && isMaamul) html += renderSettingsKolomyada();
   else if(activeSettingsTab==="kharashMgr" && isMaamul) html += renderSettingsKharashMgr();
   else if(activeSettingsTab==="luuqad") html += renderSettingsLuuqad();
+  else if(activeSettingsTab==="bilawga" && isMaamul) html += renderSettingsBilawga();
 
   return html;
 }
 
 function setSettingsTab(t){ activeSettingsTab=t; renderContent(); }
+
+function renderSettingsBilawga(){
+  const nowYear = new Date().getFullYear();
+  const years = [nowYear - 1, nowYear, nowYear + 1];
+  const hasBilawga = !!systemStartBisha;
+  const bilawgaName = hasBilawga ? getBishaName(systemStartBisha) : BILAHA[new Date().getMonth()];
+  const bilawgaYear = hasBilawga ? getBishaYear(systemStartBisha) : nowYear;
+  return `<div>
+    <h4 style="color:#1a3a5c;margin-bottom:8px">🗓️ Bisha Bilawga Nidaamka</h4>
+    <p style="color:#64748b;font-size:13px;line-height:1.6;margin-bottom:20px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:12px 14px;">
+      <strong style="color:#0369a1">Maxay tahay?</strong><br>
+      Marka nidaamka cusub la bilaabo, xisaabiyuhu wuxuu ku dhacaa xayniin: nidaamku wuxuu u baahan yahay in bisha hore la gudbiyey ka hor intaan bisha hadda la gudbin.<br><br>
+      <strong style="color:#0369a1">Xalka:</strong> Dooro bisha ugu horeysa ee nidaamka la bilaabay. Bisha aad doortid, kuma baahna gudbin bisha ka horeysa.
+    </p>
+    <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:16px">
+      <label class="form-lbl" style="margin-bottom:10px">📅 Dooro Bisha Bilawga</label>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <select id="bilawga-bisha-name" class="form-select" style="margin-bottom:0;flex:1;min-width:140px">
+          ${BILAHA.map(b=>`<option value="${b}" ${b===bilawgaName?"selected":""}>${b}</option>`).join("")}
+        </select>
+        <select id="bilawga-bisha-year" class="form-select" style="margin-bottom:0;width:110px">
+          ${years.map(y=>`<option value="${y}" ${y===bilawgaYear?"selected":""}>${y}</option>`).join("")}
+        </select>
+        <button onclick="saveSystemStartBisha()" style="padding:9px 22px;background:linear-gradient(135deg,#1565c0,#3b82f6);border:none;border-radius:9px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 3px 12px rgba(21,101,192,.3)">💾 Keydi</button>
+      </div>
+    </div>
+    ${hasBilawga ? `
+    <div style="background:#ecfdf5;border:1.5px solid #a7f3d0;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span style="font-size:26px">✅</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:800;color:#065f46;font-size:14px">Bisha Bilawga Hadda: ${systemStartBisha}</div>
+        <div style="color:#059669;font-size:12px;margin-top:2px">Bishaan, xisaabiyuhu wuxuu u gudbin karaa Maamulka bisha hore la'aanteed.</div>
+      </div>
+      <button onclick="clearSystemStartBisha()" style="padding:6px 14px;background:#fff;border:1.5px solid #fca5a5;border-radius:8px;color:#dc2626;font-size:12px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;white-space:nowrap">🗑️ Tirtir</button>
+    </div>` : `
+    <div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:22px">⚠️</span>
+      <div style="color:#92400e;font-size:13px;font-weight:600">Bisha bilawga lama dooran. Xisaabiyuhu wuxuu u baahan yahay in bisha hore la gudbiyey si uu u gudbin karo.</div>
+    </div>`}
+  </div>`;
+}
+function saveSystemStartBisha(){
+  const nameEl = document.getElementById("bilawga-bisha-name");
+  const yearEl = document.getElementById("bilawga-bisha-year");
+  if(!nameEl || !yearEl) return;
+  systemStartBisha = nameEl.value + " " + yearEl.value;
+  saveSettingsToFb();
+  showToast("✅ Bisha bilawga waa la keydiey: " + systemStartBisha);
+  renderContent();
+}
+function clearSystemStartBisha(){
+  if(!confirm("Ma hubtaa inaad tirtiraysaa bisha bilawga?\n\nKadibna check-ka bishii hore ee gudbin wuu soo noqon doonaa.")) return;
+  systemStartBisha = "";
+  saveSettingsToFb();
+  showToast("🗑️ Bisha bilawga waa la tiriyey", "warning");
+  renderContent();
+}
 
 function onNoocChange(val){
   const btn = document.querySelector(".btn-add");
@@ -3114,10 +3176,12 @@ async function openSubmitModal(key){
   }
 
   // Hubi 3: Bisha hore waa in la gudbiyey ka hor intaan bisha hadda la gudbin
+  // EXCEPTION: Haddii bisha hadda ay tahay bisha bilawga nidaamka, check-ka ha laga gudbo
   const bishaName = getBishaName(currentBisha);
   const bishaYear = getBishaYear(currentBisha);
   const bishaIdx = BILAHA.indexOf(bishaName);
-  if(bishaIdx > 0){
+  const isStartMonth = systemStartBisha && currentBisha === systemStartBisha;
+  if(bishaIdx > 0 && !isStartMonth){
     // Bisha hore waa jirtaa (ma aha Janaayo)
     const prevBishaName = BILAHA[bishaIdx - 1];
     const prevBishaFull = prevBishaName + " " + bishaYear;
