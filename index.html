@@ -679,6 +679,8 @@ function FL(key){ return customFieldLabels[key] || FIELD_LABELS[key] || key; }
 function KL(key){ return customKharashLabels[key] || KHARASH_LABELS[key] || key; }
 let pwdVisible = false;
 let appData = buildInitFarac();
+// Xanib history: list of {farac, ardayMagac, lacag, waqti, bisha}
+let xanibHistory = [];
 
 function L(key){ return (LUUQADAHA[currentLang]||LUUQADAHA.so)[key] || key; }
 
@@ -787,7 +789,11 @@ async function loadBisha(targetBisha){
       Object.keys(DEFAULT_FASALADA).forEach(k=>{
         if(prevSnap[k]){
           const addH = +(prevSnap[k]._nextHormar||0);
-          const addD = +(prevSnap[k]._nextDhiman||0);
+          // Ka jar lacagta ardayda la xanibay bisha hore — si uusan dib ugu soo noqon
+          const xanibJaar = (prevSnap[k].baxayaasha||[])
+            .filter(b=>b.xanibay)
+            .reduce((s,b)=>s+(+(b.lacagBishaLaTagay||0)),0);
+          const addD = Math.max(0, (+(prevSnap[k]._nextDhiman||0)) - xanibJaar);
           // Haddii carry horaan loogu darin (flag ku jiro) ha darin
           if(!appData[k]._carryApplied && (addH>0 || addD>0)){
             appData[k].lacagHormarshay    = addH;
@@ -1043,6 +1049,9 @@ function renderSidebar(){
       <div class="label">${FARAC_LABELS[currentUser.role]}</div>
       ${appData[currentUser.role]?.submitted?`<div class="sub">✅ ${L("msg_submitted").replace("📤 ","")}</div>`:""}
     </div>`;
+    // History tab for shaqaalaha
+    html += `<div class="sb-divider"></div>
+      <button class="sb-tab-btn ${activeTab==="history"?"active":""}" onclick="selectHistoryTab()" style="margin-bottom:4px">📜 History</button>`;
   }
   if(activeFarac){
     html += `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:6px">
@@ -1063,6 +1072,7 @@ function renderSidebar(){
 function selectFarac(k){ activeFarac=k; activeTab="xisaab"; renderAll(); }
 function selectGuud(){ activeFarac=null; activeTab="guud"; renderAll(); }
 function selectMaamulSettings(){ activeFarac=null; activeTab="maamul-settings"; activeSettingsTab="fasalada"; renderAll(); }
+function selectHistoryTab(){ activeFarac=null; activeTab="history"; renderAll(); }
 function selectTab(t){ activeTab=t; renderContent(); renderSidebar(); }
 
 // ══════════════════════════════════════════
@@ -1084,6 +1094,7 @@ function renderContent(){
     return;
   }
   if((activeFarac===null) && (isMaamul || isKormeere)){ mc.innerHTML=renderGuud(); initGuudCharts(); return; }
+  if(activeFarac===null && activeTab==="history"){ mc.innerHTML=renderHistoryTab(); return; }
   if(activeFarac){ mc.innerHTML=renderFaracDetail(); if(activeTab==="charts") initFaracCharts(); return; }
   mc.innerHTML="";
 }
@@ -1706,6 +1717,15 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
         </select>`)
         : `<span style="color:#ccc;font-size:12px">—</span>`}
       </td>
+      <td>
+        ${currentUser.role==="maamul" && !b.xanibay
+          ? `<button onclick="xanibArday('${faracKey}',${i})"
+              style="padding:4px 12px;background:linear-gradient(135deg,#1a3a5c,#1565c0);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">🔒 Xanib</button>`
+          : b.xanibay
+            ? `<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">✅ La xanibay</span>`
+            : `<span style="color:#ccc;font-size:11px">—</span>`
+        }
+      </td>
       ${!isLocked && !isKormeere?`<td><button onclick="removeBaxay('${faracKey}',${i})"
         style="background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;">🗑️</button></td>`:"<td></td>"}
     </tr>`;
@@ -1734,6 +1754,7 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
             <th>Lacag Bisha La Tagay</th>
             <th>Lacag Bisha La Tagay ($)</th>
             <th>Maka Quustay?</th>
+            ${currentUser.role==="maamul"?`<th style="background:#1a3a5c!important;color:#ffd700!important;font-weight:800!important">Xanib</th>`:"<th></th>"}
             <th></th>
           </tr></thead>
           <tbody>${rows}</tbody>
@@ -1770,7 +1791,107 @@ function updateBaxay(key, idx, field, val){
   refreshCalcDisplay();
 }
 
-// ── REPORT TAB ────────────────────────────
+// ── XANIB ARDAY ───────────────────────────
+function xanibArday(faracKey, idx){
+  if(currentUser.role !== "maamul") return;
+  const b = appData[faracKey].baxayaasha[idx];
+  if(!b) return;
+  const lacag = +(b.lacagBishaLaTagay||0);
+  if(!lacag){ showToast("⚠️ Ardayga lacag lama gelin, ma xanibo kartid","warning"); return; }
+  if(b.xanibay){ showToast("⚠️ Ardaygaan horey ayaa loo xanibay","warning"); return; }
+
+  // Ka jar lacagta kaarka cas (lacagDhimanaydKore)
+  const fd = appData[faracKey];
+  const kore = +(fd.lacagDhimanaydKore||0);
+  fd.lacagDhimanaydKore = Math.max(0, kore - lacag);
+
+  // Mark as xanibay
+  b.xanibay = true;
+  b.xanibWaqti = new Date().toISOString();
+
+  // Keydi history
+  xanibHistory.push({
+    farac: FARAC_LABELS[faracKey]||faracKey,
+    ardayMagac: b.magac||"—",
+    lacag: lacag,
+    waqti: new Date().toLocaleString("so-SO"),
+    bisha: currentBisha
+  });
+  saveXanibHistoryToFb();
+
+  scheduleSave();
+  refreshCalcDisplay();
+  showToast(`✅ ${b.magac||"Ardayga"} waa la xanibay — $${lacag.toLocaleString()} kaarka cas ayaa laga jaaray`);
+}
+
+// ── XANIB HISTORY FIREBASE ────────────────
+const XANIB_HISTORY_FB_PATH = "xanibHistory";
+async function saveXanibHistoryToFb(){
+  try{ await window._fbSet(window._fbRef(window._fbDb, XANIB_HISTORY_FB_PATH), xanibHistory); }catch(e){}
+}
+async function loadXanibHistoryFromFb(){
+  try{
+    const snap = await window._fbGet(window._fbRef(window._fbDb, XANIB_HISTORY_FB_PATH));
+    const val = snap.val ? snap.val() : snap;
+    if(val && Array.isArray(val)) xanibHistory = val;
+    else if(val && typeof val === "object") xanibHistory = Object.values(val);
+  }catch(e){}
+}
+// ── HISTORY TAB ───────────────────────────
+function renderHistoryTab(){
+  const rows = xanibHistory.length === 0
+    ? `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Wax xanib ah ma jiraan weli</td></tr>`
+    : [...xanibHistory].reverse().map((h, i) => `
+      <tr>
+        <td style="color:#64748b;font-weight:700;font-size:12px">${xanibHistory.length - i}</td>
+        <td style="font-weight:700;color:#0a1628">${h.ardayMagac}</td>
+        <td><span style="background:#eff6ff;color:#1565c0;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;border:1px solid #bfdbfe;">${h.farac}</span></td>
+        <td style="color:#dc2626;font-weight:800;font-family:'Space Grotesk',sans-serif;">$${(+h.lacag).toLocaleString()}</td>
+        <td style="color:#64748b;font-size:12px">${h.waqti} — <span style="color:#1565c0;font-weight:600">${h.bisha}</span></td>
+      </tr>`).join("");
+
+  const totalLacag = xanibHistory.reduce((s,h)=>s+(+h.lacag),0);
+
+  return `
+  <div class="panel" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="width:5px;height:32px;border-radius:4px;background:linear-gradient(135deg,#1a3a5c,#1565c0)"></div>
+        <div>
+          <h2 style="margin:0;color:#1a3a5c;font-size:17px;font-weight:800">📜 History — Ardayda La Xanibay</h2>
+          <p style="margin:3px 0 0;color:#64748b;font-size:12px;font-weight:500">Liiska ardayda maamulku xanibay — waqtiga iyo lacagta</p>
+        </div>
+      </div>
+      <div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1.5px solid #fca5a5;border-radius:12px;padding:10px 18px;text-align:right">
+        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#991b1b">Wadarta La Jaaray</div>
+        <div style="font-size:20px;font-weight:800;color:#dc2626;font-family:'Space Grotesk',sans-serif">$${totalLacag.toLocaleString()}</div>
+      </div>
+    </div>
+    ${xanibHistory.length > 0
+      ? `<div style="background:linear-gradient(135deg,#fff7ed,#ffedd5);border:1.5px solid #fed7aa;border-radius:10px;padding:10px 16px;margin-bottom:14px;font-size:12px;font-weight:600;color:#92400e;">
+          ⚠️ Xogtan waxay muujisaa dhammaan ardayda maamulku lacagtooda kaarka cas ka jaaray (Xanibay). Wadarta: <strong>${xanibHistory.length}</strong> arday.
+        </div>`
+      : ""}
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th style="width:30px">#</th>
+          <th>Magaca Ardayga</th>
+          <th>Farac</th>
+          <th>Lacagta Ka Go'day ($)</th>
+          <th>Waqtiga — Bisha</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        ${xanibHistory.length > 0 ? `<tfoot><tr>
+          <td colspan="3" style="text-align:left;font-weight:800;color:#1a3a5c">Wadarta Xanibka: ${xanibHistory.length} Arday</td>
+          <td style="color:#dc2626;font-weight:800;font-family:'Space Grotesk',sans-serif;">$${totalLacag.toLocaleString()}</td>
+          <td></td>
+        </tr></tfoot>` : ""}
+      </table>
+    </div>
+  </div>`;
+}
+
 function renderReportTab(fd, calc, color){
   const reportInner = buildReportHTML(fd, calc, color);
 
@@ -2919,8 +3040,10 @@ async function submitFarac(key){
   const cagHadda = Math.max(0, (+(fd.lacagHormarshay||0)) - calc.totalHormartay);
   fd._nextHormar = cagHadda + calc.totalBishatanHormartay;
   // Kaarka cas bisha xigta: Hadda (lacagDhimanaydKore - totalDhimanayd) + lacagAanBixin + Baaqi ku ah
+  // Ka jar lacagta ardayda la xanibay — si kaarka cas bisha xigta uusan dib ugu soo noqon
+  const xanibTotalLacag = (fd.baxayaasha||[]).filter(b=>b.xanibay).reduce((s,b)=>s+(+(b.lacagBishaLaTagay||0)),0);
   const casHadda = Math.max(0, (+(fd.lacagDhimanaydKore||0)) - calc.totalDhimanayd);
-  fd._nextDhiman = casHadda + calc.totalLacagAanBixin + (+(fd.lacagKhususi||0));
+  fd._nextDhiman = Math.max(0, casHadda + calc.totalLacagAanBixin + (+(fd.lacagKhususi||0)) - xanibTotalLacag);
   // Kaydi ardayda totalka si bisha xigtu u ogaato farqiga
   fd._nextArdayda = calc.totalArdayda;
   fd.submitted = true;
@@ -3255,6 +3378,7 @@ async function appInit(){
   setFbLoading(true);
   try{
     await loadUsersAndSettings();
+    await loadXanibHistoryFromFb();
     applyLangToLogin();
     const savedBisha = await fbGetOnce(BISHA_FB_PATH);
     // Support both old format ("Abriil") and new format ("Abriil 2026")
