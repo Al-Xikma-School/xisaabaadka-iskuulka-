@@ -2040,8 +2040,8 @@ function buildReportHTML(fd, calc, color){
         <th style="text-align:left">Magaca</th>
         <th>Telefon</th>
         <th>Sababta</th>
-        <th>Lacag Bisha La Tagay</th>
-        <th>Lacag Bisha La Tagay ($)</th>
+        <th>Lacag Bisha </th>
+        <th>Lacag uu La Tagay ($)</th>
         <th>Maka Quustay</th>
       </tr></thead>
       <tbody>
@@ -2050,7 +2050,7 @@ function buildReportHTML(fd, calc, color){
           <td style="text-align:left;font-weight:700;color:#0a1628">${b.magac||"—"}</td>
           <td>${b.telefon||"—"}</td>
           <td>${b.sabab||"—"}</td>
-          <td><span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:800;background:${b.bixiyey==="haa"?"#ecfdf5":"#fef2f2"};color:${b.bixiyey==="haa"?"#059669":"#dc2626"}">${b.bixiyey==="haa"?"✅ Bixiyey":"❌ Kama bixin"}</span></td>
+          <td><span style="display:inline-block;padding:2px 8px;border-radius:5px;font-size:10px;font-weight:800;background:${b.bixiyey==="haa"?"#ecfdf5":"#fef2f2"};color:${b.bixiyey==="haa"?"#059669":"#dc2626"}">${b.bixiyey==="haa"?"✅ Bixiyey":"❌ Ma bixin"}</span></td>
           <td style="color:#1d4ed8;font-weight:700">$${(+(b.lacagBishaLaTagay||0)).toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:2})}</td>
           <td>${b.bixiyey==="maya"?(b.quustay==="Haa"?"✅ Haa":b.quustay==="Maya"?"❌ Maya":"—"):"—"}</td>
         </tr>`).join("")}
