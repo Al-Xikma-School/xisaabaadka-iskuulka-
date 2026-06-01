@@ -764,6 +764,32 @@ async function getPrevBisha(targetBisha){
   return BILAHA[idx - 1] + " " + year;
 }
 
+// Raadi _nextFasalada ugu dambeeyay bishaaha hore oo dhan (ilaa 24 bil)
+async function getLastKnownFasalada(targetBisha){
+  let checkBisha = targetBisha;
+  for(let i = 0; i < 24; i++){
+    const prev = await getPrevBisha(checkBisha);
+    if(!prev) break;
+    try{
+      const snap = await fbGetOnce(getFbPath(prev));
+      if(snap && typeof snap === "object"){
+        // Hubi farac kasta gaar ahaan
+        const result = {};
+        let foundAny = false;
+        Object.keys(DEFAULT_FASALADA).forEach(k=>{
+          if(snap[k] && snap[k]._nextFasalada && Array.isArray(snap[k]._nextFasalada) && snap[k]._nextFasalada.length > 0){
+            result[k] = snap[k]._nextFasalada;
+            foundAny = true;
+          }
+        });
+        if(foundAny) return result;
+      }
+    }catch{}
+    checkBisha = prev;
+  }
+  return null;
+}
+
 async function loadBisha(targetBisha){
   setFbLoading(true);
   try{
@@ -805,6 +831,27 @@ async function loadBisha(targetBisha){
         }
       });
       // Firebase ku keydi carry-ka cusub
+      if(_activeListener){ _activeListener(); _activeListener=null; }
+      try{ await fbSet(getFbPath(targetBisha), appData); }catch{}
+    }
+
+    // Fasalada magacyada: raadi bishaaha hore oo dhan — haddii bisha cusub weli Default fasalada leedahay
+    const lastKnown = await getLastKnownFasalada(targetBisha);
+    if(lastKnown){
+      Object.keys(DEFAULT_FASALADA).forEach(k=>{
+        if(!lastKnown[k]) return;
+        const bishaFasaladaWaaEmpty = !snap || !snap[k] || !snap[k].fasalada || snap[k].fasalada.length === 0;
+        const bishaFasaladaDefault = snap && snap[k] && snap[k].fasalada &&
+          snap[k].fasalada.length === DEFAULT_FASALADA[k].length &&
+          snap[k].fasalada.every((f,i)=> f.magaca === DEFAULT_FASALADA[k][i] && f.tiradaBixisay===0 && f.lacagtaBishatanHormartay===0);
+        if(bishaFasaladaWaaEmpty || bishaFasaladaDefault){
+          appData[k].fasalada = lastKnown[k].map(f=>emptyFasal(f.magaca, k, f.nooca||"caadi"));
+          appData[k].fasalada.forEach((f,i)=>{
+            if(lastKnown[k][i] && lastKnown[k][i].qiimaha) f.qiimaha = lastKnown[k][i].qiimaha;
+          });
+        }
+      });
+      // Kaydi fasalada cusub Firebase
       if(_activeListener){ _activeListener(); _activeListener=null; }
       try{ await fbSet(getFbPath(targetBisha), appData); }catch{}
     }
@@ -3046,6 +3093,8 @@ async function submitFarac(key){
   fd._nextDhiman = Math.max(0, casHadda + calc.totalLacagAanBixin + (+(fd.lacagKhususi||0)) - xanibTotalLacag);
   // Kaydi ardayda totalka si bisha xigtu u ogaato farqiga
   fd._nextArdayda = calc.totalArdayda;
+  // Kaydi fasalada magacyada + nooca si dhammaan bishaaha xigta u adeegsadaan (ha la abuurin dib)
+  fd._nextFasalada = fd.fasalada.map(f=>({magaca: f.magaca, nooca: f.nooca||"caadi", qiimaha: f.qiimaha}));
   fd.submitted = true;
   fd.savedAt = new Date().toISOString();
 
