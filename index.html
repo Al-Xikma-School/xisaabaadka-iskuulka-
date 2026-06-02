@@ -696,7 +696,7 @@ function buildInitFarac(){
   return d;
 }
 function calcFarac(fd){
-  let tB=0,tL=0,tH=0,tHTiro=0,tD=0,tBH=0,tAB=0,tLAB=0,tS=0,tF=0,tCusub=0,tBaxday=0;
+  let tB=0,tL=0,tH=0,tHTiro=0,tD=0,tBH=0,tAB=0,tLAB=0,tS=0,tF=0,tCusub=0,tBaxday=0,tDiscount=0;
   // Caadi (non-bas) totals — tirada kolomyada: bas kuma biirto wadarta tirada
   let tB_w=0, tHTiro_w=0, tAB_w=0, tS_w=0, tF_w=0, tCusub_w=0, tBaxday_w=0;
   fd.fasalada.forEach(f=>{
@@ -713,6 +713,7 @@ function calcFarac(fd){
     tF    +=+(f.freeStudents||0);
     tCusub+=+(f.ardaydaCusub||0);
     tBaxday+=+(f.ardaydaBaxday||0);
+    tDiscount+=+(f.discount||0);
     // Wadarta tirada — bas fasalada kuma biirto kolomyada tirada
     if(!isBas){
       tB_w     +=+(f.tiradaBixisay||0);
@@ -726,7 +727,7 @@ function calcFarac(fd){
   });
   const kWadar=Object.values(fd.kharash).reduce((a,b)=>a+(+b),0);
   const xarooday=tL+tD+tBH;
-  const saafi=xarooday-(+fd.discount)-(+fd.lacagKhususi);
+  const saafi=xarooday-tDiscount-(+fd.lacagKhususi);
   // totalArdayda: bas fasalada tiradooda kuma jirto
   const totalArdayda=tB_w+tAB_w+tS_w+tF_w+tCusub_w+tHTiro_w;
   return {
@@ -741,7 +742,7 @@ function calcFarac(fd){
     totalFree:tF, totalFree_w:tF_w,
     totalCusub:tCusub, totalCusub_w:tCusub_w,
     totalBaxday:tBaxday, totalBaxday_w:tBaxday_w,
-    kharashWadar:kWadar, xarooday, saafi, totalArdayda
+    kharashWadar:kWadar, xarooday, saafi, totalArdayda, totalDiscount:tDiscount
   };
 }
 
@@ -1090,6 +1091,7 @@ function renderSidebar(){
     html += `<button class="sb-guud-btn ${activeFarac===null && activeTab!=="maamul-settings"?"active":""}" onclick="selectGuud()" style="margin-top:4px">${L("nav_guud_short")}</button>`;
     if(isMaamul){
       html += `<button class="sb-guud-btn ${activeTab==="maamul-settings"?"active":""}" onclick="selectMaamulSettings()" style="margin-top:4px;background:${activeTab==="maamul-settings"?'linear-gradient(135deg,#1565c0,#3b82f6)':'transparent'};color:${activeTab==="maamul-settings"?'#fff':'rgba(255,255,255,.75)'}">${L("tab_settings")}</button>`;
+      html += `<button class="sb-guud-btn ${activeTab==="history"?"active":""}" onclick="selectHistoryTab()" style="margin-top:4px;background:${activeTab==="history"?'linear-gradient(135deg,#dc2626,#ef4444)':'transparent'};color:${activeTab==="history"?'#fff':'rgba(255,255,255,.75)'}">📜 History</button>`;
     }
   } else {
     html += `<div class="non-maamul-badge" style="background:${FARAC_COLORS[currentUser.role]}">
@@ -1140,8 +1142,8 @@ function renderContent(){
     </div>`;
     return;
   }
+  if((activeFarac===null) && activeTab==="history"){ mc.innerHTML=renderHistoryTab(); return; }
   if((activeFarac===null) && (isMaamul || isKormeere)){ mc.innerHTML=renderGuud(); initGuudCharts(); return; }
-  if(activeFarac===null && activeTab==="history"){ mc.innerHTML=renderHistoryTab(); return; }
   if(activeFarac){ mc.innerHTML=renderFaracDetail(); if(activeTab==="charts") initFaracCharts(); return; }
   mc.innerHTML="";
 }
@@ -1545,6 +1547,7 @@ function renderXisaabTab(fd, calc, isLocked, color){
         if(k==='lacagtaBishatanHormartay') return `<th style="background:#fff8e1!important;color:#e65100!important;font-weight:800!important">${FL(k)}</th>`;
         if(k==='ardaydaCusub') return `<th style="background:#e3f2fd!important;color:#1565c0!important;font-weight:700!important">${FL(k)}</th>`;
         if(k==='ardaydaBaxday') return `<th style="background:#fce4ec!important;color:#880e4f!important;font-weight:700!important">${FL(k)}</th>`;
+        if(k==='scholarship') return `<th style="background:#fff3e0!important;color:#e65100!important;font-weight:800!important">Discount ($)</th><th>${FL(k)}</th>`;
         return `<th>${FL(k)}</th>`;
       }).join("")}
       <th class="th-green">Wadarta Ardayda</th>
@@ -1571,6 +1574,7 @@ function renderXisaabTab(fd, calc, isLocked, color){
       ? `<td style="color:#cbd5e1;font-weight:600;font-size:13px;background:rgba(234,88,12,.04)">—</td>`
       : `<td class="td-green-bg">${wA}</td>`;
     html+=`<tr style="${rowBg}"><td style="${nameStyle}">${isBas?'🚌 ':''} ${f.magaca}</td>`;
+    const discountVal = +(f.discount||0);
     fields.forEach(field=>{
       const val = f[field] || 0;
       if(isKormeere){
@@ -1584,8 +1588,14 @@ function renderXisaabTab(fd, calc, isLocked, color){
         else if(field==="ardaydaBaxday") cellColor = "#9d174d";
         else if(field==="lacagtaSooHormartay") cellColor = "#059669";
         const prefix = (field==="lacagtaDhimanayd"||field==="lacagtaBishatanHormartay"||field==="lacagtaAanBixin") ? "$" : "";
+        if(field==="scholarship"){
+          html+=`<td><span style="display:inline-block;min-width:54px;padding:4px 8px;border-radius:6px;font-size:13px;font-weight:700;color:#e65100;background:#fff3e014;border:1.5px solid #e6510030;font-family:'Space Grotesk',sans-serif;text-align:center;">$${discountVal.toLocaleString()}</span></td>`;
+        }
         html+=`<td><span style="display:inline-block;min-width:54px;padding:4px 8px;border-radius:6px;font-size:13px;font-weight:700;color:${cellColor};background:${cellColor}14;border:1.5px solid ${cellColor}30;font-family:'Space Grotesk',sans-serif;text-align:center;">${prefix}${(+val).toLocaleString()}</span></td>`;
       } else {
+        if(field==="scholarship"){
+          html+=`<td><input class="inp-cell" type="number" min="0" value="${discountVal}" ${isLocked?"disabled":""} style="border-color:#fb923c;" onchange="updateFasal('${activeFarac}',${i},'discount',this.value)"/></td>`;
+        }
         html+=`<td><input class="inp-cell" type="number" value="${val}" ${isLocked?"disabled":""} onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
       }
     });
@@ -1601,6 +1611,7 @@ function renderXisaabTab(fd, calc, isLocked, color){
     <td class="td-green">$${calc.totalBishatanHormartay.toLocaleString()}</td>
     <td class="td-red">${calc.totalAanBixin_w}</td>
     <td class="td-red">$${calc.totalLacagAanBixin.toLocaleString()}</td>
+    <td style="color:#e65100;font-weight:800;background:#fff3e0">$${calc.totalDiscount.toLocaleString()}</td>
     <td>${calc.totalScholarship_w}</td>
     <td>${calc.totalFree_w}</td>
     <td style="color:#1565c0;font-weight:700">${calc.totalCusub_w}</td>
@@ -1630,18 +1641,9 @@ function renderXisaabTab(fd, calc, isLocked, color){
       <div class="info-row"><span>Wadarta Xarooday</span><span>$${calc.xarooday.toLocaleString()}</span></div>
       <div class="discount-row">
         <span style="color:#555;font-size:13px">Qiima Dhimis (Discount)</span>
-        ${isKormeere
-          ? `<span style="display:inline-block;padding:6px 13px;border:1.5px solid #bfdbfe;border-radius:7px;font-size:14px;font-weight:700;color:#1565c0;background:#eff6ff;font-family:'Space Grotesk',sans-serif;">$${(+(fd.discount||0)).toLocaleString()}</span>`
-          : `<input class="discount-inp" type="number" value="${fd.discount}" ${isLocked?"disabled":""} onchange="updateMeta('${activeFarac}','discount',this.value)"/>`
-        }
+        <span style="display:inline-block;padding:6px 13px;border:1.5px solid #fb923c33;border-radius:7px;font-size:14px;font-weight:700;color:#e65100;background:#fff3e0;font-family:'Space Grotesk',sans-serif;">$${calc.totalDiscount.toLocaleString()}</span>
       </div>
-      <div class="discount-row">
-        <span style="color:#555;font-size:13px">Baaqi ku ah</span>
-        ${isKormeere
-          ? `<span style="display:inline-block;padding:6px 13px;border:1.5px solid #bfdbfe;border-radius:7px;font-size:14px;font-weight:700;color:#1565c0;background:#eff6ff;font-family:'Space Grotesk',sans-serif;">$${(+(fd.lacagKhususi||0)).toLocaleString()}</span>`
-          : `<input class="discount-inp" type="number" value="${fd.lacagKhususi}" ${isLocked?"disabled":""} onchange="updateBaaqi('${activeFarac}',this.value)"/>`
-        }
-      </div>
+
       <div style="display:flex;justify-content:space-between;padding:12px 0 0;font-weight:700;font-size:15px">
         <span style="color:#1a3a5c">Wadarta Saafi</span>
         <span style="color:#0d6e4f">$${calc.saafi.toLocaleString()}</span>
@@ -1886,16 +1888,20 @@ async function loadXanibHistoryFromFb(){
 }
 // ── HISTORY TAB ───────────────────────────
 function renderHistoryTab(){
+  const isMaamul = currentUser.role === "maamul";
   const rows = xanibHistory.length === 0
-    ? `<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Wax xanib ah ma jiraan weli</td></tr>`
-    : [...xanibHistory].reverse().map((h, i) => `
-      <tr>
+    ? `<tr><td colspan="${isMaamul?6:5}" style="text-align:center;color:#94a3b8;padding:24px;font-size:13px">Wax xanib ah ma jiraan weli</td></tr>`
+    : [...xanibHistory].reverse().map((h, i) => {
+        const origIdx = xanibHistory.length - 1 - i;
+        return `<tr>
         <td style="color:#64748b;font-weight:700;font-size:12px">${xanibHistory.length - i}</td>
         <td style="font-weight:700;color:#0a1628">${h.ardayMagac}</td>
         <td><span style="background:#eff6ff;color:#1565c0;border-radius:6px;padding:3px 9px;font-size:11px;font-weight:700;border:1px solid #bfdbfe;">${h.farac}</span></td>
         <td style="color:#dc2626;font-weight:800;font-family:'Space Grotesk',sans-serif;">$${(+h.lacag).toLocaleString()}</td>
         <td style="color:#64748b;font-size:12px">${h.waqti} — <span style="color:#1565c0;font-weight:600">${h.bisha}</span></td>
-      </tr>`).join("");
+        ${isMaamul ? `<td><button onclick="deleteXanibHistory(${origIdx})" style="background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;border-radius:7px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;">🗑️ Tir</button></td>` : ""}
+      </tr>`;
+      }).join("");
 
   const totalLacag = xanibHistory.reduce((s,h)=>s+(+h.lacag),0);
 
@@ -1909,9 +1915,12 @@ function renderHistoryTab(){
           <p style="margin:3px 0 0;color:#64748b;font-size:12px;font-weight:500">Liiska ardayda maamulku xanibay — waqtiga iyo lacagta</p>
         </div>
       </div>
-      <div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1.5px solid #fca5a5;border-radius:12px;padding:10px 18px;text-align:right">
-        <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#991b1b">Wadarta La Jaaray</div>
-        <div style="font-size:20px;font-weight:800;color:#dc2626;font-family:'Space Grotesk',sans-serif">$${totalLacag.toLocaleString()}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        ${isMaamul && xanibHistory.length > 0 ? `<button onclick="clearAllXanibHistory()" style="background:#fef2f2;border:1.5px solid #fca5a5;color:#dc2626;border-radius:9px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">🗑️ Dhammaan Tir</button>` : ""}
+        <div style="background:linear-gradient(135deg,#fef2f2,#fee2e2);border:1.5px solid #fca5a5;border-radius:12px;padding:10px 18px;text-align:right">
+          <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#991b1b">Wadarta La Jaaray</div>
+          <div style="font-size:20px;font-weight:800;color:#dc2626;font-family:'Space Grotesk',sans-serif">$${totalLacag.toLocaleString()}</div>
+        </div>
       </div>
     </div>
     ${xanibHistory.length > 0
@@ -1927,16 +1936,35 @@ function renderHistoryTab(){
           <th>Farac</th>
           <th>Lacagta Ka Go'day ($)</th>
           <th>Waqtiga — Bisha</th>
+          ${isMaamul ? `<th style="width:70px">Tir</th>` : ""}
         </tr></thead>
         <tbody>${rows}</tbody>
         ${xanibHistory.length > 0 ? `<tfoot><tr>
           <td colspan="3" style="text-align:left;font-weight:800;color:#1a3a5c">Wadarta Xanibka: ${xanibHistory.length} Arday</td>
           <td style="color:#dc2626;font-weight:800;font-family:'Space Grotesk',sans-serif;">$${totalLacag.toLocaleString()}</td>
-          <td></td>
+          <td>${isMaamul?"<td></td>":""}</td>
         </tr></tfoot>` : ""}
       </table>
     </div>
   </div>`;
+}
+
+function deleteXanibHistory(idx){
+  if(currentUser.role !== "maamul") return;
+  if(!confirm("Ma hubtaa inaad tirtireyso xogtan?")) return;
+  xanibHistory.splice(idx, 1);
+  saveXanibHistoryToFb();
+  renderAll();
+  showToast("✅ Xogta waa la tirtiray", "success");
+}
+
+function clearAllXanibHistory(){
+  if(currentUser.role !== "maamul") return;
+  if(!confirm("Ma hubtaa inaad dhammaan history-ga tirtireyso? Ficilkan lama soo celin karo.")) return;
+  xanibHistory = [];
+  saveXanibHistoryToFb();
+  renderAll();
+  showToast("✅ Dhammaan history-ga waa la nadiifiyey", "success");
 }
 
 function renderReportTab(fd, calc, color){
@@ -1970,6 +1998,7 @@ function buildReportHTML(fd, calc, color){
     const isBas = f.nooca === "bas";
     const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0);
     const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
+    const disc = +(f.discount||0);
     xisaabRows += `<tr>
       <td style="font-weight:700;color:${color};text-align:left;white-space:nowrap">${f.magaca}</td>
       <td>${f.tiradaBixisay}</td>
@@ -1978,6 +2007,7 @@ function buildReportHTML(fd, calc, color){
       <td>$${(+f.lacagtaDhimanayd).toLocaleString()}</td>
       <td style="color:#dc2626">${f.tiradaAanBixin}</td>
       <td style="color:#dc2626">$${(+f.lacagtaAanBixin).toLocaleString()}</td>
+      <td style="color:#e65100;font-weight:700">$${disc.toLocaleString()}</td>
       <td>${f.scholarship}</td>
       <td>${f.freeStudents}</td>
       <td style="color:#1565c0">${f.ardaydaCusub||0}</td>
@@ -2026,7 +2056,7 @@ function buildReportHTML(fd, calc, color){
     <div style="text-align:right;font-size:13px;color:#64748b;font-weight:600">
       <div>💵 Dakhli: <strong style="color:#059669">$${calc.saafi.toLocaleString()}</strong></div>
       <div style="margin-top:5px">📤 Kharash: <strong style="color:#dc2626">$${calc.kharashWadar.toLocaleString()}</strong></div>
-      ${fd.discount>0?`<div style="margin-top:5px">🔻 Discount: <strong style="color:#7c3aed">$${(+fd.discount).toLocaleString()}</strong></div>`:""}
+      ${calc.totalDiscount>0?`<div style="margin-top:5px">🔻 Discount: <strong style="color:#e65100">$${calc.totalDiscount.toLocaleString()}</strong></div>`:""}
     </div>
   </div>
 
@@ -2042,6 +2072,7 @@ function buildReportHTML(fd, calc, color){
         <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('lacagtaDhimanayd')}</th>
         <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('tiradaAanBixin')}</th>
         <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('lacagtaAanBixin')}</th>
+        <th style="background:#fff3e0;color:#e65100;white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">Discount ($)</th>
         <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('scholarship')}</th>
         <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('freeStudents')}</th>
         <th style="white-space:normal;word-break:normal;overflow-wrap:break-word;max-width:60px">${FL('ardaydaCusub')}</th>
@@ -2058,6 +2089,7 @@ function buildReportHTML(fd, calc, color){
         <td style="color:#059669">$${calc.totalDhimanayd.toLocaleString()}</td>
         <td style="color:#dc2626">${calc.totalAanBixin_w}</td>
         <td style="color:#dc2626">$${calc.totalLacagAanBixin.toLocaleString()}</td>
+        <td style="color:#e65100;font-weight:800;background:#fff3e0">$${calc.totalDiscount.toLocaleString()}</td>
         <td>${calc.totalScholarship_w}</td>
         <td>${calc.totalFree_w}</td>
         <td style="color:#1565c0">${calc.totalCusub_w}</td>
@@ -2111,6 +2143,23 @@ function buildReportHTML(fd, calc, color){
   </div>` : ""}
 
   <div class="report-footer">
+    <!-- Xisaabta Saafiga -->
+    <div style="max-width:420px;margin:0 auto 18px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 20px;text-align:left;">
+      <div style="font-size:12px;font-weight:800;color:#1a3a5c;margin-bottom:10px;font-family:'Space Grotesk',sans-serif;">🧮 Xisaabta Saafiga</div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+        <span style="color:#555;">Wadarta Xarooday</span>
+        <span style="font-weight:700;color:#1d4ed8;">$${calc.xarooday.toLocaleString()}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:12px;">
+        <span style="color:#555;">Qiima Dhimis (Discount)</span>
+        <span style="font-weight:700;color:#e65100;">$${calc.totalDiscount.toLocaleString()}</span>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;padding:10px 0 0;font-size:14px;font-weight:800;">
+        <span style="color:#1a3a5c;">Wadarta Saafi</span>
+        <span style="color:#0d6e4f;">$${calc.saafi.toLocaleString()}</span>
+      </div>
+    </div>
     🖨️ La daabacay: ${now} &nbsp;|&nbsp; 👤 ${printedBy} &nbsp;|&nbsp; 📅 ${currentBisha} &nbsp;|&nbsp; AL-XIKMA SCHOOL
   </div>`;
 }
@@ -3330,6 +3379,24 @@ async function openSubmitModal(key){
   const calc = calcFarac(fd);
   const currTotal = calc.totalArdayda;
   const farqi = currTotal - prevTotal;
+
+  // ── Hubi 0a: Xisaab Xirka — ugu yaraan hal fasalka waa in la buuxiyey
+  const xisaabBuuxaa = fd.fasalada.some(f => +(f.tiradaBixisay||0) > 0 || +(f.qiimaha||0) > 0);
+  if(!xisaabBuuxaa){
+    showToast("⛔ Walaal marka hore soo buuxi qaybta Xisaab Xirka — tirada ardayda iyo qiimaha gali", "warning");
+    activeTab = "xisaab";
+    refreshCalcDisplay();
+    return;
+  }
+
+  // ── Hubi 0b: Kharashka — ugu yaraan hal kharash waa in la buuxiyey
+  const kharashBuuxaa = Object.values(fd.kharash).some(v => +(v||0) > 0);
+  if(!kharashBuuxaa){
+    showToast("⛔ Walaal marka hore soo buuxi qaybta Kharashka — ugu yaraan hal kharash gali", "warning");
+    activeTab = "kharash";
+    refreshCalcDisplay();
+    return;
+  }
 
   // Hubi 1: Liiska dhamaystirnaanta (magac + sabab + bixiyey dhammaantood)
   const midlamaJirin = baxayaasha.some(b => !b.magac.trim() || !b.sabab || !b.bixiyey);
