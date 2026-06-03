@@ -635,6 +635,54 @@ const DEFAULT_USERS = {
 };
 let USERS = {...DEFAULT_USERS};
 
+// ── USER MODULES ─────────────────────────
+// Parent modules + sub-features structure
+// haddii parent la xiro, dhammaan children-kiisa way xirmi doonaan
+const ALL_MODULES = [
+  { id:"dashboard", label:"Dashboard",    icon:"📊", children:[] },
+  { id:"xisaab",    label:"Xisaab Xirka", icon:"💰", children:[
+      {id:"xisaab.xoggelinta",   label:"Xog Gelinta (Edit)"},
+      {id:"xisaab.save",         label:"Save / Kaydinta"},
+      {id:"xisaab.submit",       label:"Gudbi Maamulka"},
+      {id:"xisaab.kaaraska",     label:"Kaaraska (Cagaaran/Cas)"},
+      {id:"xisaab.xanib",        label:"Xanib Arday"},
+    ]
+  },
+  { id:"kharash",   label:"Kharashka",    icon:"📋", children:[
+      {id:"kharash.gelinta",     label:"Gelinta Kharashka"},
+    ]
+  },
+  { id:"charts",    label:"Charts",       icon:"📈", children:[] },
+  { id:"report",    label:"Report",       icon:"📄", children:[
+      {id:"report.print",        label:"Print / Daabacaadda"},
+    ]
+  },
+  { id:"history",   label:"History",      icon:"📜", children:[] },
+  { id:"settings",  label:"Settings",     icon:"⚙️", children:[
+      {id:"settings.fasalada",   label:"Fasalada Maamulka"},
+      {id:"settings.qiimaha",    label:"Qiimaha Default"},
+    ]
+  },
+];
+
+// Helper: hel dhammaan module IDs (parent + children)
+function getAllModuleIds(){
+  const ids = [];
+  ALL_MODULES.forEach(m=>{ ids.push(m.id); m.children.forEach(c=>ids.push(c.id)); });
+  return ids;
+}
+
+// Haddii user-ku module la'yahay ama modules undefined yahay → dhammaan fur (backward compat)
+function userHasModule(user, moduleId){
+  if(!user) return false;
+  if(user.role==="maamul" || user.role==="kormeere") return true;
+  if(!user.modules || !Array.isArray(user.modules)) return true;
+  // Haddii parent xiran yahay, child-kooduba xirmi doonaa
+  const parentId = moduleId.includes(".") ? moduleId.split(".")[0] : null;
+  if(parentId && !user.modules.includes(parentId)) return false;
+  return user.modules.includes(moduleId);
+}
+
 const FARAC_COLORS = {sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a"};
 const FARAC_LABELS = {sare:"Dugsiga Sare",dhexe:"Dugsiga Dhexe",hoose1:"Hoose 1",hoose2:"Hoose 2"};
 const BILAHA = ["Janaayo","Febraayo","Maarso","Abriil","May","Juun","Luuliyo","Ogosto","Sebtembar","Oktoobar","Noofembar","Disembar"];
@@ -1088,7 +1136,8 @@ function renderSidebar(){
         ${appData[k]?.submitted?"<span style='font-size:10px'>✅</span>":""}
       </button>`;
     });
-    html += `<button class="sb-guud-btn ${activeFarac===null && activeTab!=="maamul-settings"?"active":""}" onclick="selectGuud()" style="margin-top:4px">${L("nav_guud_short")}</button>`;
+    if(userHasModule(currentUser,"dashboard"))
+      html += `<button class="sb-guud-btn ${activeFarac===null && activeTab!=="maamul-settings"?"active":""}" onclick="selectGuud()" style="margin-top:4px">${L("nav_guud_short")}</button>`;
     if(isMaamul){
       html += `<button class="sb-guud-btn ${activeTab==="maamul-settings"?"active":""}" onclick="selectMaamulSettings()" style="margin-top:4px;background:${activeTab==="maamul-settings"?'linear-gradient(135deg,#1565c0,#3b82f6)':'transparent'};color:${activeTab==="maamul-settings"?'#fff':'rgba(255,255,255,.75)'}">${L("tab_settings")}</button>`;
       html += `<button class="sb-guud-btn ${activeTab==="history"?"active":""}" onclick="selectHistoryTab()" style="margin-top:4px;background:${activeTab==="history"?'linear-gradient(135deg,#dc2626,#ef4444)':'transparent'};color:${activeTab==="history"?'#fff':'rgba(255,255,255,.75)'}">📜 History</button>`;
@@ -1099,19 +1148,22 @@ function renderSidebar(){
       ${appData[currentUser.role]?.submitted?`<div class="sub">✅ ${L("msg_submitted").replace("📤 ","")}</div>`:""}
     </div>`;
     // History tab for shaqaalaha
-    html += `<div class="sb-divider"></div>
-      <button class="sb-tab-btn ${activeTab==="history"?"active":""}" onclick="selectHistoryTab()" style="margin-bottom:4px">📜 History</button>`;
+    if(userHasModule(currentUser,"history")){
+      html += `<div class="sb-divider"></div>
+        <button class="sb-tab-btn ${activeTab==="history"?"active":""}" onclick="selectHistoryTab()" style="margin-bottom:4px">📜 History</button>`;
+    }
   }
   if(activeFarac){
     html += `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:6px">
       <div class="sb-section-lbl">TABS</div>`;
-    const tabs=[
+    const allTabs=[
       {id:"xisaab",label:L("tab_xisaab")},
       {id:"kharash",label:L("tab_kharash")},
-      {id:"charts",label:L("tab_charts")}
+      {id:"charts",label:L("tab_charts")},
+      {id:"report",label:"📄 Report"},
     ];
-    tabs.push({id:"report",label:"📄 Report"});
-    if(!isKormeere) tabs.push({id:"settings",label:L("tab_settings")});
+    if(!isKormeere) allTabs.push({id:"settings",label:L("tab_settings")});
+    const tabs = allTabs.filter(t=>userHasModule(currentUser,t.id));
     tabs.forEach(t=>{ html+=`<button class="sb-tab-btn ${activeTab===t.id?"active":""}" onclick="selectTab('${t.id}')">${t.label}</button>`; });
     html+="</div>";
   }
@@ -1213,6 +1265,86 @@ function renderGuud(){
     </div>
     <div style="font-size:44px;opacity:.25;">⚠️</div>
   </div>
+  <!-- ══ SHAXADA XISAAB XIRKA GUUD ══ -->
+  <div class="panel" style="margin-bottom:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h4 style="margin:0;display:flex;align-items:center;gap:8px;">
+        <span style="display:inline-block;width:4px;height:22px;background:linear-gradient(135deg,#1565c0,#3b82f6);border-radius:4px;"></span>
+        📊 Shaxada Xisaab Xirka — Dhammaan Faracyada
+      </h4>
+      <span style="background:#eff6ff;color:#1d4ed8;border:1.5px solid #bfdbfe;border-radius:8px;padding:4px 12px;font-size:11px;font-weight:700;">📅 ${currentBisha}</span>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;min-width:110px;background:#0a1628;color:#ffd700;">Faracka</th>
+            <th style="background:#065f46;color:#d1fae5;">👥 Ardayda</th>
+            <th style="background:#065f46;color:#d1fae5;">✅ Bixisay</th>
+            <th style="background:#065f46;color:#d1fae5;">⚠️ Aan Bixin</th>
+            <th style="background:#1d4ed8;color:#dbeafe;">💰 Xarooday ($)</th>
+            <th style="background:#e65100;color:#ffedd5;">🔻 Discount ($)</th>
+            <th style="background:#1d4ed8;color:#dbeafe;">💸 Lacag Saafi ($)</th>
+            <th style="background:#c62828;color:#fee2e2;">📤 Kharash ($)</th>
+            <th style="background:#0f172a;color:#ffd700;">📈 Faa'iido / Khasaare</th>
+            <th style="background:#7c3aed;color:#ede9fe;">🎓 Scholarship</th>
+            <th style="background:#0891b2;color:#e0f2fe;">🆕 Cusub</th>
+            <th style="background:#7b3f00;color:#ffedd5;">🚪 Baxday</th>
+            <th style="background:#0a1628;color:#ffd700;">✅ Gudbiyey</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${allStats.map(s=>{
+            const profit = s.saafi - s.kharashWadar;
+            return `<tr>
+              <td style="text-align:left;font-weight:800;color:${s.color};white-space:nowrap;border-left:4px solid ${s.color};">
+                <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${s.color};margin-right:6px;"></span>${s.label}
+              </td>
+              <td class="td-green-bg">${s.totalArdayda}</td>
+              <td style="color:#059669;font-weight:700;">${s.totalBixisay_w}</td>
+              <td style="color:#dc2626;font-weight:700;">${s.totalAanBixin_w}</td>
+              <td style="color:#1d4ed8;font-weight:700;">$${s.xarooday.toLocaleString()}</td>
+              <td style="color:#e65100;font-weight:700;background:#fff7ed;">$${s.totalDiscount.toLocaleString()}</td>
+              <td class="td-blue-bg">$${s.saafi.toLocaleString()}</td>
+              <td style="color:#dc2626;font-weight:700;">$${s.kharashWadar.toLocaleString()}</td>
+              <td style="font-weight:800;font-size:13px;color:${profit>=0?'#059669':'#dc2626'};background:${profit>=0?'#ecfdf5':'#fef2f2'};">
+                ${profit>=0?'▲':'▼'} $${Math.abs(profit).toLocaleString()}
+              </td>
+              <td style="color:#7c3aed;font-weight:700;">${s.totalScholarship_w}</td>
+              <td style="color:#0891b2;font-weight:700;">${s.totalCusub_w}</td>
+              <td style="color:#7b3f00;font-weight:700;">${s.totalBaxday_w}</td>
+              <td style="text-align:center;">
+                ${s.submitted
+                  ? `<span style="background:#ecfdf5;color:#059669;border:1.5px solid #a7f3d0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800;">✅ Haa</span>`
+                  : `<span style="background:#fff7ed;color:#ea580c;border:1.5px solid #fed7aa;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:800;">⏳ Maya</span>`}
+              </td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td style="text-align:left;font-weight:800;color:#0a1628;background:#f1f5f9;">WADAR</td>
+            <td class="tfoot-total-arday">${grand.totalArdayda}</td>
+            <td style="background:#d1fae5;color:#065f46;font-weight:800;">${allStats.reduce((a,s)=>a+s.totalBixisay_w,0)}</td>
+            <td style="background:#fee2e2;color:#991b1b;font-weight:800;">${allStats.reduce((a,s)=>a+s.totalAanBixin_w,0)}</td>
+            <td style="background:#dbeafe;color:#1d4ed8;font-weight:800;">$${allStats.reduce((a,s)=>a+s.xarooday,0).toLocaleString()}</td>
+            <td style="background:#fff7ed;color:#e65100;font-weight:800;">$${allStats.reduce((a,s)=>a+s.totalDiscount,0).toLocaleString()}</td>
+            <td class="tfoot-total-lacag">$${grand.saafi.toLocaleString()}</td>
+            <td style="background:#fee2e2;color:#991b1b;font-weight:800;">$${grand.kharashWadar.toLocaleString()}</td>
+            <td style="font-weight:800;font-size:14px;color:${grand.saafi-grand.kharashWadar>=0?'#059669':'#dc2626'};background:${grand.saafi-grand.kharashWadar>=0?'#d1fae5':'#fee2e2'};">
+              ${grand.saafi-grand.kharashWadar>=0?'▲':'▼'} $${Math.abs(grand.saafi-grand.kharashWadar).toLocaleString()}
+            </td>
+            <td style="background:#ede9fe;color:#7c3aed;font-weight:800;">${allStats.reduce((a,s)=>a+s.totalScholarship_w,0)}</td>
+            <td style="background:#e0f2fe;color:#0891b2;font-weight:800;">${grand.totalCusub}</td>
+            <td style="background:#ffedd5;color:#7b3f00;font-weight:800;">${grand.totalBaxday}</td>
+            <td style="background:#f1f5f9;"></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+  <!-- ══ DHAMMAATAY SHAXADA ══ -->
+
   <div class="panel" style="margin-bottom:16px"><h4 style="margin-bottom:14px">📈 Barbardhig Faracyada — Dakhliga & Kharashka</h4><div class="chart-canvas-wrap"><canvas id="chart-guud-bar"></canvas></div></div>
 
   <!-- Laba chart cusub: Ardayda Pie + Kharash Breakdown -->
@@ -1456,8 +1588,8 @@ function renderFaracDetail(){
     <div class="action-btns">
       ${fd.submitted?"<span class='badge-submitted'>✅ La Gudbiyey</span>":""}
       ${!fd.submitted && !isKormeere?`
-        <button class="btn-save" onclick="saveDraft('${activeFarac}')">💾 Save</button>
-        ${!isMaamul?`<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`:""}
+        ${userHasModule(currentUser,"xisaab.save")?`<button class="btn-save" onclick="saveDraft('${activeFarac}')">💾 Save</button>`:""}
+        ${(!isMaamul && userHasModule(currentUser,"xisaab.submit"))?`<button class="btn-gudbi" onclick="openSubmitModal('${activeFarac}')">📤 Gudbi</button>`:""}
       `:""}
       ${fd.submitted && isMaamul?`<button class="btn-unlock" onclick="unlockFarac('${activeFarac}')">🔓 Unlock</button>`:""}
       ${isKormeere?`<span style="background:#eff6ff;color:#1565c0;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid #bfdbfe;">👁️ Daawasho Kaliya</span>`:""}
@@ -1479,7 +1611,7 @@ function renderFaracDetail(){
     ${statCardSm("🚪 Ardayda Baxday",calc.totalBaxday_w,"📤","#7b3f00")}
     ${statCardSm("⚠️ Aan Bixin (Tiro)",calc.totalAanBixin_w,"⚠️","#e65100")}
   </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+  ${userHasModule(currentUser,"xisaab.kaaraska") ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
     <!-- KAARKA CAGAARAN: Lacagtii la hormarshey -->
     <div style="background:linear-gradient(135deg,#0d6e4f,#059669);border-radius:14px;padding:16px 20px;box-shadow:0 4px 16px rgba(13,110,79,.3);">
       <div style="color:rgba(255,255,255,.75);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">💚 Lacagtii la Hormarshey Bilihii Hore</div>
@@ -1519,12 +1651,18 @@ function renderFaracDetail(){
       </div>
     </div>
   </div>
+  ` : ""}
+
   `;
 
   if(activeTab==="xisaab"){
-    html+=renderXisaabTab(fd, calc, isLocked, color);
+    const xisaabLocked = isLocked || !userHasModule(currentUser,"xisaab.xoggelinta");
+    html+=renderXisaabTab(fd, calc, xisaabLocked, color);
   }
-  if(activeTab==="kharash") html+=renderKharashTab(fd, calc, isLocked);
+  if(activeTab==="kharash"){
+    const kharashLocked = isLocked || !userHasModule(currentUser,"kharash.gelinta");
+    html+=renderKharashTab(fd, calc, kharashLocked);
+  }
   if(activeTab==="charts") html+=renderChartsTab();
   if(activeTab==="report") html+=renderReportTab(fd, calc, color);
   if(activeTab==="settings") html+=`<div class="panel" style="padding:14px 18px">${renderSettingsTab(isMaamul)}</div>`;
@@ -1564,7 +1702,7 @@ function renderXisaabTab(fd, calc, isLocked, color){
     });
 
   fasaladaSorted.forEach(({f, i_orig: i})=>{
-    const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0);
+    const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0) - +(f.discount||0);
     const isBas = f.nooca === "bas";
     // Bas fasalada: tirada ardayda kuma biirto — kaliya lacagta
     const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
@@ -1617,7 +1755,7 @@ function renderXisaabTab(fd, calc, isLocked, color){
     <td style="color:#1565c0;font-weight:700">${calc.totalCusub_w}</td>
     <td style="color:#888;font-weight:700">${calc.totalBaxday_w}</td>
     <td class="tfoot-total-arday">${calc.totalArdayda}</td>
-    <td class="tfoot-total-lacag">$${calc.xarooday.toLocaleString()}</td>
+    <td class="tfoot-total-lacag">$${(calc.xarooday - calc.totalDiscount).toLocaleString()}</td>
   </tr></tfoot></table></div></div>
 
   <div class="panel" style="margin-bottom:16px">
@@ -1992,9 +2130,10 @@ function buildReportHTML(fd, calc, color){
   // Period display — bisha la dooratay
   const periodText = currentBisha;
 
-  // Xisaab table rows
+  // Xisaab table rows — same sort as xisaab tab: caadi hore, bas dambeba
+  const fasaladaSortedReport = [...fd.fasalada].sort((a,b)=>(a.nooca==="bas"?1:0)-(b.nooca==="bas"?1:0));
   let xisaabRows = "";
-  fd.fasalada.forEach(f=>{
+  fasaladaSortedReport.forEach(f=>{
     const isBas = f.nooca === "bas";
     const wL = +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0);
     const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
@@ -2387,6 +2526,11 @@ function initFaracCharts(){
 // ── SETTINGS TAB ──────────────────────────
 function renderSettingsTab(isMaamul){
   // Non-maamul sees only: fasalada (add only), qiimaha, luuqad
+  const nonMaamulTabs = [];
+  if(userHasModule(currentUser,"settings.fasalada")) nonMaamulTabs.push({id:"fasalada", icon:"🏫", label:"Fasalada"});
+  if(userHasModule(currentUser,"settings.qiimaha"))  nonMaamulTabs.push({id:"qiimaha",  icon:"💵", label:"Qiimaha"});
+  nonMaamulTabs.push({id:"luuqad", icon:"🌐", label:"Luuqadda"});
+
   const tabs = isMaamul
     ? [
         {id:"fasalada",  icon:"🏫", label:"Fasalada"},
@@ -2397,14 +2541,11 @@ function renderSettingsTab(isMaamul){
         {id:"luuqad",    icon:"🌐", label:"Luuqadda"},
         {id:"bilawga",   icon:"🗓️", label:"Bisha Bilawga"},
       ]
-    : [
-        {id:"fasalada", icon:"🏫", label:"Fasalada"},
-        {id:"luuqad",   icon:"🌐", label:"Luuqadda"},
-      ];
+    : nonMaamulTabs;
 
   // Make sure activeSettingsTab is valid for this user
   const validIds = tabs.map(t=>t.id);
-  if(!validIds.includes(activeSettingsTab)) activeSettingsTab = "fasalada";
+  if(!validIds.includes(activeSettingsTab)) activeSettingsTab = validIds[0] || "fasalada";
 
   let html = `<div class="settings-tab-bar">
       ${tabs.map(t=>`<button class="settings-tab-btn ${activeSettingsTab===t.id?"active":""}" onclick="setSettingsTab('${t.id}')">${t.icon} ${t.label}</button>`).join("")}
@@ -2738,6 +2879,9 @@ function renderSettingsUsers(){
           &nbsp;${u.label||""}
           &nbsp;· 🔑 ${u.password}
         </div>
+        ${(u.role!=="maamul" && u.role!=="kormeere") ? `<div style="font-size:10px;color:#64748b;margin-top:3px;">
+          🧩 ${(!u.modules||!Array.isArray(u.modules)) ? '<span style="color:#059669;font-weight:700">Dhammaan Modules</span>' : (u.modules.filter(m=>!m.includes(".")).map(m=>{const mod=ALL_MODULES.find(x=>x.id===m); return mod?mod.icon+" "+mod.label:m;}).join(", ")||'<span style="color:#dc2626">Wax module ah</span>')}
+        </div>` : ''}
       </div>
       <div class="user-item-btns">
         <button class="btn-save" style="font-size:11px;padding:5px 10px;margin-right:4px" onclick="openEditUser('${username}')">✏️ Edit</button>
@@ -2754,6 +2898,8 @@ function renderSettingsUsers(){
     {v:"kormeere",l:"Kormeere (Daawasho Kaliya)"},
   ].map(r=>`<option value="${r.v}">${r.l}</option>`).join("");
 
+  // Build module checkboxes HTML (for add form — all checked by default)
+
   return `<div class="settings-grid">
     <div>
       <h4 style="color:#1a3a5c;margin-bottom:14px">➕ Ku Dar User Cusub</h4>
@@ -2764,18 +2910,31 @@ function renderSettingsUsers(){
       <label class="form-lbl">Label (Magaca)</label>
       <input id="new-user-label" class="form-input" placeholder="tusaale: Maamulka 2"/>
       <label class="form-lbl">Role</label>
-      <select id="new-user-role" class="form-select">${roleOpts}</select>
-      <button class="btn-add" onclick="addUser()">➕ Ku Dar User</button>
+      <select id="new-user-role" class="form-select" onchange="onNewUserRoleChange(this.value)">${roleOpts}</select>
+      <!-- Modules section (hidden for maamul/kormeere) -->
+      <div id="new-user-modules-wrap" style="margin-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="form-lbl" style="margin:0;font-size:12px">🧩 User Modules</label>
+          <div style="display:flex;gap:6px">
+            <button type="button" onclick="checkAllModules('new-user')" style="font-size:10px;padding:3px 9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1565c0;border-radius:5px;cursor:pointer;font-weight:700">✅ Dhammaan</button>
+            <button type="button" onclick="uncheckAllModules('new-user')" style="font-size:10px;padding:3px 9px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:5px;cursor:pointer;font-weight:700">❌ Nadiifi</button>
+          </div>
+        </div>
+        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;max-height:320px;overflow-y:auto">
+          ${buildModuleCheckboxesHtml("new-user", null)}
+        </div>
+      </div>
+      <button class="btn-add" onclick="addUser()" style="margin-top:14px">➕ Ku Dar User</button>
     </div>
     <div>
       <h4 style="color:#1a3a5c;margin-bottom:14px">👥 Isticmaalayaasha</h4>
-      <div class="fasal-list" style="max-height:320px">${userList}</div>
+      <div class="fasal-list" style="max-height:420px">${userList}</div>
       <button class="btn-reset" style="margin-top:10px" onclick="resetUsersToDefault()">♻️ Dib u Deji Users-ka</button>
     </div>
   </div>
   <!-- Edit User Modal -->
   <div id="edit-user-modal" style="display:none;position:fixed;inset:0;background:rgba(10,22,40,.6);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
-    <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+    <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.2);">
       <h3 style="color:#1a3a5c;margin:0 0 18px;font-size:16px;font-weight:800">✏️ Wax ka Beddel User-ka</h3>
       <input type="hidden" id="edit-user-orig-name"/>
       <label class="form-lbl">Username</label>
@@ -2785,8 +2944,19 @@ function renderSettingsUsers(){
       <label class="form-lbl">Label (Magaca)</label>
       <input id="edit-user-label" class="form-input" placeholder="Magaca"/>
       <label class="form-lbl">Role</label>
-      <select id="edit-user-role" class="form-select">${roleOpts}</select>
-      <div style="display:flex;gap:10px;margin-top:6px">
+      <select id="edit-user-role" class="form-select" onchange="onEditUserRoleChange(this.value)">${roleOpts}</select>
+      <!-- Edit Modules -->
+      <div id="edit-user-modules-wrap" style="margin-top:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+          <label class="form-lbl" style="margin:0;font-size:12px">🧩 User Modules</label>
+          <div style="display:flex;gap:6px">
+            <button type="button" onclick="checkAllModules('edit-user')" style="font-size:10px;padding:3px 9px;background:#eff6ff;border:1px solid #bfdbfe;color:#1565c0;border-radius:5px;cursor:pointer;font-weight:700">✅ Dhammaan</button>
+            <button type="button" onclick="uncheckAllModules('edit-user')" style="font-size:10px;padding:3px 9px;background:#fef2f2;border:1px solid #fecaca;color:#dc2626;border-radius:5px;cursor:pointer;font-weight:700">❌ Nadiifi</button>
+          </div>
+        </div>
+        <div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;max-height:300px;overflow-y:auto" id="edit-user-modules-inner"></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-cancel" style="flex:1" onclick="closeEditUser()">❌ Jooji</button>
         <button class="btn-confirm" style="flex:1;background:#1565c0;color:#fff;border:none;border-radius:var(--radius-sm);padding:10px 22px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;" onclick="saveEditUser()">💾 Keydi</button>
       </div>
@@ -3224,6 +3394,97 @@ function resetFarac(key){
   renderAll();
 }
 
+// ── MODULE CHECKBOX HELPERS ───────────────
+function getSelectedModules(prefix){
+  const ids = [];
+  ALL_MODULES.forEach(mod=>{
+    const el = document.getElementById(prefix+"_"+mod.id);
+    if(el && el.checked){
+      ids.push(mod.id);
+      mod.children.forEach(ch=>{
+        const chEl = document.getElementById(prefix+"_"+ch.id);
+        if(chEl && chEl.checked) ids.push(ch.id);
+      });
+    }
+  });
+  return ids;
+}
+function onModuleParentChange(prefix, parentId, checked){
+  // Show/hide children
+  const childWrap = document.getElementById(prefix+"_children_"+parentId);
+  if(childWrap) childWrap.style.display = checked ? "block" : "none";
+  // If unchecked, uncheck all children
+  const mod = ALL_MODULES.find(m=>m.id===parentId);
+  if(mod && !checked){
+    mod.children.forEach(ch=>{
+      const el = document.getElementById(prefix+"_"+ch.id);
+      if(el) el.checked = false;
+    });
+  }
+}
+function toggleModuleParent(label, prefix, modId){
+  const el = document.getElementById(prefix+"_"+modId);
+  if(!el) return;
+  el.checked = !el.checked;
+  onModuleParentChange(prefix, modId, el.checked);
+  // Update label style
+  const isChecked = el.checked;
+  label.style.background = isChecked ? "#eff6ff" : "#f8fafc";
+  label.style.border = isChecked ? "1.5px solid #bfdbfe" : "1.5px solid #e2e8f0";
+}
+function checkAllModules(prefix){
+  ALL_MODULES.forEach(mod=>{
+    const el = document.getElementById(prefix+"_"+mod.id);
+    if(el){ el.checked = true; onModuleParentChange(prefix, mod.id, true); }
+    mod.children.forEach(ch=>{
+      const chEl = document.getElementById(prefix+"_"+ch.id);
+      if(chEl) chEl.checked = true;
+    });
+  });
+}
+function uncheckAllModules(prefix){
+  ALL_MODULES.forEach(mod=>{
+    const el = document.getElementById(prefix+"_"+mod.id);
+    if(el){ el.checked = false; onModuleParentChange(prefix, mod.id, false); }
+    mod.children.forEach(ch=>{
+      const chEl = document.getElementById(prefix+"_"+ch.id);
+      if(chEl) chEl.checked = false;
+    });
+  });
+}
+function onNewUserRoleChange(role){
+  const wrap = document.getElementById("new-user-modules-wrap");
+  if(wrap) wrap.style.display = (role==="maamul"||role==="kormeere") ? "none" : "block";
+}
+function onEditUserRoleChange(role){
+  const wrap = document.getElementById("edit-user-modules-wrap");
+  if(wrap) wrap.style.display = (role==="maamul"||role==="kormeere") ? "none" : "block";
+}
+function buildModuleCheckboxesHtml(prefix, selectedModules){
+  const allSelected = !selectedModules;
+  return ALL_MODULES.map(mod=>{
+    const parentChecked = allSelected || selectedModules.includes(mod.id);
+    const hasChildren = mod.children.length > 0;
+    return `
+      <div style="margin-bottom:${hasChildren?'6px':'3px'}">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 8px;border-radius:7px;background:${parentChecked?'#eff6ff':'#f8fafc'};border:1.5px solid ${parentChecked?'#bfdbfe':'#e2e8f0'};transition:.15s" onclick="toggleModuleParent(this,'${prefix}','${mod.id}')">
+          <input type="checkbox" id="${prefix}_${mod.id}" value="${mod.id}" ${parentChecked?"checked":""} style="width:15px;height:15px;accent-color:#1565c0;cursor:pointer;" onchange="onModuleParentChange('${prefix}','${mod.id}',this.checked)" onclick="event.stopPropagation()"/>
+          <span style="font-size:14px">${mod.icon}</span>
+          <span style="font-weight:700;color:#1a3a5c;font-size:13px">${mod.label}</span>
+        </label>
+        ${hasChildren ? `<div id="${prefix}_children_${mod.id}" style="margin-left:28px;margin-top:3px;display:${parentChecked?'block':'none'}">
+          ${mod.children.map(ch=>{
+            const chChecked = allSelected || selectedModules.includes(ch.id);
+            return `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;padding:4px 8px;border-radius:6px;background:${chChecked?'#f0fdf4':'#f8fafc'};border:1px solid ${chChecked?'#a7f3d0':'#e2e8f0'};margin-bottom:3px;transition:.15s">
+              <input type="checkbox" id="${prefix}_${ch.id}" value="${ch.id}" ${chChecked?"checked":""} style="width:13px;height:13px;accent-color:#059669;cursor:pointer;"/>
+              <span style="color:#374151;font-size:12px;font-weight:600">${ch.label}</span>
+            </label>`;
+          }).join("")}
+        </div>` : ""}
+      </div>`;
+  }).join("");
+}
+
 // ── USER MANAGEMENT ───────────────────────
 function addUser(){
   const username = (document.getElementById("new-user-name")?.value||"").trim().toLowerCase();
@@ -3232,7 +3493,11 @@ function addUser(){
   const role     = document.getElementById("new-user-role")?.value || "sare";
   if(!username || !password){ showToast("⚠️ Username iyo Password buuxi","warning"); return; }
   if(USERS[username]){ showToast("⚠️ Username horey u jira","warning"); return; }
-  USERS[username] = {password, role, label: label||username};
+  const newUser = {password, role, label: label||username};
+  if(role!=="maamul" && role!=="kormeere"){
+    newUser.modules = getSelectedModules("new-user");
+  }
+  USERS[username] = newUser;
   saveUsersToFb();
   showToast(`✅ User "${username}" waa la abuuray`);
   renderContent();
@@ -3261,6 +3526,15 @@ function openEditUser(username){
   document.getElementById("edit-user-label").value = u.label||"";
   const roleEl = document.getElementById("edit-user-role");
   if(roleEl) roleEl.value = u.role;
+  // Build modules inner HTML
+  const inner = document.getElementById("edit-user-modules-inner");
+  const isMaamulOrKormeere = (u.role==="maamul" || u.role==="kormeere");
+  const wrap = document.getElementById("edit-user-modules-wrap");
+  if(wrap) wrap.style.display = isMaamulOrKormeere ? "none" : "block";
+  if(inner){
+    const selectedMods = (!u.modules || !Array.isArray(u.modules)) ? null : u.modules;
+    inner.innerHTML = buildModuleCheckboxesHtml("edit-user", selectedMods);
+  }
   const modal = document.getElementById("edit-user-modal");
   if(modal) modal.style.display = "flex";
 }
@@ -3282,9 +3556,12 @@ function saveEditUser(){
     label: newLabel || newName,
   };
   if(newPass) updatedUser.password = newPass;
-  if(newName !== origName){
-    delete USERS[origName];
+  if(newRole!=="maamul" && newRole!=="kormeere"){
+    updatedUser.modules = getSelectedModules("edit-user");
+  } else {
+    delete updatedUser.modules;
   }
+  if(newName !== origName) delete USERS[origName];
   USERS[newName] = updatedUser;
   saveUsersToFb();
   closeEditUser();
