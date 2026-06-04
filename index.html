@@ -164,6 +164,7 @@ window.dispatchEvent(new Event("fb-ready"));
   .inp-cell{width:70px;padding:5px 6px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:11px;text-align:center;background:#fff;transition:.2s;font-family:'Plus Jakarta Sans',sans-serif;}
   .inp-cell:focus{border-color:#3b82f6;outline:none;box-shadow:0 0 0 3px rgba(59,130,246,.12);}
   .inp-cell:disabled{background:#f8fafc;color:#cbd5e1;border-color:#f1f5f9;}
+  @keyframes pulse-red{0%,100%{box-shadow:0 0 0 2px rgba(220,38,38,.3);}50%{box-shadow:0 0 0 4px rgba(220,38,38,.5);}}
   .th-green{background:#ecfdf5!important;color:#065f46!important;font-weight:800!important;}
   .th-blue{background:#eff6ff!important;color:#1d4ed8!important;font-weight:800!important;}
   .td-green{color:#059669!important;font-weight:700!important;}
@@ -1680,16 +1681,23 @@ function renderXisaabTab(fd, calc, isLocked, color){
       ${isLocked?"<span style='font-size:12px;opacity:.8'>🔒 Qori la'aan</span>":""}
     </div>
     <div class="tbl-wrap"><table><thead><tr>
-      <th>Fasalka</th>
+      <th style="background:#1e293b!important;color:#fff!important;">Fasalka</th>
       ${fields.map(k=>{
-        if(k==='lacagtaBishatanHormartay') return `<th style="background:#fff8e1!important;color:#e65100!important;font-weight:800!important">${FL(k)}</th>`;
-        if(k==='ardaydaCusub') return `<th style="background:#e3f2fd!important;color:#1565c0!important;font-weight:700!important">${FL(k)}</th>`;
-        if(k==='ardaydaBaxday') return `<th style="background:#fce4ec!important;color:#880e4f!important;font-weight:700!important">${FL(k)}</th>`;
-        if(k==='scholarship') return `<th style="background:#fff3e0!important;color:#e65100!important;font-weight:800!important">Discount ($)</th><th>${FL(k)}</th>`;
+        if(k==='tiradaBixisay') return `<th style="background:#bbf7d0!important;color:#065f46!important;font-weight:800!important">✅ ${FL(k)}</th>`;
+        if(k==='qiimaha') return `<th style="background:#e0f2fe!important;color:#0369a1!important;font-weight:700!important">💵 ${FL(k)}</th>`;
+        if(k==='lacagtaSooHormartay') return `<th style="background:#bbf7d0!important;color:#065f46!important;font-weight:700!important">↩️ ${FL(k)}</th>`;
+        if(k==='lacagtaDhimanayd') return `<th style="background:#dbeafe!important;color:#1d4ed8!important;font-weight:700!important">🟦 ${FL(k)}</th>`;
+        if(k==='lacagtaBishatanHormartay') return `<th style="background:#fef9c3!important;color:#854d0e!important;font-weight:800!important">⭐ ${FL(k)}</th>`;
+        if(k==='tiradaAanBixin') return `<th style="background:#fee2e2!important;color:#991b1b!important;font-weight:800!important">⚠️ ${FL(k)}</th>`;
+        if(k==='lacagtaAanBixin') return `<th style="background:#fee2e2!important;color:#991b1b!important;font-weight:800!important">💸 ${FL(k)}</th>`;
+        if(k==='freeStudents') return `<th style="background:#fff7ed!important;color:#9a3412!important;font-weight:700!important">🆓 ${FL(k)}</th>`;
+        if(k==='ardaydaCusub') return `<th style="background:#e0f2fe!important;color:#0369a1!important;font-weight:700!important">🆕 ${FL(k)}</th>`;
+        if(k==='ardaydaBaxday') return `<th style="background:#fce7f3!important;color:#9d174d!important;font-weight:700!important">🚪 ${FL(k)}</th>`;
+        if(k==='scholarship') return `<th style="background:#ede9fe!important;color:#5b21b6!important;font-weight:800!important">🏷️ Discount ($)</th><th style="background:#ede9fe!important;color:#5b21b6!important;font-weight:700!important">🎓 ${FL(k)}</th>`;
         return `<th>${FL(k)}</th>`;
       }).join("")}
-      <th class="th-green">Wadarta Ardayda</th>
-      <th class="th-blue">Wadarta Lacag</th>
+      <th class="th-green">👥 Wadarta Ardayda</th>
+      <th class="th-blue">💰 Wadarta Lacag</th>
     </tr></thead><tbody>`;
 
   // Sort fasalada for display: caadi hore, bas dambeba — laakiin original index (i_orig) ayaa xifaala
@@ -1732,9 +1740,28 @@ function renderXisaabTab(fd, calc, isLocked, color){
         html+=`<td><span style="display:inline-block;min-width:54px;padding:4px 8px;border-radius:6px;font-size:13px;font-weight:700;color:${cellColor};background:${cellColor}14;border:1.5px solid ${cellColor}30;font-family:'Space Grotesk',sans-serif;text-align:center;">${prefix}${(+val).toLocaleString()}</span></td>`;
       } else {
         if(field==="scholarship"){
-          html+=`<td><input class="inp-cell" type="number" min="0" value="${discountVal}" ${isLocked?"disabled":""} style="border-color:#fb923c;" onchange="updateFasal('${activeFarac}',${i},'discount',this.value)"/></td>`;
+          html+=`<td style="background:#f5f3ff"><input class="inp-cell" type="number" min="0" value="${discountVal}" ${isLocked?"disabled":""} style="border-color:#fb923c;" oninput="if(+this.value<0)this.value=0;" onchange="updateFasal('${activeFarac}',${i},'discount',this.value)"/></td>`;
         }
-        html+=`<td><input class="inp-cell" type="number" value="${val}" ${isLocked?"disabled":""} onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
+        let cellBg = "";
+        let extraStyle = "";
+        if(field==="tiradaBixisay") cellBg = "background:#f0fdf4;";
+        else if(field==="qiimaha") cellBg = "background:#f0f9ff;";
+        else if(field==="lacagtaSooHormartay") cellBg = "background:#f0fdf4;";
+        else if(field==="lacagtaDhimanayd") cellBg = "background:#eff6ff;";
+        else if(field==="lacagtaBishatanHormartay") cellBg = "background:#fefce8;";
+        else if(field==="tiradaAanBixin") cellBg = "background:#fff1f2;";
+        else if(field==="lacagtaAanBixin"){
+          cellBg = "background:#fff1f2;";
+          if(+(f.tiradaAanBixin||0) > 0 && +(val||0) <= 0){
+            extraStyle = "border-color:#dc2626!important;box-shadow:0 0 0 3px rgba(220,38,38,.2);animation:pulse-red 1.5s infinite;";
+            cellBg = "background:#fee2e2;";
+          }
+        }
+        else if(field==="scholarship") cellBg = "background:#faf5ff;";
+        else if(field==="freeStudents") cellBg = "background:#fff7ed;";
+        else if(field==="ardaydaCusub") cellBg = "background:#f0f9ff;";
+        else if(field==="ardaydaBaxday") cellBg = "background:#fdf2f8;";
+        html+=`<td style="${cellBg}"><input class="inp-cell" type="number" min="0" value="${val}" ${isLocked?"disabled":""} style="${extraStyle}" oninput="if(+this.value<0)this.value=0;" onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
       }
     });
     html+=`${ardaydaCell}<td class="td-blue-bg">$${wL.toLocaleString()}</td></tr>`;
@@ -3223,6 +3250,38 @@ function updateFasal(key, idx, field, val){
   if(!canEdit(key)) return;
   const fd = appData[key];
 
+  // VALIDATION: Tiro maynis la ogolaan mayo
+  const numVal = +val;
+  if(numVal < 0){
+    showToast("⚠️ Tiro maynis la gali mayo — fadlan tiro 0 ama ka weyn gali", "warning");
+    refreshCalcDisplay();
+    return;
+  }
+
+  // VALIDATION: Haddii tiradaAanBixin la galiyo, digniin u soo tufo lacag
+  if(field === "tiradaAanBixin" && numVal > 0){
+    const lacagHadda = +(fd.fasalada[idx].lacagtaAanBixin||0);
+    if(lacagHadda <= 0){
+      fd.fasalada[idx][field] = val;
+      scheduleSave();
+      refreshCalcDisplay();
+      showToast("⚠️ Fadlan mudane: ardayda bishatan lacagtu ku hartay lacagtooda gali!", "warning");
+      return;
+    }
+  }
+
+  // VALIDATION: lacagtaAanBixin — haddii la gelin oo tiradaAanBixin > 0
+  if(field === "lacagtaAanBixin"){
+    const tiroAanBixin = +(fd.fasalada[idx].tiradaAanBixin||0);
+    if(tiroAanBixin > 0 && numVal <= 0){
+      showToast("⚠️ Fadlan mudane: ardayda bishatan lacagtu ku hartay lacagtooda gali!", "warning");
+      fd.fasalada[idx][field] = val;
+      scheduleSave();
+      refreshCalcDisplay();
+      return;
+    }
+  }
+
   // VALIDATION: Kaarka cagaaran (lacagtaSooHormartay) — dollar = tiro * qiimaha
   if(field === "lacagtaSooHormartay"){
     const newVal = +val||0;
@@ -3301,6 +3360,15 @@ async function saveDraft(key){
 async function submitFarac(key){
   const fd = appData[key];
   const calc = calcFarac(fd);
+
+  // VALIDATION: Hubi in lacagtaAanBixin la buuxiyey haddii tiradaAanBixin > 0
+  const missingLacag = fd.fasalada.filter(f => +(f.tiradaAanBixin||0) > 0 && +(f.lacagtaAanBixin||0) <= 0);
+  if(missingLacag.length > 0){
+    const names = missingLacag.map(f=>f.magaca).join(", ");
+    showToast(`⚠️ Fadlan mudane: ardayda bishatan lacagtu ku hartay lacagtooda gali! (${names})`, "warning");
+    closeModal();
+    return;
+  }
 
   // Kaarka cagaaran bisha xigta: Hadda (lacagHormarshay - totalHormartay) + lacagBishatan
   const cagHadda = Math.max(0, (+(fd.lacagHormarshay||0)) - calc.totalHormartay);
