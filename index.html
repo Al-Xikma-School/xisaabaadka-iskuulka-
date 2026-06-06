@@ -3737,7 +3737,7 @@ async function openSubmitModal(key){
   // ── Hubi 0b: Kharashka — ugu yaraan hal kharash waa in la buuxiyey
   const kharashBuuxaa = Object.values(fd.kharash).some(v => +(v||0) > 0);
   if(!kharashBuuxaa){
-    showToast("⛔ Walaal marka hore soo buuxi qaybta Kharashka — ugu yaraan hal kharash gali", "warning");
+    showToast("⛔ Walaal marka hore soo buuxi qaybta Kharashka — ha ilaawin ", "warning");
     activeTab = "kharash";
     refreshCalcDisplay();
     return;
@@ -3752,7 +3752,7 @@ async function openSubmitModal(key){
     // Hubi 1: Liiska dhamaystirnaanta (magac + sabab + bixiyey dhammaantood)
     const midlamaJirin = baxayaasha.some(b => !b.magac.trim() || !b.sabab || !b.bixiyey);
     if(midlamaJirin){
-      showToast("⛔ Liiska ardayda baxday dhamaystir — Magac, Sabab, iyo Lacag buuxi", "warning");
+      showToast("⛔ Liiska ardayda baxday dhamaystir — Magac, Taleefon, Sabab, iyo Lacag buuxi", "warning");
       return;
     }
 
@@ -3760,7 +3760,7 @@ async function openSubmitModal(key){
     if(prevTotal > 0 && farqi < 0){
       const need = Math.abs(farqi);
       if(baxayaasha.length < need){
-        showToast(`⛔ Waa khasab inaad liiska ku darsataa ardaydii ka maqan — waxaad u baahan tahay ${need} arday, hadda ${baxayaasha.length} kaliya`, "warning");
+        showToast(`⛔ walaal ardayda baxday halkaan ku buuxi  — waxaad u baahan tahay ${need} arday, hadda ${baxayaasha.length} kaliya`, "warning");
         return;
       }
     }
