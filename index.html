@@ -735,7 +735,7 @@ function L(key){ return (LUUQADAHA[currentLang]||LUUQADAHA.so)[key] || key; }
 
 function emptyFasal(name, faracKey, nooca){
   const q = (defaultQiimaha && defaultQiimaha[faracKey]) ? defaultQiimaha[faracKey] : 13;
-  return {magaca:name,nooca:nooca||"caadi",tiradaBixisay:0,qiimaha:q,lacagtaSooHormartay:0,lacagtaDhimanayd:0,lacagtaBishatanHormartay:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0,ardaydaCusub:0,ardaydaBaxday:0};
+  return {magaca:name,nooca:nooca||"caadi",tiradaBixisay:0,qiimaha:q,lacagtaSooHormartay:0,lacagtaHormarLacag:0,lacagtaDhimanayd:0,lacagtaBishatanHormartay:0,tiradaAanBixin:0,lacagtaAanBixin:0,scholarship:0,freeStudents:0,ardaydaCusub:0,ardaydaBaxday:0};
 }
 function buildInitFarac(){
   const d={};
@@ -753,7 +753,7 @@ function calcFarac(fd){
     tB    +=+(f.tiradaBixisay||0);
     tL    +=+(f.tiradaBixisay||0) * +(f.qiimaha||0);
     tHTiro+=+(f.lacagtaSooHormartay||0);
-    tH    +=+(f.lacagtaSooHormartay||0) * +(f.qiimaha||0);
+    tH    +=+(f.lacagtaHormarLacag||0);
     tD    +=+(f.lacagtaDhimanayd||0);
     tBH   +=+(f.lacagtaBishatanHormartay||0);
     tAB   +=+(f.tiradaAanBixin||0);
@@ -1761,7 +1761,19 @@ function renderXisaabTab(fd, calc, isLocked, color){
         else if(field==="freeStudents") cellBg = "background:#fff7ed;";
         else if(field==="ardaydaCusub") cellBg = "background:#f0f9ff;";
         else if(field==="ardaydaBaxday") cellBg = "background:#fdf2f8;";
-        html+=`<td style="${cellBg}"><input class="inp-cell" type="number" min="0" value="${val}" ${isLocked?"disabled":""} style="${extraStyle}" oninput="if(+this.value<0)this.value=0;" onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
+        if(field === "lacagtaSooHormartay"){
+          const lacagVal = +(f.lacagtaHormarLacag||0);
+          html+=`<td style="${cellBg};cursor:pointer;" onclick="${isLocked?'':"openHormarLacagModal('${activeFarac}',${i})"}">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+              <input class="inp-cell" type="number" min="0" value="${val}" ${isLocked?"disabled":""} style="width:58px;pointer-events:${isLocked?'none':'auto'};"
+                oninput="if(+this.value<0)this.value=0;"
+                onchange="updateFasal('${activeFarac}',${i},'lacagtaSooHormartay',this.value);if(+this.value<=0){updateFasal('${activeFarac}',${i},'lacagtaHormarLacag',0);}else if(!${isLocked})openHormarLacagModal('${activeFarac}',${i});" />
+              ${lacagVal>0?`<span style="font-size:10px;color:#059669;font-weight:700;font-family:'Space Grotesk',sans-serif;">$${lacagVal.toLocaleString()}</span>`:'<span style="font-size:9px;color:#94a3b8;">lacag gali</span>'}
+            </div>
+          </td>`;
+        } else {
+          html+=`<td style="${cellBg}"><input class="inp-cell" type="number" min="0" value="${val}" ${isLocked?"disabled":""} style="${extraStyle}" oninput="if(+this.value<0)this.value=0;" onchange="updateFasal('${activeFarac}',${i},'${field}',this.value)"/></td>`;
+        }
       }
     });
     html+=`${ardaydaCell}<td class="td-blue-bg">$${wL.toLocaleString()}</td></tr>`;
@@ -3282,14 +3294,22 @@ function updateFasal(key, idx, field, val){
     }
   }
 
-  // VALIDATION: Kaarka cagaaran (lacagtaSooHormartay) — dollar = tiro * qiimaha
-  if(field === "lacagtaSooHormartay"){
+  // VALIDATION: lacagtaSooHormartay — haddii kaarka cagaaran "Hadda" $0 yahay, ha u oggolaanin tiro
+  if(field === "lacagtaSooHormartay" && (+val||0) > 0){
+    const calc = calcFarac(fd);
+    const cagHadda = Math.max(0, (+(fd.lacagHormarshay||0)) - calc.totalHormartay);
+    if(cagHadda <= 0){
+      showToast("⛔ Mudane, lacagtii ardaydu hormastay way dhamaatay — waa $0. Wax tiro ah ma galin kartid!", "warning");
+      refreshCalcDisplay();
+      return;
+    }
+  }
+
+  // VALIDATION: Kaarka cagaaran lacagta (lacagtaHormarLacag)
+  if(field === "lacagtaHormarLacag"){
     const newVal = +val||0;
-    const qiime = +(fd.fasalada[idx].qiimaha||0);
-    // Wadarta dollar-ka cusub (tiro kasta * qiimaheedu)
     const totalDollarNew = fd.fasalada.reduce((sum, f, i2) => {
-      const tiro = i2 === idx ? newVal : +(f.lacagtaSooHormartay||0);
-      return sum + tiro * +(f.qiimaha||0);
+      return sum + (i2 === idx ? newVal : +(f.lacagtaHormarLacag||0));
     }, 0);
     const maxCag = +(fd.lacagHormarshay||0);
     if(totalDollarNew > maxCag){
@@ -3339,6 +3359,57 @@ function updateBaaqi(key, val){
   appData[key].lacagKhususi = +val||0;
   scheduleSave();
   refreshCalcDisplay();
+}
+
+
+function openHormarLacagModal(faracKey, fasalIdx){
+  const fd = appData[faracKey];
+  const calc_cag = calcFarac(fd);
+  const cagHaddaMod = Math.max(0, (+(fd.lacagHormarshay||0)) - calc_cag.totalHormartay);
+  if(cagHaddaMod <= 0){
+    showToast("⛔ Mudane, lacagtii ardaydu hormastay way dhamaatay — waa $0. Wax tiro ah ma galin kartid!", "warning");
+    return;
+  }
+  const f = fd.fasalada[fasalIdx];
+  const tiro = +(f.lacagtaSooHormartay||0);
+  const curLacag = +(f.lacagtaHormarLacag||0);
+  const maxCagThis = Math.max(0, (+(fd.lacagHormarshay||0)) - fd.fasalada.reduce((s,ff,ii)=> ii===fasalIdx ? s : s+(+(ff.lacagtaHormarLacag||0)), 0));
+
+  const overlay = document.createElement("div");
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(10,22,40,.65);backdrop-filter:blur(6px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;";
+  overlay.innerHTML = `
+    <div style="background:#fff;border-radius:20px;padding:28px;width:100%;max-width:380px;box-shadow:0 10px 40px rgba(0,0,0,.2);">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+        <span style="font-size:24px;">↩️</span>
+        <h3 style="margin:0;color:#0a1628;font-size:17px;font-weight:800;">Lacagta Hormarisay</h3>
+      </div>
+      <p style="color:#64748b;font-size:13px;margin-bottom:4px;font-weight:600;">${f.magaca}</p>
+      <p style="color:#94a3b8;font-size:12px;margin-bottom:18px;">Ardayda tiro: <strong style="color:#059669">${tiro}</strong> &nbsp;|&nbsp; Ugu badan: <strong style="color:#1565c0">$${maxCagThis.toLocaleString()}</strong></p>
+      <label style="color:#475569;font-size:12px;font-weight:700;display:block;margin-bottom:7px;text-transform:uppercase;letter-spacing:.4px;">💵 Lacagta Aad Galayso ($)</label>
+      <input id="hormar-lacag-inp" type="number" min="0" max="${maxCagThis}" value="${curLacag||''}"
+        placeholder="Tusaale: 150"
+        style="width:100%;padding:13px 16px;border:2px solid #3b82f6;border-radius:11px;font-size:18px;font-weight:700;font-family:'Space Grotesk',sans-serif;outline:none;color:#1e293b;text-align:center;margin-bottom:18px;"
+        oninput="if(+this.value<0)this.value=0;if(+this.value>${maxCagThis})this.value=${maxCagThis};"
+      />
+      <div style="display:flex;gap:10px;">
+        <button onclick="
+          updateFasal('${faracKey}',${fasalIdx},'lacagtaSooHormartay',0);
+          updateFasal('${faracKey}',${fasalIdx},'lacagtaHormarLacag',0);
+          this.closest('div[style*=fixed]').remove();"
+          style="flex:1;padding:12px;border:1.5px solid #e2e8f0;border-radius:10px;background:#f8fafc;cursor:pointer;font-size:14px;font-weight:600;color:#64748b;font-family:'Plus Jakarta Sans',sans-serif;">
+          Jooji
+        </button>
+        <button onclick="
+          const lacag = +(document.getElementById('hormar-lacag-inp').value||0);
+          updateFasal('${faracKey}',${fasalIdx},'lacagtaHormarLacag',lacag);
+          this.closest('div[style*=fixed]').remove();"
+          style="flex:2;padding:12px;border:none;border-radius:10px;background:linear-gradient(135deg,#059669,#0d6e4f);color:#fff;cursor:pointer;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 3px 12px rgba(13,110,79,.3);">
+          ✅ Xaqiiji Lacagta
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>{ const inp = document.getElementById("hormar-lacag-inp"); if(inp){ inp.focus(); inp.select(); }}, 100);
 }
 
 function refreshCalcDisplay(){
