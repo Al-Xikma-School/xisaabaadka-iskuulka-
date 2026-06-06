@@ -3743,19 +3743,26 @@ async function openSubmitModal(key){
     return;
   }
 
-  // Hubi 1: Liiska dhamaystirnaanta (magac + sabab + bixiyey dhammaantood)
-  const midlamaJirin = baxayaasha.some(b => !b.magac.trim() || !b.sabab || !b.bixiyey);
-  if(midlamaJirin){
-    showToast("⛔ Liiska ardayda baxday dhamaystir — Magac, Sabab, iyo Lacag buuxi", "warning");
-    return;
-  }
+  // ── Bisha 6aad (Juun) iyo 7aad (Luuliyo) — liiska ardayda baxday kuma xirna
+  const currentBishaName = getBishaName(currentBisha);
+  const BISHA_XORTA = ["Juun", "Luuliyo"]; // Labadaas bisha xorta ah
+  const isBishaXorta = BISHA_XORTA.includes(currentBishaName);
 
-  // Hubi 2: Haddii ardaydu yaraatay, liiska waa in uu ku jiraan ardaydii ka maqan
-  if(prevTotal > 0 && farqi < 0){
-    const need = Math.abs(farqi);
-    if(baxayaasha.length < need){
-      showToast(`⛔ Waa khasab inaad liiska ku darsataa ardaydii ka maqan — waxaad u baahan tahay ${need} arday, hadda ${baxayaasha.length} kaliya`, "warning");
+  if(!isBishaXorta){
+    // Hubi 1: Liiska dhamaystirnaanta (magac + sabab + bixiyey dhammaantood)
+    const midlamaJirin = baxayaasha.some(b => !b.magac.trim() || !b.sabab || !b.bixiyey);
+    if(midlamaJirin){
+      showToast("⛔ Liiska ardayda baxday dhamaystir — Magac, Sabab, iyo Lacag buuxi", "warning");
       return;
+    }
+
+    // Hubi 2: Haddii ardaydu yaraatay, liiska waa in uu ku jiraan ardaydii ka maqan
+    if(prevTotal > 0 && farqi < 0){
+      const need = Math.abs(farqi);
+      if(baxayaasha.length < need){
+        showToast(`⛔ Waa khasab inaad liiska ku darsataa ardaydii ka maqan — waxaad u baahan tahay ${need} arday, hadda ${baxayaasha.length} kaliya`, "warning");
+        return;
+      }
     }
   }
 
