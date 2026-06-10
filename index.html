@@ -353,7 +353,7 @@ window.dispatchEvent(new Event("fb-ready"));
     <p id="modal-body"></p>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Jooji</button>
-      <button class="btn-confirm" id="modal-confirm-btn"></button>
+      <a class="btn-confirm" id="modal-confirm-btn" style="text-decoration:none;display:inline-block;text-align:center;"></a>
     </div>
   </div>
 </div>
@@ -1824,6 +1824,37 @@ function renderXisaabTab(fd, calc, isLocked, color){
       <div style="display:flex;justify-content:space-between;padding:12px 0 0;font-weight:700;font-size:15px">
         <span style="color:#1a3a5c">Wadarta Saafi</span>
         <span style="color:#0d6e4f">$${calc.saafi.toLocaleString()}</span>
+      </div>
+    </div>
+    <div class="panel" id="xisaab-xir-panel-${activeFarac}">
+      <h4>✅ Xaqiiji Xisaab Xirka</h4>
+      <div class="info-row"><span>Wadarta Saafida</span><span style="color:#0d6e4f;font-weight:700;font-family:'Space Grotesk',sans-serif">$${calc.saafi.toLocaleString()}</span></div>
+      <div style="margin:10px 0 6px">
+        <label style="color:#64748b;font-size:12px;font-weight:700;display:block;margin-bottom:6px">💳 Lacagta Akoonka laga jiiday</label>
+        <input
+          type="number"
+          id="akoon-jiiday-${activeFarac}"
+          min="0"
+          value="${+(fd.lacagAkoonJiiday||0)||''}"
+          placeholder="Gali halkaan lacagta akoonkaada laga jiiday"
+          style="width:100%;padding:9px 13px;border:1.5px solid #e2e8f0;border-radius:9px;font-size:14px;font-weight:700;font-family:Space Grotesk,sans-serif;outline:none;transition:.2s;color:#1e293b;background:#f8fafc;"
+          onfocus="this.style.borderColor='#3b82f6';this.style.background='#fff'"
+          onblur="this.style.borderColor='#e2e8f0';this.style.background='#f8fafc'"
+          oninput="updateMeta('${activeFarac}','lacagAkoonJiiday',this.value);renderXisaabXirFarqi('${activeFarac}',${calc.saafi},this.value)"
+        />
+      </div>
+      <div id="xisaab-xir-farqi-${activeFarac}" style="margin-top:8px">
+        ${buildXisaabXirFarqiHTML(+(fd.lacagAkoonJiiday||0), calc.saafi)}
+      </div>
+      <div style="margin-top:14px">
+        <a
+          href="http://secadmin.lms.so/#/schools/add-marge"
+          target="_blank"
+          rel="noopener noreferrer"
+          style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#1565c0,#3b82f6);color:#fff;text-align:center;border-radius:10px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;text-decoration:none;box-shadow:0 4px 14px rgba(21,101,192,.3);transition:.2s;"
+          onmouseover="this.style.opacity='.88'"
+          onmouseout="this.style.opacity='1'"
+        >✅ Xaqiiji Xisaab Xirka</a>
       </div>
     </div>
     <div class="panel">
@@ -3788,6 +3819,38 @@ function changeLang(code){
 // ══════════════════════════════════════════
 // MODAL
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// XISAAB XIR FARQI
+// ══════════════════════════════════════════
+function buildXisaabXirFarqiHTML(akoon, saafi){
+  if(!akoon) return '<div style="color:#94a3b8;font-size:12px;text-align:center;padding:6px 0">— Gali lacagta akoonka laga jiiday —</div>';
+  const farqi = akoon - saafi;
+  const isOk = akoon === saafi;
+  const farqiStr = (farqi > 0 ? '+' : '') + '$' + farqi.toLocaleString();
+  const bg = isOk ? '#d1fae5' : '#fee2e2';
+  const border = isOk ? '#6ee7b7' : '#fca5a5';
+  const col = isOk ? '#0d6e4f' : '#c62828';
+  const textCol = isOk ? '#065f46' : '#991b1b';
+  const msg = isOk
+    ? '🎉 Hambalyo Xisaabiye! Waad ku guulaysatay xisaabka bisha ' + currentBisha
+    : '⚠️ Mudane Xisaabiye, wali waxbaa ka khaldan xisaab xirkaaga — fadlan iska hubi';
+  return '<div style="border-top:1.5px dashed #e2e8f0;padding-top:10px;margin-top:4px">'
+    + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">'
+    + '<span style="color:#64748b">Farqiga</span>'
+    + '<span style="font-weight:800;font-family:Space Grotesk,sans-serif;color:' + col + '">' + farqiStr + '</span>'
+    + '</div>'
+    + '<div style="border-radius:10px;padding:10px 14px;background:' + bg + ';border:1.5px solid ' + border + ';font-size:12.5px;font-weight:600;color:' + textCol + ';line-height:1.5;text-align:center">'
+    + msg
+    + '</div>'
+    + '</div>';
+}
+
+function renderXisaabXirFarqi(faracKey, saafi, akoonVal){
+  const el = document.getElementById("xisaab-xir-farqi-" + faracKey);
+  if(!el) return;
+  el.innerHTML = buildXisaabXirFarqiHTML(+akoonVal || 0, saafi);
+}
+
 async function openSubmitModal(key){
   const fd = appData[key];
   const baxayaasha = fd.baxayaasha || [];
@@ -3800,6 +3863,15 @@ async function openSubmitModal(key){
   const xisaabBuuxaa = fd.fasalada.some(f => +(f.tiradaBixisay||0) > 0 || +(f.qiimaha||0) > 0);
   if(!xisaabBuuxaa){
     showToast("⛔ Walaal marka hore soo buuxi qaybta Xisaab Xirka — tirada ardayda iyo qiimaha gali", "warning");
+    activeTab = "xisaab";
+    refreshCalcDisplay();
+    return;
+  }
+
+  // ── Hubi 0a2: Lacagta Akoonka laga jiiday — waa in la galiyaa
+  const akoonJiiday = +(fd.lacagAkoonJiiday||0);
+  if(!akoonJiiday || akoonJiiday <= 0){
+    showToast("⛔ Marka hore gali Lacagta Akoonka laga jiiday qaybta Xaqiiji Xisaab Xirka", "warning");
     activeTab = "xisaab";
     refreshCalcDisplay();
     return;
@@ -3862,6 +3934,9 @@ async function openSubmitModal(key){
   document.getElementById("modal-body").textContent = `${L("modal_submit_body")} ${FARAC_LABELS[key]}? ${L("modal_submit_body2")}`;
   const btn = document.getElementById("modal-confirm-btn");
   btn.textContent = L("btn_gudbi"); btn.style.background="#1565c0";
+  btn.href = "http://secadmin.lms.so/#/schools/add-marge";
+  btn.target = "_blank";
+  btn.rel = "noopener noreferrer";
   document.querySelector(".btn-cancel").textContent = L("btn_jooji");
   document.getElementById("modal-overlay").classList.add("show");
 }
@@ -3876,12 +3951,18 @@ function openResetModal(key){
       document.getElementById("modal-body").textContent = `${L("modal_reset_body")} ${FARAC_LABELS[key]}?`;
       const btn = document.getElementById("modal-confirm-btn");
       btn.textContent = L("btn_nadiifi"); btn.style.background="#c62828";
+      btn.removeAttribute("href"); btn.removeAttribute("target"); btn.removeAttribute("rel");
       document.querySelector(".btn-cancel").textContent = L("btn_jooji");
       document.getElementById("modal-overlay").classList.add("show");
     }
   });
 }
-function closeModal(){ document.getElementById("modal-overlay").classList.remove("show"); modalAction=null; }
+function closeModal(){
+  document.getElementById("modal-overlay").classList.remove("show");
+  const btn = document.getElementById("modal-confirm-btn");
+  btn.removeAttribute("href"); btn.removeAttribute("target"); btn.removeAttribute("rel");
+  modalAction=null;
+}
 document.getElementById("modal-confirm-btn").addEventListener("click",()=>{
   if(!modalAction) return;
   if(modalAction.type==="submit") submitFarac(modalAction.key);
