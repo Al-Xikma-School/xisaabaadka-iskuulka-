@@ -353,7 +353,7 @@ window.dispatchEvent(new Event("fb-ready"));
     <p id="modal-body"></p>
     <div class="modal-btns">
       <button class="btn-cancel" onclick="closeModal()">Jooji</button>
-      <a class="btn-confirm" id="modal-confirm-btn" style="text-decoration:none;display:inline-block;text-align:center;"></a>
+      <button class="btn-confirm" id="modal-confirm-btn"></button>
     </div>
   </div>
 </div>
@@ -1847,14 +1847,12 @@ function renderXisaabTab(fd, calc, isLocked, color){
         ${buildXisaabXirFarqiHTML(+(fd.lacagAkoonJiiday||0), calc.saafi)}
       </div>
       <div style="margin-top:14px">
-        <a
-          href="http://secadmin.lms.so/#/schools/add-marge"
-          target="_blank"
-          rel="noopener noreferrer"
-          style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#1565c0,#3b82f6);color:#fff;text-align:center;border-radius:10px;font-size:14px;font-weight:700;font-family:'Plus Jakarta Sans',sans-serif;text-decoration:none;box-shadow:0 4px 14px rgba(21,101,192,.3);transition:.2s;"
+        <button
+          onclick="window.location.href='http://secadmin.lms.so/#/schools/add-marge'"
+          style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#1565c0,#3b82f6);color:#fff;text-align:center;border-radius:10px;font-size:14px;font-weight:700;font-family:Plus Jakarta Sans,sans-serif;text-decoration:none;box-shadow:0 4px 14px rgba(21,101,192,.3);transition:.2s;cursor:pointer;border:none;"
           onmouseover="this.style.opacity='.88'"
           onmouseout="this.style.opacity='1'"
-        >✅ Xaqiiji Xisaab Xirka</a>
+        >✅ Xaqiiji Xisaab Xirka</button>
       </div>
     </div>
     <div class="panel">
@@ -3934,9 +3932,7 @@ async function openSubmitModal(key){
   document.getElementById("modal-body").textContent = `${L("modal_submit_body")} ${FARAC_LABELS[key]}? ${L("modal_submit_body2")}`;
   const btn = document.getElementById("modal-confirm-btn");
   btn.textContent = L("btn_gudbi"); btn.style.background="#1565c0";
-  btn.href = "http://secadmin.lms.so/#/schools/add-marge";
-  btn.target = "_blank";
-  btn.rel = "noopener noreferrer";
+  btn.onclick = function(){ window.location.href = 'http://secadmin.lms.so/#/schools/add-marge'; };
   document.querySelector(".btn-cancel").textContent = L("btn_jooji");
   document.getElementById("modal-overlay").classList.add("show");
 }
@@ -3951,7 +3947,7 @@ function openResetModal(key){
       document.getElementById("modal-body").textContent = `${L("modal_reset_body")} ${FARAC_LABELS[key]}?`;
       const btn = document.getElementById("modal-confirm-btn");
       btn.textContent = L("btn_nadiifi"); btn.style.background="#c62828";
-      btn.removeAttribute("href"); btn.removeAttribute("target"); btn.removeAttribute("rel");
+      btn.onclick = null;
       document.querySelector(".btn-cancel").textContent = L("btn_jooji");
       document.getElementById("modal-overlay").classList.add("show");
     }
@@ -3960,7 +3956,7 @@ function openResetModal(key){
 function closeModal(){
   document.getElementById("modal-overlay").classList.remove("show");
   const btn = document.getElementById("modal-confirm-btn");
-  btn.removeAttribute("href"); btn.removeAttribute("target"); btn.removeAttribute("rel");
+  btn.onclick = null;
   modalAction=null;
 }
 document.getElementById("modal-confirm-btn").addEventListener("click",()=>{
