@@ -676,7 +676,7 @@ function getAllModuleIds(){
 // Haddii user-ku module la'yahay ama modules undefined yahay → dhammaan fur (backward compat)
 function userHasModule(user, moduleId){
   if(!user) return false;
-  if(user.role==="maamul" || user.role==="kormeere") return true;
+  if(user.role==="maamul" || user.role==="kormeere" || user.role==="xoghubiye") return true;
   if(!user.modules || !Array.isArray(user.modules)) return true;
   // Haddii parent xiran yahay, child-kooduba xirmi doonaa
   const parentId = moduleId.includes(".") ? moduleId.split(".")[0] : null;
@@ -971,7 +971,8 @@ function doLogin(){
   if(usr && usr.password===p){
     currentUser = {...usr, username:u};
     document.getElementById("login-err").style.display="none";
-    activeFarac = (usr.role!=="maamul" && usr.role!=="kormeere") ? usr.role : "sare";
+    if(usr.role==="xoghubiye") activeFarac = null;
+    else activeFarac = (usr.role!=="maamul" && usr.role!=="kormeere") ? usr.role : "sare";
     activeTab = "xisaab";
     document.getElementById("login-page").style.display="none";
     document.getElementById("app-page").classList.add("show");
@@ -1127,13 +1128,20 @@ document.addEventListener("click", function(e){
 function renderSidebar(){
   const isMaamul = currentUser.role==="maamul";
   const isKormeere = currentUser.role==="kormeere";
+  const isXogHubiye = currentUser.role==="xoghubiye";
   const sb = document.getElementById("sidebar");
   let html="";
-  if(isMaamul || isKormeere){
+  if(isMaamul || isKormeere || isXogHubiye){
     if(isKormeere){
       html += `<div style="background:linear-gradient(135deg,#1565c0,#3b82f6);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="color:#fff;font-weight:800;font-size:13px;">👁️ Kormeere</div>
         <div style="color:rgba(255,255,255,.75);font-size:11px;margin-top:3px;">Daawasho Kaliya</div>
+      </div>`;
+    }
+    if(isXogHubiye){
+      html += `<div style="background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
+        <div style="color:#fff;font-weight:800;font-size:13px;">🔍 Xog Hubiye</div>
+        <div style="color:rgba(255,255,255,.75);font-size:11px;margin-top:3px;">Xaqiijinta Gudbinta Xisaabta</div>
       </div>`;
     }
     html += `<div class="sb-section-lbl">${L("nav_faracyada")}</div>`;
@@ -1144,8 +1152,11 @@ function renderSidebar(){
         ${appData[k]?.submitted?"<span style='font-size:10px'>✅</span>":""}
       </button>`;
     });
-    if(userHasModule(currentUser,"dashboard"))
+    if(isXogHubiye){
+      html += `<button class="sb-guud-btn ${activeFarac===null?"active":""}" onclick="selectGuud()" style="margin-top:4px">📋 Xaalada Gudbinta</button>`;
+    } else if(userHasModule(currentUser,"dashboard")){
       html += `<button class="sb-guud-btn ${activeFarac===null && activeTab!=="maamul-settings"?"active":""}" onclick="selectGuud()" style="margin-top:4px">${L("nav_guud_short")}</button>`;
+    }
     if(isMaamul){
       html += `<button class="sb-guud-btn ${activeTab==="maamul-settings"?"active":""}" onclick="selectMaamulSettings()" style="margin-top:4px;background:${activeTab==="maamul-settings"?'linear-gradient(135deg,#1565c0,#3b82f6)':'transparent'};color:${activeTab==="maamul-settings"?'#fff':'rgba(255,255,255,.75)'}">${L("tab_settings")}</button>`;
       html += `<button class="sb-guud-btn ${activeTab==="history"?"active":""}" onclick="selectHistoryTab()" style="margin-top:4px;background:${activeTab==="history"?'linear-gradient(135deg,#dc2626,#ef4444)':'transparent'};color:${activeTab==="history"?'#fff':'rgba(255,255,255,.75)'}">📜 History</button>`;
@@ -1161,7 +1172,12 @@ function renderSidebar(){
         <button class="sb-tab-btn ${activeTab==="history"?"active":""}" onclick="selectHistoryTab()" style="margin-bottom:4px">📜 History</button>`;
     }
   }
-  if(activeFarac){
+  if(activeFarac && isXogHubiye){
+    html += `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:6px">
+      <div class="sb-section-lbl">TABS</div>
+      <button class="sb-tab-btn active">${L("tab_xisaab")}</button>
+    </div>`;
+  } else if(activeFarac){
     html += `<div style="border-top:1px solid rgba(255,255,255,.1);margin-top:6px;padding-top:6px">
       <div class="sb-section-lbl">TABS</div>`;
     const allTabs=[
@@ -1191,7 +1207,12 @@ function renderContent(){
   destroyCharts();
   const isMaamul = currentUser.role==="maamul";
   const isKormeere = currentUser.role==="kormeere";
+  const isXogHubiye = currentUser.role==="xoghubiye";
   const mc = document.getElementById("main-content");
+  if(isXogHubiye){
+    mc.innerHTML = activeFarac ? renderXogHubiyeFaracView() : renderXogHubiyeGuud();
+    return;
+  }
   if(activeTab==="maamul-settings" && isMaamul){
     mc.innerHTML = `<div class="panel" style="padding:14px 18px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
@@ -1678,9 +1699,104 @@ function renderFaracDetail(){
   return html;
 }
 
+// ── XOG HUBIYE (DATA VERIFIER) — VIEWS ────
+function renderXogHubiyeGuud(){
+  const keys = Object.keys(FARAC_COLORS);
+  const submittedCount = keys.filter(k=>appData[k]?.submitted).length;
+  const rows = keys.map(k=>{
+    const submitted = !!(appData[k] && appData[k].submitted);
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-radius:12px;margin-bottom:10px;background:#fff;border:1.5px solid ${submitted?'#a7f3d0':'#fecaca'};box-shadow:0 2px 8px rgba(0,0,0,.05)">
+      <button onclick="selectFarac('${k}')" style="display:flex;align-items:center;gap:10px;background:none;border:none;cursor:pointer;padding:0;">
+        <span style="width:12px;height:12px;border-radius:50%;display:inline-block;background:${FARAC_COLORS[k]}"></span>
+        <span style="font-weight:800;color:#1a3a5c;font-size:14px">${FARAC_LABELS[k]}</span>
+      </button>
+      <span style="font-weight:800;font-size:12px;padding:6px 14px;border-radius:20px;background:${submitted?'#ecfdf5':'#fef2f2'};color:${submitted?'#059669':'#dc2626'};border:1.5px solid ${submitted?'#a7f3d0':'#fecaca'}">
+        ${submitted?'✅ La Gudbiyey':'⏳ Wali Ma Gudbin'}
+      </span>
+    </div>`;
+  }).join("");
+  return `<div class="panel" style="padding:18px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+      <div style="width:5px;height:32px;border-radius:4px;background:linear-gradient(135deg,#7c3aed,#a78bfa)"></div>
+      <h2 style="margin:0;color:#1a3a5c;font-size:17px;font-weight:800">🔍 Xaalada Gudbinta — ${currentBisha}</h2>
+    </div>
+    <p style="color:#888;font-size:12px;margin:0 0 16px 39px">Faracyada gudbiyey iyo kuwa aan wali gudbin xisaab xirka bishan. Guji farac si aad u aragto xisaabtiisa.</p>
+    <div style="margin-bottom:10px;font-size:13px;color:#1a3a5c;font-weight:800;margin-left:2px">${submittedCount} / ${keys.length} Faracyada ayaa Gudbiyey</div>
+    ${rows}
+  </div>`;
+}
+
+function renderXogHubiyeFaracView(){
+  const fd = appData[activeFarac];
+  const calc = calcFarac(fd);
+  const color = FARAC_COLORS[activeFarac];
+  const submitted = !!fd.submitted;
+  let html = `
+  <div class="farac-detail-header">
+    <div class="farac-title">
+      <div class="farac-bar" style="background:${color}"></div>
+      <div>
+        <h2 style="margin:0;color:#1a3a5c;font-size:17px">${FARAC_LABELS[activeFarac]}</h2>
+        <span style="color:#888;font-size:11px">📅 ${currentBisha}</span>
+      </div>
+    </div>
+    <div class="action-btns">
+      <span style="background:${submitted?'#ecfdf5':'#fef2f2'};color:${submitted?'#059669':'#dc2626'};padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;border:1.5px solid ${submitted?'#a7f3d0':'#fecaca'};">
+        ${submitted?'✅ La Gudbiyey':'⏳ Wali Ma Gudbin'}
+      </span>
+    </div>
+  </div>
+  <div class="alert-locked" style="background:#f5f3ff;border-color:#ddd6fe;color:#5b21b6;">🔍 Adigu waxaad tahay Xog Hubiye — waxaad arki kartaa magacyada fasalada iyo wadarta ardaydooda kaliya.</div>
+  `;
+  html += renderXogHubiyeXisaabTable(fd, calc, color);
+  return html;
+}
+
+// Slim, read-only table: class name + total students only (nothing else)
+function renderXogHubiyeXisaabTable(fd, calc, color){
+  let html=`<div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;margin-bottom:18px">
+    <div class="panel-header" style="background:${color}">
+      <span>📋 Xisaab Xirka — ${currentBisha}</span>
+      <span style="font-size:12px;opacity:.8">🔒 Qori la'aan</span>
+    </div>
+    <div style="padding:18px;display:flex;">
+    <div style="overflow-x:auto;border-radius:var(--radius-sm);border:1px solid #e2e8f0;-webkit-overflow-scrolling:touch;">
+    <table style="width:auto;border-collapse:collapse;font-size:13px;"><thead><tr>
+      <th style="background:#1e293b!important;color:#fff!important;padding:10px 22px;">Fasalka</th>
+      <th class="th-green" style="padding:10px 22px;">👥 Wadarta Ardayda</th>
+    </tr></thead><tbody>`;
+
+  const fasaladaSorted = fd.fasalada
+    .map((f, i_orig) => ({f, i_orig}))
+    .sort((a, b) => {
+      const aB = a.f.nooca === "bas" ? 1 : 0;
+      const bB = b.f.nooca === "bas" ? 1 : 0;
+      return aB - bB;
+    });
+
+  fasaladaSorted.forEach(({f})=>{
+    const isBas = f.nooca === "bas";
+    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
+    const rowBg = isBas ? "background:linear-gradient(90deg,rgba(234,88,12,.07),rgba(251,146,60,.04));" : "";
+    const nameStyle = isBas ? "font-weight:700;color:#ea580c;white-space:nowrap;font-size:13px;padding:10px 22px;" : `font-weight:600;color:${color};white-space:nowrap;font-size:13px;padding:10px 22px;`;
+    const ardaydaCell = isBas
+      ? `<td style="color:#cbd5e1;font-weight:600;font-size:13px;background:rgba(234,88,12,.04);padding:10px 22px;text-align:center;">—</td>`
+      : `<td class="td-green-bg" style="font-weight:800;font-size:15px;padding:10px 22px;text-align:center;">${wA}</td>`;
+    html += `<tr style="${rowBg}"><td style="${nameStyle}">${isBas?'🚌 ':''}${f.magaca}</td>${ardaydaCell}</tr>`;
+  });
+
+  html += `</tbody><tfoot><tr>
+    <td style="color:#1a3a5c;font-size:12px;font-weight:800;padding:10px 22px;">WADAR</td>
+    <td class="tfoot-total-arday" style="padding:10px 22px;text-align:center;">${calc.totalArdayda}</td>
+  </tr></tfoot></table>
+    </div>
+    </div></div>`;
+  return html;
+}
+
 // ── XISAAB TAB ────────────────────────────
-function renderXisaabTab(fd, calc, isLocked, color){
-  const isKormeere = currentUser.role === "kormeere";
+function renderXisaabTab(fd, calc, isLocked, color, minimalView){
+  const isKormeere = currentUser.role === "kormeere" || currentUser.role === "xoghubiye";
   const fields = Object.keys(FIELD_LABELS);
   let html=`<div style="background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.08);overflow:hidden;margin-bottom:18px">
     <div class="panel-header" style="background:${color}">
@@ -1806,7 +1922,9 @@ function renderXisaabTab(fd, calc, isLocked, color){
     <td class="tfoot-total-arday">${calc.totalArdayda}</td>
     <td class="tfoot-total-lacag">$${calc.xarooday.toLocaleString()}</td>
   </tr></tfoot></table></div></div>
-
+  `;
+  if(minimalView) return html;
+  html += `
   <div class="panel" style="margin-bottom:16px">
     <h4 style="margin-bottom:10px">📝 Faalo / Xusuus-qor</h4>
     ${isKormeere
@@ -2950,8 +3068,8 @@ function addFasalNonMaamul(){
   renderAll();
 }
 function renderSettingsUsers(){
-  const roleBgColors = {maamul:"#1a3a5c",sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a",kormeere:"#1565c0"};
-  const roleLabels = {maamul:"Maamulka",sare:"Dugsiga Sare",dhexe:"Dugsiga Dhexe",hoose1:"Hoose 1",hoose2:"Hoose 2",kormeere:"Kormeere"};
+  const roleBgColors = {maamul:"#1a3a5c",sare:"#0d6e4f",dhexe:"#7b3f00",hoose1:"#4a1a6b",hoose2:"#8b1a2a",kormeere:"#1565c0",xoghubiye:"#7c3aed"};
+  const roleLabels = {maamul:"Maamulka",sare:"Dugsiga Sare",dhexe:"Dugsiga Dhexe",hoose1:"Hoose 1",hoose2:"Hoose 2",kormeere:"Kormeere",xoghubiye:"Xog Hubiye"};
   const userList = Object.entries(USERS).map(([username, u])=>`
     <div class="user-item">
       <div class="user-item-info">
@@ -2961,7 +3079,7 @@ function renderSettingsUsers(){
           &nbsp;${u.label||""}
           &nbsp;· 🔑 ${u.password}
         </div>
-        ${(u.role!=="maamul" && u.role!=="kormeere") ? `<div style="font-size:10px;color:#64748b;margin-top:3px;">
+        ${(u.role!=="maamul" && u.role!=="kormeere" && u.role!=="xoghubiye") ? `<div style="font-size:10px;color:#64748b;margin-top:3px;">
           🧩 ${(!u.modules||!Array.isArray(u.modules)) ? '<span style="color:#059669;font-weight:700">Dhammaan Modules</span>' : (u.modules.filter(m=>!m.includes(".")).map(m=>{const mod=ALL_MODULES.find(x=>x.id===m); return mod?mod.icon+" "+mod.label:m;}).join(", ")||'<span style="color:#dc2626">Wax module ah</span>')}
         </div>` : ''}
       </div>
@@ -2978,6 +3096,7 @@ function renderSettingsUsers(){
     {v:"hoose1",l:"Hoose 1"},
     {v:"hoose2",l:"Hoose 2"},
     {v:"kormeere",l:"Kormeere (Daawasho Kaliya)"},
+    {v:"xoghubiye",l:"Xog Hubiye (Xaqiijiyaha Gudbinta)"},
   ].map(r=>`<option value="${r.v}">${r.l}</option>`).join("");
 
   // Build module checkboxes HTML (for add form — all checked by default)
@@ -3297,7 +3416,7 @@ function hexToRgba(hex, a){
 // DATA MUTATIONS
 // ══════════════════════════════════════════
 function canEdit(key){ 
-  if(currentUser.role==="kormeere") return false;
+  if(currentUser.role==="kormeere" || currentUser.role==="xoghubiye") return false;
   return !appData[key]?.submitted || currentUser.role==="maamul"; 
 }
 
@@ -3636,11 +3755,11 @@ function uncheckAllModules(prefix){
 }
 function onNewUserRoleChange(role){
   const wrap = document.getElementById("new-user-modules-wrap");
-  if(wrap) wrap.style.display = (role==="maamul"||role==="kormeere") ? "none" : "block";
+  if(wrap) wrap.style.display = (role==="maamul"||role==="kormeere"||role==="xoghubiye") ? "none" : "block";
 }
 function onEditUserRoleChange(role){
   const wrap = document.getElementById("edit-user-modules-wrap");
-  if(wrap) wrap.style.display = (role==="maamul"||role==="kormeere") ? "none" : "block";
+  if(wrap) wrap.style.display = (role==="maamul"||role==="kormeere"||role==="xoghubiye") ? "none" : "block";
 }
 function buildModuleCheckboxesHtml(prefix, selectedModules){
   const allSelected = !selectedModules;
@@ -3676,7 +3795,7 @@ function addUser(){
   if(!username || !password){ showToast("⚠️ Username iyo Password buuxi","warning"); return; }
   if(USERS[username]){ showToast("⚠️ Username horey u jira","warning"); return; }
   const newUser = {password, role, label: label||username};
-  if(role!=="maamul" && role!=="kormeere"){
+  if(role!=="maamul" && role!=="kormeere" && role!=="xoghubiye"){
     newUser.modules = getSelectedModules("new-user");
   }
   USERS[username] = newUser;
@@ -3710,7 +3829,7 @@ function openEditUser(username){
   if(roleEl) roleEl.value = u.role;
   // Build modules inner HTML
   const inner = document.getElementById("edit-user-modules-inner");
-  const isMaamulOrKormeere = (u.role==="maamul" || u.role==="kormeere");
+  const isMaamulOrKormeere = (u.role==="maamul" || u.role==="kormeere" || u.role==="xoghubiye");
   const wrap = document.getElementById("edit-user-modules-wrap");
   if(wrap) wrap.style.display = isMaamulOrKormeere ? "none" : "block";
   if(inner){
@@ -3738,7 +3857,7 @@ function saveEditUser(){
     label: newLabel || newName,
   };
   if(newPass) updatedUser.password = newPass;
-  if(newRole!=="maamul" && newRole!=="kormeere"){
+  if(newRole!=="maamul" && newRole!=="kormeere" && newRole!=="xoghubiye"){
     updatedUser.modules = getSelectedModules("edit-user");
   } else {
     delete updatedUser.modules;
