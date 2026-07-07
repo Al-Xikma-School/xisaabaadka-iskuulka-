@@ -1749,6 +1749,7 @@ function renderXogHubiyeFaracView(){
   <div class="alert-locked" style="background:#f5f3ff;border-color:#ddd6fe;color:#5b21b6;">🔍 Adigu waxaad tahay Xog Hubiye — waxaad arki kartaa magacyada fasalada iyo wadarta ardaydooda kaliya.</div>
   `;
   html += renderXogHubiyeXisaabTable(fd, calc, color);
+  html += renderBaxayaashaPanel(fd, calc, true, activeFarac);
   return html;
 }
 
@@ -2046,7 +2047,8 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
   baxayaasha.forEach((b, i) => {
     const sabOptions = SABAB_OPTIONS.map(s =>
       `<option value="${s}" ${b.sabab===s?"selected":""}>${s}</option>`).join("");
-    const isKormeere = currentUser.role==="kormeere";
+    const isKormeere = currentUser.role==="kormeere" || currentUser.role==="xoghubiye";
+    const isXogUururiye = currentUser.role==="xoghubiye";
     const rdStyle = "display:inline-block;padding:4px 9px;border-radius:6px;font-size:12px;font-weight:700;color:#334155;background:#f1f5f9;border:1px solid #e2e8f0;";
     rows += `<tr>
       <td style="color:#64748b;font-weight:700;font-size:12px">${i+1}</td>
@@ -2101,9 +2103,22 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
         : `<span style="color:#ccc;font-size:12px">—</span>`}
       </td>
       <td>
+        ${isXogUururiye
+          ? (b.tirMaamule
+              ? `<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">✅ Loo Diray Maamule</span>`
+              : `<button onclick="tirMaamuleArday('${faracKey}',${i})"
+                  style="padding:4px 12px;background:linear-gradient(135deg,#7c3aed,#a855f7);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">📤 Tir Maamule</button>`)
+          : (b.tirMaamule
+              ? `<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">✅ Loo Diray Maamule</span>`
+              : `<span style="color:#ccc;font-size:11px">—</span>`)
+        }
+      </td>
+      <td>
         ${currentUser.role==="maamul" && !b.xanibay
-          ? `<button onclick="xanibArday('${faracKey}',${i})"
-              style="padding:4px 12px;background:linear-gradient(135deg,#1a3a5c,#1565c0);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">🔒 Xanib</button>`
+          ? (b.tirMaamule
+              ? `<button onclick="xanibArday('${faracKey}',${i})"
+                  style="padding:4px 12px;background:linear-gradient(135deg,#1a3a5c,#1565c0);border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">🔒 Xanib</button>`
+              : `<span style="color:#ccc;font-size:11px;font-style:italic">⏳ Sugaya Xog Ururiye</span>`)
           : b.xanibay
             ? `<span style="display:inline-block;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;">✅ La xanibay</span>`
             : `<span style="color:#ccc;font-size:11px">—</span>`
@@ -2137,6 +2152,7 @@ function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
             <th>Lacag Bisha La Tagay</th>
             <th>Lacag Bisha La Tagay ($)</th>
             <th>Maka Quustay?</th>
+            ${(currentUser.role==="xoghubiye"||currentUser.role==="maamul")?`<th style="background:#7c3aed!important;color:#fff!important;font-weight:800!important">Tir Maamule</th>`:"<th></th>"}
             ${currentUser.role==="maamul"?`<th style="background:#1a3a5c!important;color:#ffd700!important;font-weight:800!important">Xanib</th>`:"<th></th>"}
             <th></th>
           </tr></thead>
@@ -2174,11 +2190,25 @@ function updateBaxay(key, idx, field, val){
   refreshCalcDisplay();
 }
 
+// ── TIR MAAMULE (Xog Ururiye u diraya Maamulka) ──────────
+function tirMaamuleArday(faracKey, idx){
+  if(currentUser.role !== "xoghubiye") return;
+  const b = appData[faracKey].baxayaasha[idx];
+  if(!b) return;
+  if(b.tirMaamule){ showToast("⚠️ Ardaygan horey ayaad ugu dirtay Maamulka","warning"); return; }
+  b.tirMaamule = true;
+  b.tirMaamuleWaqti = new Date().toISOString();
+  scheduleSave();
+  refreshCalcDisplay();
+  showToast(`✅ "${b.magac||"Ardayga"}" waxaad u dirtay Maamulka si uu u xanibo`);
+}
+
 // ── XANIB ARDAY ───────────────────────────
 function xanibArday(faracKey, idx){
   if(currentUser.role !== "maamul") return;
   const b = appData[faracKey].baxayaasha[idx];
   if(!b) return;
+  if(!b.tirMaamule){ showToast("⚠️ Xog Ururiyuhu weli kuuma dirin ardaygan — sug ilaa uu riixo 'Tir Maamule'","warning"); return; }
   const lacag = +(b.lacagBishaLaTagay||0);
   if(!lacag){ showToast("⚠️ Ardayga lacag lama gelin, ma xanibo kartid","warning"); return; }
   if(b.xanibay){ showToast("⚠️ Ardaygaan horey ayaa loo xanibay","warning"); return; }
@@ -2219,6 +2249,19 @@ async function loadXanibHistoryFromFb(){
     if(val && Array.isArray(val)) xanibHistory = val;
     else if(val && typeof val === "object") xanibHistory = Object.values(val);
   }catch(e){}
+}
+let _xanibHistoryListener = null;
+function startXanibHistoryListener(){
+  if(_xanibHistoryListener){ _xanibHistoryListener(); _xanibHistoryListener=null; }
+  const dbRef = window._fbRef(window._fbDb, XANIB_HISTORY_FB_PATH);
+  _xanibHistoryListener = window._fbOnValue(dbRef, (snapshot)=>{
+    const val = snapshot.val();
+    if(val && Array.isArray(val)) xanibHistory = val;
+    else if(val && typeof val === "object") xanibHistory = Object.values(val);
+    else xanibHistory = [];
+    // Ku cusboonaysii view-ga haddii user-ku fadhiyo History tab-ka
+    if(currentUser && activeFarac===null && activeTab==="history") renderContent();
+  });
 }
 // ── HISTORY TAB ───────────────────────────
 function renderHistoryTab(){
@@ -4127,7 +4170,7 @@ async function appInit(){
   setFbLoading(true);
   try{
     await loadUsersAndSettings();
-    await loadXanibHistoryFromFb();
+    startXanibHistoryListener();
     applyLangToLogin();
     const savedBisha = await fbGetOnce(BISHA_FB_PATH);
     // Support both old format ("Abriil") and new format ("Abriil 2026")
