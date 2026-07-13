@@ -784,8 +784,8 @@ function calcFarac(fd){
   const basKabid=tL_bas-kDareewalada;
   const xarooday=tL+tD+tBH+tSaayid;
   const saafi=xarooday-tDiscount-(+fd.lacagKhususi);
-  // totalArdayda: bas fasalada tiradooda kuma jirto
-  const totalArdayda=tB_w+tAB_w+tS_w+tF_w+tCusub_w+tHTiro_w;
+  // totalArdayda: bas fasalada tiradooda kuma jirto; ardayda baxday waa laga jarayaa
+  const totalArdayda=tB_w+tAB_w+tS_w+tF_w+tCusub_w+tHTiro_w-tBaxday_w;
   return {
     totalBixisay:tB, totalBixisay_w:tB_w,
     totalLacag:tL,
@@ -1777,7 +1777,7 @@ function renderXogHubiyeXisaabTable(fd, calc, color){
 
   fasaladaSorted.forEach(({f})=>{
     const isBas = f.nooca === "bas";
-    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
+    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0) - +(f.ardaydaBaxday||0));
     const rowBg = isBas ? "background:linear-gradient(90deg,rgba(234,88,12,.07),rgba(251,146,60,.04));" : "";
     const nameStyle = isBas ? "font-weight:700;color:#ea580c;white-space:nowrap;font-size:13px;padding:10px 22px;" : `font-weight:600;color:${color};white-space:nowrap;font-size:13px;padding:10px 22px;`;
     const ardaydaCell = isBas
@@ -1838,7 +1838,7 @@ function renderXisaabTab(fd, calc, isLocked, color, minimalView){
     const wL = Math.max(0, +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0) + +(f.lacagtaSaayidka||0) - +(f.discount||0));
     const isBas = f.nooca === "bas";
     // Bas fasalada: tirada ardayda kuma biirto — kaliya lacagta
-    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
+    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0) - +(f.ardaydaBaxday||0));
     const rowBg = isBas ? "background:linear-gradient(90deg,rgba(234,88,12,.07),rgba(251,146,60,.04));" : "";
     const nameStyle = isBas ? "font-weight:700;color:#ea580c;white-space:nowrap;font-size:12px" : `font-weight:600;color:${color};white-space:nowrap;font-size:12px`;
     const ardaydaCell = isBas
@@ -2375,7 +2375,7 @@ function buildReportHTML(fd, calc, color){
   fasaladaSortedReport.forEach(f=>{
     const isBas = f.nooca === "bas";
     const wL = Math.max(0, +(f.tiradaBixisay||0) * +(f.qiimaha||0) + +(f.lacagtaDhimanayd||0) + +(f.lacagtaBishatanHormartay||0) + +(f.lacagtaSaayidka||0) - +(f.discount||0));
-    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0));
+    const wA = isBas ? null : (+f.tiradaBixisay + +f.tiradaAanBixin + +f.scholarship + +f.freeStudents + +(f.ardaydaCusub||0) + +(f.lacagtaSooHormartay||0) - +(f.ardaydaBaxday||0));
     const disc = +(f.discount||0);
     const rowBgR = isBas ? "background:rgba(234,88,12,.05);" : "";
     xisaabRows += `<tr style="${rowBgR}">
