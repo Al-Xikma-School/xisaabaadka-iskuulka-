@@ -821,6 +821,16 @@ async function getPrevBisha(targetBisha){
   return BILAHA[idx - 1] + " " + year;
 }
 
+function getNextBisha(targetBisha){
+  // Hel bisha xigta si loo helo kaararka carry-over-ka loo diray (loogu talagalay unlock rollback)
+  const name = getBishaName(targetBisha);
+  const year = getBishaYear(targetBisha);
+  const idx = BILAHA.indexOf(name);
+  if(idx < 0) return null;
+  if(idx === 11){ return BILAHA[0] + " " + (year + 1); }
+  return BILAHA[idx + 1] + " " + year;
+}
+
 // Raadi _nextFasalada ugu dambeeyay bishaaha hore oo dhan (ilaa 24 bil)
 async function getLastKnownFasalada(targetBisha){
   let checkBisha = targetBisha;
@@ -882,6 +892,11 @@ async function loadBisha(targetBisha){
             appData[k].lacagHormarshay    = addH;
             appData[k].lacagDhimanaydKore = addD;
             appData[k]._carryApplied = true;
+            // Xasuuso qadarka saxda ah ee la geliyey, si haddii bisha hore la furo (unlock)
+            // loo ogaado inta laga jarayo bisha xigta — halkii lagu tirtiri lahaa dhammaan qiimaha
+            // (taasoo tirtiri lahayd wax kasta oo xisaabiyuhu gacanta ku daray bisha xigta).
+            appData[k]._carryAppliedH = addH;
+            appData[k]._carryAppliedD = addD;
           }
           // Kaydi ardayda bishii hore si farqiga loo xisaabiyo
           appData[k].prevMonthArdayda = +(prevSnap[k]._nextArdayda||0) || calcFarac(prevSnap[k]).totalArdayda;
@@ -2006,7 +2021,7 @@ function renderXisaabTab(fd, calc, isLocked, color, minimalView){
 function renderBaxayaashaPanel(fd, calc, isLocked, faracKey){
   const baxayaasha = fd.baxayaasha || [];
   const prevTotal = +(fd.prevMonthArdayda||0);
-  const currTotal = calc.totalArdayda;
+  const currTotal = calc.totalArdayda - calc.totalCusub_w;
   const farqi = currTotal - prevTotal;
 
   // Farqi section
@@ -3678,6 +3693,25 @@ async function submitFarac(key){
 }
 async function unlockFarac(key){
   const fd = appData[key];
+
+  // Ka hor inta aan _nextHormar/_nextDhiman la tirtirin, dib u soo qaad bisha xigta
+  // (tusaale: May la unlock-gareeyay → Juun) oo si buuxda uga faaruqi kaararka cagaaran/casaanka —
+  // si marka xisaabiyuhu mar labaad gudbiyo xogtiisa saxda ah, ay si nadiif ah u soo gasho.
+  try{
+    const nextBisha = getNextBisha(currentBisha);
+    if(nextBisha){
+      const nextSnap = await fbGetOnce(getFbPath(nextBisha));
+      if(nextSnap && typeof nextSnap==="object" && nextSnap[key] && !nextSnap[key].submitted){
+        nextSnap[key].lacagHormarshay    = 0;
+        nextSnap[key].lacagDhimanaydKore = 0;
+        nextSnap[key]._carryApplied = false;
+        nextSnap[key]._carryAppliedH = 0;
+        nextSnap[key]._carryAppliedD = 0;
+        await fbSet(getFbPath(nextBisha), nextSnap);
+      }
+    }
+  }catch(e){}
+
   fd._nextHormar = 0;
   fd._nextDhiman = 0;
   fd.submitted = false;
@@ -4030,7 +4064,7 @@ async function openSubmitModal(key){
   const baxayaasha = fd.baxayaasha || [];
   const prevTotal = +(fd.prevMonthArdayda||0);
   const calc = calcFarac(fd);
-  const currTotal = calc.totalArdayda;
+  const currTotal = calc.totalArdayda - calc.totalCusub_w;
   const farqi = currTotal - prevTotal;
 
   // ── Hubi 0a: Xisaab Xirka — ugu yaraan hal fasalka waa in la buuxiyey
