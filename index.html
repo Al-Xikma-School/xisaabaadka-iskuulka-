@@ -2788,6 +2788,7 @@ function renderSettingsTab(isMaamul){
   if(userHasModule(currentUser,"settings.fasalada")) nonMaamulTabs.push({id:"fasalada", icon:"🏫", label:"Fasalada"});
   if(userHasModule(currentUser,"settings.qiimaha"))  nonMaamulTabs.push({id:"qiimaha",  icon:"💵", label:"Qiimaha"});
   nonMaamulTabs.push({id:"luuqad", icon:"🌐", label:"Luuqadda"});
+  nonMaamulTabs.push({id:"password", icon:"🔑", label:"Passwordka"});
 
   const tabs = isMaamul
     ? [
@@ -2798,6 +2799,7 @@ function renderSettingsTab(isMaamul){
         {id:"kharashMgr",icon:"📋", label:"Kharashka"},
         {id:"luuqad",    icon:"🌐", label:"Luuqadda"},
         {id:"bilawga",   icon:"🗓️", label:"Bisha Bilawga"},
+        {id:"password",  icon:"🔑", label:"Passwordka"},
       ]
     : nonMaamulTabs;
 
@@ -2816,6 +2818,7 @@ function renderSettingsTab(isMaamul){
   else if(activeSettingsTab==="kharashMgr" && isMaamul) html += renderSettingsKharashMgr();
   else if(activeSettingsTab==="luuqad") html += renderSettingsLuuqad();
   else if(activeSettingsTab==="bilawga" && isMaamul) html += renderSettingsBilawga();
+  else if(activeSettingsTab==="password") html += renderSettingsPassword();
 
   return html;
 }
@@ -3061,6 +3064,7 @@ function renderSettingsFasaladaNonMaamul(){
               ${f.magaca}
               ${isBas ? `<span class="fasal-bas-badge">🚌 Bas</span>` : ""}
             </span>
+            <button style="background:rgba(255,255,255,.7);border:1px solid rgba(59,130,246,.35);color:#2563eb;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;font-weight:700;" onclick="openEditFasal('${myFarac}',${i})">✏️</button>
           </div>
           <div style="display:flex;align-items:center;gap:8px;">
             <span style="color:${isBas?'rgba(234,88,12,.65)':`rgba(${r},${g},${b},.65)`};font-size:11px;min-width:80px;font-weight:600">💵 Qiimaha:</span>
@@ -3254,6 +3258,44 @@ function renderSettingsLuuqad(){
         ${currentLang===code?`<span style="margin-left:auto;color:#1565c0;font-size:18px">✓</span>`:""}
       </div>`).join("")}
   </div>`;
+}
+
+// ── PASSWORDKA — WAX KA BEDDEL PASSWORD-KAAGA ──
+function renderSettingsPassword(){
+  return `<div>
+    <div class="settings-grid" style="grid-template-columns:1fr;max-width:380px">
+      <div>
+        <h4 style="color:#1a3a5c;margin-bottom:14px">🔑 Wax ka Beddel Password-kaaga</h4>
+        <label class="form-lbl">Password-ka Hore</label>
+        <input id="pw-old" class="form-input" type="password" placeholder="Password-ka hadda"/>
+        <label class="form-lbl">Password-ka Cusub</label>
+        <input id="pw-new" class="form-input" type="password" placeholder="Ugu yaraan 4 xaraf"/>
+        <label class="form-lbl">Ku Celi Password-ka Cusub</label>
+        <input id="pw-confirm" class="form-input" type="password" placeholder="Ku celi password-ka cusub" onkeydown="if(event.key==='Enter')changeMyPassword()"/>
+        <button class="btn-add" onclick="changeMyPassword()" style="margin-top:6px">💾 Kaydi Password-ka Cusub</button>
+        <p style="color:#64748b;font-size:12px;line-height:1.7;background:#f8fafc;border-radius:9px;padding:12px 14px;border:1px solid #e2e8f0;margin-top:14px">
+          Waxaad isticmaali doontaa password-kan cusub marka aad markasta soo galayso nidaamka.
+        </p>
+      </div>
+    </div>
+  </div>`;
+}
+function changeMyPassword(){
+  const oldEl = document.getElementById("pw-old");
+  const newEl = document.getElementById("pw-new");
+  const confirmEl = document.getElementById("pw-confirm");
+  const oldPass = (oldEl?.value||"");
+  const newPass = (newEl?.value||"").trim();
+  const confirmPass = (confirmEl?.value||"").trim();
+  if(!currentUser || !USERS[currentUser.username]){ showToast("⚠️ Khalad — dib u soo gal","warning"); return; }
+  if(oldPass !== USERS[currentUser.username].password){ showToast("⛔ Password-ka hore waa qalad","warning"); return; }
+  if(!newPass || newPass.length < 4){ showToast("⚠️ Password-ka cusub waa in uu ka badan yahay 4 xaraf","warning"); return; }
+  if(newPass !== confirmPass){ showToast("⚠️ Password-ka cusub iyo ku celintiisu isku mid maahan","warning"); return; }
+  USERS[currentUser.username].password = newPass;
+  currentUser.password = newPass;
+  saveUsersToFb();
+  if(oldEl) oldEl.value=""; if(newEl) newEl.value=""; if(confirmEl) confirmEl.value="";
+  showToast("✅ Password-kaaga waa la beddelay");
 }
 
 function renderSettingsKolomyada(){
@@ -4142,7 +4184,7 @@ async function openSubmitModal(key){
   document.getElementById("modal-body").textContent = `${L("modal_submit_body")} ${FARAC_LABELS[key]}? ${L("modal_submit_body2")}`;
   const btn = document.getElementById("modal-confirm-btn");
   btn.textContent = L("btn_gudbi"); btn.style.background="#1565c0";
-  btn.onclick = function(){ window.location.href = 'http://secadmin.lms.so/#/schools/add-marge'; };
+  btn.onclick = null;
   document.querySelector(".btn-cancel").textContent = L("btn_jooji");
   document.getElementById("modal-overlay").classList.add("show");
 }
